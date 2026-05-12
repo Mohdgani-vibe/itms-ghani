@@ -127,6 +127,9 @@ func CheckPassword(password string, hash string) error {
 
 func ValidatePasswordStrength(password string) error {
 	trimmed := strings.TrimSpace(password)
+	if password != trimmed {
+		return fmt.Errorf("password must not start or end with whitespace")
+	}
 	if len(trimmed) < 12 {
 		return fmt.Errorf("password must be at least 12 characters")
 	}
