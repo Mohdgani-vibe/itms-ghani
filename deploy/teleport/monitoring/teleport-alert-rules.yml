@@ -1,0 +1,29 @@
+groups:
+  - name: teleport-platform
+    rules:
+      - alert: TeleportNodeDown
+        expr: up{job="teleport"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Teleport node unavailable
+          description: One of the Teleport auth/proxy nodes is not responding to Prometheus scrapes.
+
+      - alert: TeleportHighAuthFailures
+        expr: increase(teleport_auth_generate_user_single_use_cert_total[5m]) < increase(teleport_auth_generate_user_cert_total[5m]) * 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Elevated Teleport auth anomalies
+          description: Successful certificate issuance dropped significantly and may indicate failed logins or MFA problems.
+
+      - alert: TeleportSessionSpike
+        expr: sum(teleport_server_interactive_sessions) > 150
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: High concurrent interactive session count
+          description: Interactive SSH usage is above the normal enterprise baseline.

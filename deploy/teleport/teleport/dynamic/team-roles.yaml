@@ -1,0 +1,67 @@
+kind: role
+version: v7
+metadata:
+  name: zerodha-staging-ops
+spec:
+  allow:
+    logins: ['zerodha-admin']
+    node_labels:
+      environment: ['staging']
+      team: ['platform', 'sre']
+    app_labels:
+      platform: ['salt']
+      environment: ['staging']
+    request:
+      roles: ['zerodha-prod-ops']
+  options:
+    require_session_mfa: true
+    max_session_ttl: 8h
+
+---
+kind: role
+version: v7
+metadata:
+  name: zerodha-monitoring-ops
+spec:
+  allow:
+    logins: ['zerodha-admin']
+    node_labels:
+      environment: ['monitoring']
+      team: ['observability', 'sre']
+    app_labels:
+      platform: ['salt']
+      environment: ['monitoring']
+  options:
+    require_session_mfa: true
+    max_session_ttl: 8h
+
+---
+kind: role
+version: v7
+metadata:
+  name: zerodha-prod-ops
+spec:
+  allow:
+    logins: ['zerodha-admin']
+    node_labels:
+      environment: ['production']
+      team: ['platform', 'sre']
+    app_labels:
+      platform: ['salt']
+      environment: ['production']
+    review_requests:
+      roles: ['zerodha-prod-ops']
+  options:
+    require_session_mfa: true
+    max_session_ttl: 2h
+
+---
+kind: access_request
+version: v3
+metadata:
+  name: prod-dual-approval
+spec:
+  roles: ['zerodha-prod-ops']
+  thresholds:
+    - approve: 2
+      deny: 1

@@ -29,6 +29,11 @@ __pycache__/
 
 backend/*.db
 backend/.env
+backend/.env.secrets
+deploy/teleport/.env
+deploy/teleport/.env.bak.*
+deploy/teleport/runtime/*
+!deploy/teleport/runtime/.gitignore
 backend/bin/
 backend/data/*.db
 backend/prisma/*.db

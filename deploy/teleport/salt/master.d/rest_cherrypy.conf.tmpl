@@ -1,0 +1,11 @@
+rest_cherrypy:
+  port: __SALT_API_BIND_PORT__
+  host: __SALT_API_BIND_HOST__
+  disable_ssl: false
+  ssl_crt: __SALT_API_TLS_CERT_PATH__
+  ssl_key: __SALT_API_TLS_KEY_PATH__
+  thread_pool: 200
+  socket_queue_size: 256
+  max_request_body_size: 1048576
+  collect_stats: true
+  expire_responses: 60

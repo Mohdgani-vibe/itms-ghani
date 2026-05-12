@@ -1,0 +1,51 @@
+version: v3
+teleport:
+  data_dir: /var/lib/teleport
+  diag_addr: 0.0.0.0:3000
+  log:
+    output: stderr
+    severity: INFO
+    format:
+      output: text
+  auth_token: __TELEPORT_AUTH_TOKEN__
+
+  storage:
+    type: postgres
+    conn_string: postgres://__POSTGRES_USER__:__POSTGRES_PASSWORD__@postgres:5432/__POSTGRES_DB__?sslmode=disable
+
+  audit_events_uri:
+    - file:///var/lib/teleport/audit/events
+  audit_sessions_uri: __SESSION_STORAGE_URI__?region=__SESSION_STORAGE_REGION__
+
+auth_service:
+  enabled: true
+  cluster_name: __CLUSTER_NAME__
+  license_file: __TELEPORT_LICENSE_PATH__
+  proxy_listener_mode: multiplex
+  authentication:
+    type: local
+    second_factor: otp
+    require_session_mfa: true
+
+proxy_service:
+  enabled: true
+  web_listen_addr: 0.0.0.0:3080
+  public_addr: __WEB_PUBLIC_ADDR__:443
+  ssh_public_addr: __SSH_PUBLIC_ADDR__
+  tunnel_public_addr: __TUNNEL_PUBLIC_ADDR__
+  https_keypairs: []
+
+ssh_service:
+  enabled: false
+
+app_service:
+  enabled: true
+  debug_app: false
+  apps:
+    - name: salt-api
+      uri: __SALT_API_URI__
+      public_addr: __SALT_APP_PUBLIC_ADDR__
+      insecure_skip_verify: __SALT_API_SKIP_VERIFY__
+      labels:
+        platform: salt
+        environment: __SALT_APP_ENVIRONMENT__

@@ -1,0 +1,23 @@
+module(load="imfile")
+
+input(
+  type="imfile"
+  File="/var/lib/teleport/audit/events/*.log"
+  Tag="teleport-audit"
+  Facility="local6"
+  Severity="info"
+  PersistStateInterval="100"
+)
+
+template(name="TeleportJsonLine" type="string" string="%msg%\n")
+
+action(
+  type="omfwd"
+  target="__SYSLOG_TARGET__"
+  port="__SYSLOG_PORT__"
+  protocol="tcp"
+  Template="TeleportJsonLine"
+  TCP_Framing="octet-counted"
+  KeepAlive="on"
+  action.resumeRetryCount="-1"
+)

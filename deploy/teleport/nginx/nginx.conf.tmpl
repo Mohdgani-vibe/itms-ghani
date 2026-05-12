@@ -1,0 +1,100 @@
+user nginx;
+worker_processes auto;
+
+events {
+  worker_connections 4096;
+  multi_accept on;
+}
+
+stream {
+  upstream teleport_ssh {
+    least_conn;
+    server teleport-1:3023 max_fails=3 fail_timeout=10s;
+    server teleport-2:3023 max_fails=3 fail_timeout=10s;
+    server teleport-3:3023 max_fails=3 fail_timeout=10s;
+  }
+
+  upstream teleport_tunnel {
+    least_conn;
+    server teleport-1:3024 max_fails=3 fail_timeout=10s;
+    server teleport-2:3024 max_fails=3 fail_timeout=10s;
+    server teleport-3:3024 max_fails=3 fail_timeout=10s;
+  }
+
+  server {
+    listen __SSH_LISTEN_PORT__;
+    proxy_pass teleport_ssh;
+    proxy_timeout 1h;
+    proxy_connect_timeout 10s;
+  }
+
+  server {
+    listen __TUNNEL_LISTEN_PORT__;
+    proxy_pass teleport_tunnel;
+    proxy_timeout 1h;
+    proxy_connect_timeout 10s;
+  }
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                  '$status $body_bytes_sent "$http_referer" '
+                  '"$http_user_agent" "$request_time"';
+
+  sendfile on;
+  tcp_nopush on;
+  tcp_nodelay on;
+  keepalive_timeout 65;
+  server_tokens off;
+
+  limit_req_zone $binary_remote_addr zone=teleport_ui_rate:20m rate=30r/s;
+  limit_conn_zone $binary_remote_addr zone=teleport_ui_conn:20m;
+
+  upstream teleport_web {
+    least_conn;
+    server teleport-1:3080 max_fails=3 fail_timeout=10s;
+    server teleport-2:3080 max_fails=3 fail_timeout=10s;
+    server teleport-3:3080 max_fails=3 fail_timeout=10s;
+  }
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    '' close;
+  }
+
+  server {
+    listen __WEB_LISTEN_PORT__ ssl http2;
+    server_name __WEB_PUBLIC_ADDR__;
+
+    ssl_certificate /etc/nginx/tls/tls.crt;
+    ssl_certificate_key /etc/nginx/tls/tls.key;
+    ssl_protocols TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:50m;
+    ssl_session_timeout 1d;
+
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "no-referrer" always;
+    add_header Content-Security-Policy "default-src 'self'; connect-src 'self' wss: https:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'" always;
+
+    limit_req zone=teleport_ui_rate burst=40 nodelay;
+    limit_conn teleport_ui_conn 40;
+
+    location / {
+      proxy_pass http://teleport_web;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Proto https;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $connection_upgrade;
+      proxy_read_timeout 3600s;
+    }
+  }
+}
