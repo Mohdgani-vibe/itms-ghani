@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"itms/backend/internal/integrations/hostbridge"
 )
@@ -72,6 +73,10 @@ func (client *Client) ListAgentAlerts(ctx context.Context, agentID string, limit
 	if !client.Enabled() {
 		return nil, fmt.Errorf("wazuh integration is not configured")
 	}
+	agentID = strings.TrimSpace(agentID)
+	if agentID == "" {
+		return nil, nil
+	}
 	if limit <= 0 {
 		limit = 20
 	}
@@ -79,21 +84,25 @@ func (client *Client) ListAgentAlerts(ctx context.Context, agentID string, limit
 	if err != nil {
 		return nil, err
 	}
+	resolvedAgentID, err := client.resolveAgentID(ctx, token, agentID)
+	if err != nil {
+		return nil, err
+	}
 
 	findings := make([]AgentAlert, 0, 3)
-	syscheckFinding, err := client.listSyscheckAlert(ctx, token, agentID, limit)
+	syscheckFinding, err := client.listSyscheckAlert(ctx, token, resolvedAgentID, limit)
 	if err != nil {
 		return nil, err
 	}
 	if syscheckFinding != nil {
 		findings = append(findings, *syscheckFinding)
 	}
-	scaFindings, err := client.listSCAAlerts(ctx, token, agentID, limit)
+	scaFindings, err := client.listSCAAlerts(ctx, token, resolvedAgentID, limit)
 	if err != nil {
 		return nil, err
 	}
 	findings = append(findings, scaFindings...)
-	rootcheckFinding, err := client.listRootcheckAlert(ctx, token, agentID, limit)
+	rootcheckFinding, err := client.listRootcheckAlert(ctx, token, resolvedAgentID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +110,48 @@ func (client *Client) ListAgentAlerts(ctx context.Context, agentID string, limit
 		findings = append(findings, *rootcheckFinding)
 	}
 	return findings, nil
+}
+
+func (client *Client) resolveAgentID(ctx context.Context, token string, agentID string) (string, error) {
+	if isNumericAgentID(agentID) {
+		return agentID, nil
+	}
+
+	var payload struct {
+		Data struct {
+			AffectedItems []struct {
+				ID     string `json:"id"`
+				Name   string `json:"name"`
+				IP     string `json:"ip"`
+				Status string `json:"status"`
+			} `json:"affected_items"`
+		} `json:"data"`
+	}
+	if err := client.getJSON(ctx, token, fmt.Sprintf("/agents?search=%s&select=id,name,ip,status", agentID), &payload); err != nil {
+		return "", err
+	}
+	for _, item := range payload.Data.AffectedItems {
+		if strings.EqualFold(strings.TrimSpace(item.Name), agentID) && strings.TrimSpace(item.ID) != "" {
+			return strings.TrimSpace(item.ID), nil
+		}
+	}
+	if len(payload.Data.AffectedItems) == 1 && strings.TrimSpace(payload.Data.AffectedItems[0].ID) != "" {
+		return strings.TrimSpace(payload.Data.AffectedItems[0].ID), nil
+	}
+	return agentID, nil
+}
+
+func isNumericAgentID(value string) bool {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return false
+	}
+	for _, char := range value {
+		if !unicode.IsDigit(char) {
+			return false
+		}
+	}
+	return true
 }
 
 func (client *Client) listSyscheckAlert(ctx context.Context, token string, agentID string, limit int) (*AgentAlert, error) {
