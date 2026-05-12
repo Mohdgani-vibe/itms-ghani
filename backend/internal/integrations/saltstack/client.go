@@ -155,10 +155,81 @@ func (client *Client) RunState(ctx context.Context, target string, state string)
 	})
 
 	var result map[string]any
-	if err := client.doJSON(ctx, http.MethodPost, "/run", payload, &result); err != nil {
+	if err := client.doJSONWithTimeout(ctx, http.MethodPost, "/run", payload, &result, 10*time.Minute); err != nil {
+		return nil, err
+	}
+	if err := stateApplyError(result, target, state); err != nil {
 		return nil, err
 	}
 	return result, nil
+}
+
+func stateApplyError(result map[string]any, target string, state string) error {
+	returns, ok := result["return"].([]any)
+	if !ok {
+		return nil
+	}
+
+	for _, item := range returns {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		value, ok := entry[target]
+		if !ok {
+			for _, fallback := range entry {
+				value = fallback
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			continue
+		}
+
+		if errText := saltFailureText(value); errText != "" {
+			return fmt.Errorf("saltstack state %s failed: %s", strings.TrimSpace(state), errText)
+		}
+	}
+
+	return nil
+}
+
+func saltFailureText(value any) string {
+	switch typed := value.(type) {
+	case string:
+		return strings.TrimSpace(typed)
+	case []any:
+		messages := make([]string, 0, len(typed))
+		for _, item := range typed {
+			text := strings.TrimSpace(fmt.Sprint(item))
+			if text != "" {
+				messages = append(messages, text)
+			}
+		}
+		return strings.Join(messages, "; ")
+	case map[string]any:
+		messages := make([]string, 0)
+		for key, item := range typed {
+			stateResult, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			resultValue, hasResult := stateResult["result"].(bool)
+			if !hasResult || resultValue {
+				continue
+			}
+			comment := strings.TrimSpace(fmt.Sprint(stateResult["comment"]))
+			if comment == "" || comment == "<nil>" {
+				comment = "state returned result=false"
+			}
+			messages = append(messages, fmt.Sprintf("%s: %s", key, comment))
+		}
+		return strings.Join(messages, "; ")
+	default:
+		return ""
+	}
 }
 
 func (client *Client) RunCommand(ctx context.Context, target string, command string) (map[string]any, error) {
@@ -210,17 +281,27 @@ func (client *Client) BuildTerminalURL(target string) string {
 }
 
 func (client *Client) doJSON(ctx context.Context, method string, path string, body any, out any) error {
+	return client.doJSONWithTimeout(ctx, method, path, body, out, 0)
+}
+
+func (client *Client) doJSONWithTimeout(ctx context.Context, method string, path string, body any, out any, timeout time.Duration) error {
 	var encoded []byte
 	var requestBody *bytes.Reader
+	httpClient := client.httpClient
 	if body != nil {
 		var err error
-		encoded, err = json.Marshal(body)
+		encoded, err = json.Marshal(client.lowstateBody(path, body))
 		if err != nil {
 			return err
 		}
 		requestBody = bytes.NewReader(encoded)
 	} else {
 		requestBody = bytes.NewReader(nil)
+	}
+	if timeout > 0 && client.httpClient != nil {
+		clonedClient := *client.httpClient
+		clonedClient.Timeout = timeout
+		httpClient = &clonedClient
 	}
 
 	req, err := http.NewRequestWithContext(ctx, method, client.baseURL+path, requestBody)
@@ -238,7 +319,7 @@ func (client *Client) doJSON(ctx context.Context, method string, path string, bo
 		req.Header.Set("X-Auth-Token", token)
 	}
 
-	resp, err := client.httpClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -257,7 +338,7 @@ func (client *Client) doJSON(ctx context.Context, method string, path string, bo
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-Auth-Token", token)
 		resp.Body.Close()
-		resp, err = client.httpClient.Do(req)
+		resp, err = httpClient.Do(req)
 		if err != nil {
 			return err
 		}
@@ -363,6 +444,10 @@ func (client *Client) usesInlineEAuth(path string, body any) bool {
 	}
 	_, ok := body.(map[string]any)
 	return ok
+}
+
+func (client *Client) lowstateBody(path string, body any) any {
+	return body
 }
 
 func firstNonEmpty(values ...string) string {
