@@ -19,8 +19,15 @@ The example files in this repo are:
 - `scripts/salt/itms_inventory/refresh.sls`
 - `scripts/salt/itms_inventory/ubuntu/init.sls`
 - `scripts/salt/itms_inventory/windows/init.sls`
+- `scripts/salt/patch/run.sls`
 - `scripts/push-system-inventory.py`
 - `scripts/push-system-inventory.ps1`
+
+To sync this repo's Salt content into the default host fileserver root, run:
+
+```bash
+sudo bash scripts/sync-itms-salt-fileserver.sh
+```
 
 Copy them into your Salt fileserver, for example:
 
@@ -31,6 +38,7 @@ salt://itms_agent/windows/init.sls
 salt://itms_inventory/refresh.sls
 salt://itms_inventory/ubuntu/init.sls
 salt://itms_inventory/windows/init.sls
+salt://patch/run.sls
 salt://itms/files/push-system-inventory.py
 salt://itms/files/push-system-inventory.ps1
 ```
@@ -42,6 +50,7 @@ salt://itms/files/push-system-inventory.ps1
 - `itms_agent.windows.init` contains the Windows workflow.
 - `itms_inventory.refresh` remains the generic fallback state for detail refresh.
 - `itms_inventory.ubuntu.init` and `itms_inventory.windows.init` hold the OS-specific refresh commands.
+- `patch.run` is the generic Salt patch state used by the ITMS patch action for Ubuntu or Debian Linux assets.
 
 ## Required pillar values
 
