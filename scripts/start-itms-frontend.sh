@@ -5,7 +5,16 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FRONTEND_DIR="$REPO_ROOT/frontend"
 FRONTEND_HOST="${FRONTEND_HOST:-0.0.0.0}"
 FRONTEND_PORT="${FRONTEND_PORT:-4175}"
-FRONTEND_URL="${FRONTEND_URL:-http://localhost:${FRONTEND_PORT}}"
+FRONTEND_PUBLIC_HOST="${FRONTEND_PUBLIC_HOST:-${ITMS_PUBLIC_HOST:-}}"
+
+if [[ -z "$FRONTEND_PUBLIC_HOST" ]]; then
+	if [[ "$FRONTEND_HOST" == "0.0.0.0" ]]; then
+		FRONTEND_PUBLIC_HOST="$(hostname -I 2>/dev/null | awk '{print $1}')"
+	fi
+	FRONTEND_PUBLIC_HOST="${FRONTEND_PUBLIC_HOST:-localhost}"
+fi
+
+FRONTEND_URL="${FRONTEND_URL:-http://${FRONTEND_PUBLIC_HOST}:${FRONTEND_PORT}}"
 
 require_command() {
 	if ! command -v "$1" >/dev/null 2>&1; then

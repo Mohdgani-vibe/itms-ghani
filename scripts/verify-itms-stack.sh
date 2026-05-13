@@ -46,13 +46,26 @@ require_command() {
 require_command curl
 require_command docker
 
+compose_service_health() {
+  local service_name="$1"
+  local container_id
+
+  container_id="$(compose_cmd ps -q "$service_name" 2>/dev/null | head -n 1 | tr -d '\r')"
+  if [[ -z "$container_id" ]]; then
+    printf 'missing\n'
+    return 0
+  fi
+
+  docker_cmd inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$container_id" 2>/dev/null || printf 'missing\n'
+}
+
 echo "Checking Docker Compose services..."
 compose_cmd ps
 
 echo
 echo "Checking container health..."
-backend_health="$(docker_cmd inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' zerodha-itms-backend 2>/dev/null || true)"
-postgres_health="$(docker_cmd inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' zerodha-itms-postgres 2>/dev/null || true)"
+backend_health="$(compose_service_health backend)"
+postgres_health="$(compose_service_health postgres)"
 echo "backend:  ${backend_health:-missing}"
 echo "postgres: ${postgres_health:-missing}"
 
