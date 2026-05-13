@@ -87,6 +87,13 @@ def format_bytes(size_bytes):
     return f"{value:.1f} {units[unit_index]}"
 
 
+def truncate_text(value, limit=20000):
+    value = (value or "").strip()
+    if len(value) <= limit:
+        return value
+    return value[: limit - 16].rstrip() + "\n... output truncated"
+
+
 def collect_processor():
     for line in read_text("/proc/cpuinfo").splitlines():
         if line.lower().startswith("model name"):
@@ -121,6 +128,74 @@ def collect_storage():
     if total == 0:
         return "Unknown storage"
     return format_bytes(total)
+
+
+def flatten_block_devices(devices, parent=""):
+    flattened = []
+    for device in devices or []:
+        current = dict(device)
+        current["parent_name"] = parent
+        flattened.append(current)
+        flattened.extend(flatten_block_devices(device.get("children") or [], device.get("name", "")))
+    return flattened
+
+
+def collect_volume_details():
+    output = run_command([
+        "lsblk",
+        "-J",
+        "-b",
+        "-o",
+        "NAME,PATH,SIZE,FSTYPE,TYPE,MOUNTPOINT,FSAVAIL,FSUSE%,UUID,PKNAME",
+    ], timeout=20)
+    if not output:
+        return []
+
+    try:
+        parsed = json.loads(output)
+    except json.JSONDecodeError:
+        return []
+
+    volumes = []
+    for item in flatten_block_devices(parsed.get("blockdevices") or []):
+        device_type = (item.get("type") or "").strip().lower()
+        if device_type in {"loop", "rom"}:
+            continue
+        name = (item.get("name") or "").strip()
+        path = (item.get("path") or "").strip()
+        fstype = (item.get("fstype") or "").strip()
+        mountpoint = (item.get("mountpoint") or "").strip()
+        encrypted = fstype.lower() == "crypto_luks" or path.startswith("/dev/mapper/") or name.startswith("dm-")
+        encryption = "LUKS" if fstype.lower() == "crypto_luks" else ("device-mapper" if encrypted else "")
+        size_raw = item.get("size")
+        available_raw = item.get("fsavail")
+
+        volumes.append({
+            "name": name,
+            "path": path,
+            "size": format_bytes(int(size_raw)) if str(size_raw).isdigit() else str(size_raw or ""),
+            "filesystem": fstype,
+            "device_type": device_type,
+            "mountpoint": mountpoint,
+            "available": format_bytes(int(available_raw)) if str(available_raw).isdigit() else str(available_raw or ""),
+            "used_percent": str(item.get("fsuse%") or ""),
+            "uuid": (item.get("uuid") or "").strip(),
+            "parent": (item.get("pkname") or item.get("parent_name") or "").strip(),
+            "encrypted": encrypted,
+            "encryption": encryption,
+        })
+    return volumes
+
+
+def collect_disk_layout():
+    return truncate_text(run_command(["fdisk", "-l"], timeout=20))
+
+
+def collect_remote_access_id(command, args=None):
+    if not command_exists(command):
+        return ""
+    output = run_command([command, *(args or ["--get-id"])], timeout=10)
+    return output.splitlines()[0].strip() if output else ""
 
 
 def collect_gpu():
@@ -250,7 +325,11 @@ def collect_source_fingerprint():
         value = read_text(candidate).strip().lower()
         if value:
             return value
-    return socket.gethostname().split(".", 1)[0].strip().lower()
+    return collect_hostname().lower()
+
+
+def collect_hostname():
+    return socket.gethostname().strip()
 
 
 def build_default_asset_tag(hostname, source_fingerprint):
@@ -281,6 +360,10 @@ def collect_wazuh_agent_id():
         if not first_line:
             continue
         parts = first_line.split()
+        if parts:
+            agent_id = parts[0].strip()
+            if agent_id.isdigit():
+                return agent_id
         if len(parts) >= 2:
             return parts[1].strip()
     return ""
@@ -341,33 +424,251 @@ def collect_pending_updates():
     return 0
 
 
-def collect_installed_software(limit):
-    software = []
+def collect_pending_update_details():
+    apt_output = run_command(["bash", "-lc", "apt list --upgradable 2>/dev/null | tail -n +2"])
+    if apt_output:
+        details = []
+        for line in apt_output.splitlines():
+            entry = line.strip()
+            if not entry:
+                continue
+            package_name = entry.split("/", 1)[0].strip()
+            if package_name:
+                details.append(package_name)
+        if details:
+            return details
 
+    dnf_output = run_command(["bash", "-lc", "dnf -q check-update 2>/dev/null"])
+    if dnf_output:
+        details = []
+        for line in dnf_output.splitlines():
+            entry = line.strip()
+            if not entry or entry.startswith("Last metadata expiration check:"):
+                continue
+            fields = entry.split()
+            if len(fields) < 2:
+                continue
+            package_name = fields[0].strip()
+            if package_name:
+                details.append(package_name)
+        if details:
+            return details
+
+    yum_output = run_command(["bash", "-lc", "yum -q check-update 2>/dev/null"])
+    if yum_output:
+        details = []
+        for line in yum_output.splitlines():
+            entry = line.strip()
+            if not entry:
+                continue
+            fields = entry.split()
+            if len(fields) < 2:
+                continue
+            package_name = fields[0].strip()
+            if package_name:
+                details.append(package_name)
+        if details:
+            return details
+
+    return []
+
+
+def collect_logged_in_users():
+    users = []
+    seen = set()
+
+    def add_candidate(value):
+        candidate = (value or "").strip()
+        if not candidate or candidate in seen:
+            return
+        seen.add(candidate)
+        users.append(candidate)
+
+    for line in run_command(["who"]).splitlines():
+        parts = line.split()
+        if parts:
+            add_candidate(parts[0])
+
+    loginctl_output = run_command(["bash", "-lc", "loginctl list-sessions --no-legend 2>/dev/null"])
+    for line in loginctl_output.splitlines():
+        parts = line.split()
+        if len(parts) >= 3:
+            add_candidate(parts[2])
+
+    add_candidate(os.getenv("SUDO_USER", ""))
+    return users
+
+
+def collect_network_details():
+    if not command_exists("ip"):
+        return {
+            "wired_ip": "",
+            "wireless_ip": "",
+            "netbird_ip": "",
+            "dns": "",
+            "gateway": "",
+            "interface_stats": {},
+        }
+
+    output = run_command(["ip", "-j", "addr", "show"])
+    try:
+        interfaces = json.loads(output) if output else []
+    except json.JSONDecodeError:
+        interfaces = []
+
+    wired_ip = ""
+    wireless_ip = ""
+    netbird_ip = ""
+    interface_stats = {}
+    ignored_prefixes = ("lo", "docker", "br-", "veth", "virbr")
+
+    for item in interfaces:
+        interface_name = str(item.get("ifname", "")).strip()
+        if not interface_name or interface_name.startswith(ignored_prefixes):
+            continue
+        if item.get("operstate") == "DOWN":
+            continue
+
+        addresses = []
+        for addr_info in item.get("addr_info", []):
+            if addr_info.get("family") != "inet":
+                continue
+            local_address = str(addr_info.get("local", "")).strip()
+            if not local_address or local_address.startswith("127."):
+                continue
+            addresses.append(local_address)
+        if not addresses:
+            continue
+
+        interface_stats[interface_name] = {
+            "mtu": item.get("mtu"),
+            "state": item.get("operstate"),
+            "mac": item.get("address", ""),
+            "addresses": addresses,
+        }
+
+        primary_address = addresses[0]
+        normalized_name = interface_name.lower()
+        if normalized_name.startswith("netbird") or normalized_name.startswith("wt"):
+            if not netbird_ip:
+                netbird_ip = primary_address
+            continue
+        if normalized_name.startswith("wl") or "wifi" in normalized_name or "wlan" in normalized_name:
+            if not wireless_ip:
+                wireless_ip = primary_address
+            continue
+        if not wired_ip:
+            wired_ip = primary_address
+
+    dns_servers = []
+    for line in read_text("/etc/resolv.conf").splitlines():
+        parts = line.split()
+        if len(parts) >= 2 and parts[0] == "nameserver":
+            dns_servers.append(parts[1].strip())
+
+    gateway = ""
+    route_output = run_command(["ip", "route", "show", "default"])
+    for line in route_output.splitlines():
+        parts = line.split()
+        if not parts or parts[0] != "default":
+            continue
+        if "via" in parts:
+            via_index = parts.index("via")
+            if via_index + 1 < len(parts):
+                gateway = parts[via_index + 1].strip()
+                break
+
+    return {
+        "wired_ip": wired_ip,
+        "wireless_ip": wireless_ip,
+        "netbird_ip": netbird_ip,
+        "dns": ", ".join(dns_servers),
+        "gateway": gateway,
+        "interface_stats": interface_stats,
+    }
+
+
+def collect_installed_software(limit):
+    if limit <= 0:
+        return []
+
+    priority_terms = (
+        "salt",
+        "wazuh",
+        "openscap",
+        "scap",
+        "clamav",
+        "clamd",
+        "freshclam",
+    )
+    source_entries = []
+
+    dpkg_entries = []
     dpkg_output = run_command(["dpkg-query", "-W", "-f=${binary:Package}\t${Version}\n"])
     if dpkg_output:
-        for line in dpkg_output.splitlines()[:limit]:
+        for line in dpkg_output.splitlines():
             parts = line.split("\t", 1)
             if not parts or not parts[0].strip():
                 continue
-            software.append({
+            dpkg_entries.append({
                 "name": parts[0].strip(),
                 "version": parts[1].strip() if len(parts) > 1 else "",
                 "install_date": "",
+                "source": "dpkg",
             })
-        return software
+    if dpkg_entries:
+        source_entries.append(dpkg_entries)
 
-    rpm_output = run_command(["rpm", "-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\n"])
-    if rpm_output:
-        for line in rpm_output.splitlines()[:limit]:
+    snap_entries = []
+    snap_output = run_command(["snap", "list"])
+    if snap_output:
+        for line in snap_output.splitlines()[1:]:
+            fields = line.split()
+            if not fields:
+                continue
+            snap_entries.append({
+                "name": fields[0].strip(),
+                "version": fields[1].strip() if len(fields) > 1 else "",
+                "install_date": "",
+                "source": "snapd",
+            })
+    if snap_entries:
+        source_entries.append(snap_entries)
+
+    flatpak_entries = []
+    flatpak_output = run_command(["flatpak", "list", "--app", "--columns=application,version"])
+    if flatpak_output:
+        for line in flatpak_output.splitlines():
             parts = line.split("\t", 1)
             if not parts or not parts[0].strip():
                 continue
-            software.append({
+            flatpak_entries.append({
                 "name": parts[0].strip(),
                 "version": parts[1].strip() if len(parts) > 1 else "",
                 "install_date": "",
+                "source": "flatpak",
             })
+    if flatpak_entries:
+        source_entries.append(flatpak_entries)
+
+    prioritized = []
+    regular = []
+    seen = set()
+    for entries in source_entries:
+        for entry in entries:
+            key = (entry.get("source", ""), entry.get("name", ""), entry.get("version", ""))
+            if key in seen:
+                continue
+            seen.add(key)
+            name = entry.get("name", "").strip().lower()
+            if any(term in name for term in priority_terms):
+                prioritized.append(entry)
+            else:
+                regular.append(entry)
+
+    software = prioritized[:limit]
+    if len(software) < limit:
+        software.extend(regular[: limit - len(software)])
     return software
 
 
@@ -599,7 +900,7 @@ def normalize_endpoint(server_url):
 
 
 def build_asset_payload(args):
-    hostname = socket.gethostname().split(".", 1)[0]
+    hostname = collect_hostname()
     os_name, os_version, kernel, architecture, os_build = collect_os_details()
     source_fingerprint = args.source_fingerprint or collect_source_fingerprint()
     asset_tag = args.asset_tag or build_default_asset_tag(hostname, source_fingerprint)
@@ -609,6 +910,8 @@ def build_asset_payload(args):
     category = infer_asset_category(args.category, manufacturer, model)
     salt_minion_id = args.salt_minion_id or collect_salt_minion_id()
     wazuh_agent_id = args.wazuh_agent_id or collect_wazuh_agent_id()
+    network_details = collect_network_details()
+    volume_details = collect_volume_details()
     asset_payload = {
         "asset_tag": asset_tag,
         "name": args.name or hostname,
@@ -648,8 +951,15 @@ def build_asset_payload(args):
             "os_build": os_build,
             "last_boot": collect_last_boot(),
             "last_seen": datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+            "logged_in_users": collect_logged_in_users(),
             "pending_updates": collect_pending_updates(),
+            "pending_update_details": collect_pending_update_details(),
+            "anydesk_id": collect_remote_access_id("anydesk"),
+            "rustdesk_id": collect_remote_access_id("rustdesk"),
+            "disk_layout": collect_disk_layout(),
+            "volumes": volume_details,
         },
+        "network": network_details,
         "installed_software": [] if args.no_software_scan else collect_installed_software(args.software_limit),
     }
     security_reports = []

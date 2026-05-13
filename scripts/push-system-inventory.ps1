@@ -89,6 +89,68 @@ function Get-PendingUpdateCount {
     }
 }
 
+function Get-PendingUpdateDetails {
+    $details = New-Object System.Collections.Generic.List[string]
+    try {
+        $session = New-Object -ComObject Microsoft.Update.Session
+        $searcher = $session.CreateUpdateSearcher()
+        $result = $searcher.Search("IsInstalled=0 and Type='Software'")
+        foreach ($update in $result.Updates) {
+            $title = [string]$update.Title
+            if (-not [string]::IsNullOrWhiteSpace($title)) {
+                $details.Add($title.Trim())
+            }
+        }
+    } catch {
+    }
+    return $details
+}
+
+function Get-LoggedInUsers {
+    $users = New-Object System.Collections.Generic.List[string]
+    $seen = @{}
+
+    function Add-UserCandidate {
+        param([string]$Value)
+        if ([string]::IsNullOrWhiteSpace($Value)) {
+            return
+        }
+        $candidate = $Value.Trim()
+        if ([string]::IsNullOrWhiteSpace($candidate) -or $seen.ContainsKey($candidate)) {
+            return
+        }
+        $seen[$candidate] = $true
+        $users.Add($candidate)
+    }
+
+    try {
+        $computerSystemUser = [string]$computer.UserName
+        if ($computerSystemUser -match '\\') {
+            Add-UserCandidate -Value ($computerSystemUser.Split('\\')[-1])
+        } else {
+            Add-UserCandidate -Value $computerSystemUser
+        }
+    } catch {
+    }
+
+    try {
+        foreach ($line in (quser 2>$null | Select-Object -Skip 1)) {
+            $normalized = ([string]$line).Trim()
+            if ([string]::IsNullOrWhiteSpace($normalized)) {
+                continue
+            }
+            $normalized = $normalized.TrimStart('>')
+            $parts = $normalized -split '\s+'
+            if ($parts.Length -gt 0) {
+                Add-UserCandidate -Value $parts[0]
+            }
+        }
+    } catch {
+    }
+
+    return @($users)
+}
+
 function Get-PrimaryMacAddress {
     try {
         $adapter = Get-NetAdapter -Physical -ErrorAction Stop |
@@ -165,6 +227,66 @@ function Format-UtcTimestamp {
     }
 }
 
+function Truncate-Text {
+    param(
+        [string]$Value,
+        [int]$Limit = 20000
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Value)) {
+        return ''
+    }
+
+    $trimmed = $Value.Trim()
+    if ($trimmed.Length -le $Limit) {
+        return $trimmed
+    }
+
+    return $trimmed.Substring(0, $Limit - 16).TrimEnd() + "`n... output truncated"
+}
+
+function Get-ExecutablePath {
+    param(
+        [string[]]$Commands,
+        [string[]]$CandidatePaths = @()
+    )
+
+    foreach ($commandName in $Commands) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($command -and -not [string]::IsNullOrWhiteSpace($command.Source)) {
+            return $command.Source
+        }
+    }
+
+    foreach ($candidate in $CandidatePaths) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    return ''
+}
+
+function Get-RemoteAccessId {
+    param(
+        [string[]]$Commands,
+        [string[]]$Arguments = @('--get-id'),
+        [string[]]$CandidatePaths = @()
+    )
+
+    $executable = Get-ExecutablePath -Commands $Commands -CandidatePaths $CandidatePaths
+    if ([string]::IsNullOrWhiteSpace($executable)) {
+        return ''
+    }
+
+    try {
+        $output = & $executable @Arguments 2>$null | Select-Object -First 1
+        return [string]($output ?? '')
+    } catch {
+        return ''
+    }
+}
+
 function Get-InstalledSoftware {
     param([int]$Limit)
 
@@ -194,9 +316,97 @@ function Get-InstalledSoftware {
             name = $app.name
             version = $app.version
             install_date = $app.install_date
+            source = 'registry'
         }
     }
     return $results
+}
+
+function Get-VolumeDetails {
+    $bitLockerByMountPoint = @{}
+    try {
+        foreach ($entry in (Get-BitLockerVolume -ErrorAction Stop)) {
+            $key = [string]$entry.MountPoint
+            if (-not [string]::IsNullOrWhiteSpace($key)) {
+                $bitLockerByMountPoint[$key.ToUpperInvariant()] = $entry
+            }
+        }
+    } catch {
+    }
+
+    $volumeMap = @{}
+    try {
+        foreach ($volume in (Get-Volume -ErrorAction Stop)) {
+            $key = [string]$volume.UniqueId
+            if (-not [string]::IsNullOrWhiteSpace($key)) {
+                $volumeMap[$key] = $volume
+            }
+        }
+    } catch {
+    }
+
+    $results = @()
+    try {
+        foreach ($partition in (Get-Partition -ErrorAction Stop | Sort-Object DiskNumber, PartitionNumber)) {
+            $driveLetter = [string]$partition.DriveLetter
+            $mountPoint = if (-not [string]::IsNullOrWhiteSpace($driveLetter)) { "$driveLetter`:" } else { [string]$partition.AccessPaths | Select-Object -First 1 }
+            $volume = $null
+            try {
+                $volume = Get-Volume -Partition $partition -ErrorAction Stop
+            } catch {
+            }
+            $bitLocker = $null
+            if (-not [string]::IsNullOrWhiteSpace($mountPoint)) {
+                $bitLocker = $bitLockerByMountPoint[$mountPoint.ToUpperInvariant()]
+            }
+
+            $size = if ($partition.Size) { Format-Bytes -Bytes ([UInt64]$partition.Size) } else { '' }
+            $available = if ($volume -and $volume.SizeRemaining) { Format-Bytes -Bytes ([UInt64]$volume.SizeRemaining) } else { '' }
+            $usedPercent = ''
+            if ($volume -and $volume.Size -and $volume.SizeRemaining -ge 0) {
+                $used = [double]$volume.Size - [double]$volume.SizeRemaining
+                if ($volume.Size -gt 0) {
+                    $usedPercent = ('{0:N0}%%' -f (($used / [double]$volume.Size) * 100))
+                }
+            }
+
+            $results += [ordered]@{
+                name = if (-not [string]::IsNullOrWhiteSpace($mountPoint)) { $mountPoint } else { "Disk $($partition.DiskNumber) Partition $($partition.PartitionNumber)" }
+                path = if (-not [string]::IsNullOrWhiteSpace($mountPoint)) { $mountPoint } else { "Disk $($partition.DiskNumber)" }
+                size = $size
+                filesystem = [string]($volume.FileSystem)
+                device_type = 'partition'
+                mountpoint = $mountPoint
+                available = $available
+                used_percent = $usedPercent
+                uuid = [string]($volume.UniqueId)
+                parent = "Disk $($partition.DiskNumber)"
+                encrypted = [bool]($bitLocker -and $bitLocker.ProtectionStatus -eq 'On')
+                encryption = if ($bitLocker) { [string]$bitLocker.VolumeStatus } else { '' }
+            }
+        }
+    } catch {
+    }
+
+    return $results
+}
+
+function Get-DiskLayoutText {
+    $parts = @()
+    try {
+        $parts += ((Get-Disk -ErrorAction Stop | Format-Table -AutoSize | Out-String).Trim())
+    } catch {
+    }
+    try {
+        $parts += ((Get-Partition -ErrorAction Stop | Format-Table -AutoSize | Out-String).Trim())
+    } catch {
+    }
+    try {
+        $parts += ((Get-Volume -ErrorAction Stop | Format-Table -AutoSize | Out-String).Trim())
+    } catch {
+    }
+
+    return Truncate-Text -Value ($parts -join "`n`n")
 }
 
 function Get-ClamAvScannerPath {
@@ -505,7 +715,13 @@ $payload = [ordered]@{
                 os_build = $operatingSystem.BuildNumber
                 last_boot = $(if ($UseDetailedHardwareInventory) { Format-UtcTimestamp -Value $operatingSystem.LastBootUpTime } else { '' })
                 last_seen = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+                logged_in_users = (Get-LoggedInUsers)
                 pending_updates = (Get-PendingUpdateCount)
+                pending_update_details = (Get-PendingUpdateDetails)
+                anydesk_id = (Get-RemoteAccessId -Commands @('AnyDesk.exe', 'anydesk.exe') -CandidatePaths @('C:\Program Files (x86)\AnyDesk\AnyDesk.exe', 'C:\Program Files\AnyDesk\AnyDesk.exe'))
+                rustdesk_id = (Get-RemoteAccessId -Commands @('rustdesk.exe', 'RustDesk.exe') -CandidatePaths @('C:\Program Files\RustDesk\rustdesk.exe', 'C:\Program Files (x86)\RustDesk\rustdesk.exe'))
+                disk_layout = (Get-DiskLayoutText)
+                volumes = (Get-VolumeDetails)
             }
             installed_software = $(if ($NoSoftwareScan) { @() } else { Get-InstalledSoftware -Limit $SoftwareLimit })
             security_reports = $securityReports
