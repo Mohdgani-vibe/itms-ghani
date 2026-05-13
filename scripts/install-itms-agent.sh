@@ -2,8 +2,14 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-COLLECTOR_SOURCE_DEFAULT="$SCRIPT_DIR/push-system-inventory.py"
+SCRIPT_DIR=""
+if declare -p BASH_SOURCE >/dev/null 2>&1 && [[ ${#BASH_SOURCE[@]} -gt 0 ]] && [[ -n "${BASH_SOURCE[0]}" ]]; then
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+fi
+COLLECTOR_SOURCE_DEFAULT=""
+if [[ -n "$SCRIPT_DIR" ]]; then
+  COLLECTOR_SOURCE_DEFAULT="$SCRIPT_DIR/push-system-inventory.py"
+fi
 INSTALL_DIR="/opt/itms"
 COLLECTOR_TARGET="$INSTALL_DIR/push-system-inventory.py"
 ENV_FILE="/etc/itms-agent.env"
@@ -30,7 +36,7 @@ WAZUH_MANAGER=""
 WAZUH_GROUP="default"
 REFRESH_HOURS="6"
 COLLECTOR_URL=""
-OPENSCAP_PROFILE="xccdf_org.ssgproject.content_profile_standard"
+OPENSCAP_PROFILE="${ITMS_OPENSCAP_PROFILE:-auto}"
 OPENSCAP_DATASTREAM=""
 OPENSCAP_RESULTS_DIR="/var/lib/itms/openscap"
 OPENSCAP_CONTENT_DIR="/var/lib/itms/openscap/content"
@@ -40,11 +46,16 @@ CLAMAV_SCAN_PATHS="${ITMS_CLAMAV_SCAN_PATHS:-/home,/etc,/opt,/usr/local/bin,/usr
 CLAMAV_TIMEOUT="${ITMS_CLAMAV_TIMEOUT:-7200}"
 INCLUDE_OPENSCAP_REPORT="${ITMS_INCLUDE_OPENSCAP_REPORT:-true}"
 USE_HARDINFO_FALLBACK="${ITMS_USE_HARDINFO_FALLBACK:-false}"
+SALT_BOOTSTRAP_URL="${ITMS_SALT_BOOTSTRAP_URL:-https://github.com/saltstack/salt-bootstrap/releases/latest/download/bootstrap-salt.sh}"
+SALT_BOOTSTRAP_VERSION="${ITMS_SALT_BOOTSTRAP_VERSION:-3006}"
+REQUIRE_SALT="${ITMS_REQUIRE_SALT:-false}"
 
 usage() {
-  cat <<'EOF'
+  cat <<'EOF2'
 Usage:
   sudo ./scripts/install-itms-agent.sh --server-url http://itms.example.com:3001 --token <inventory_ingest_token> [options]
+
+  curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s -- --server-url http://itms.example.com --token <inventory_ingest_token> [options]
 
 Required:
   --server-url URL         ITMS backend base URL or full ingest endpoint
@@ -62,7 +73,7 @@ Optional:
   --salt-master HOST       Salt master hostname or IP to write into minion config
   --wazuh-manager HOST     Wazuh manager hostname or IP for the agent package
   --wazuh-group NAME       Wazuh group, default: default
-  --openscap-profile NAME  OpenSCAP profile ID, default: xccdf_org.ssgproject.content_profile_standard
+  --openscap-profile NAME  OpenSCAP profile ID, default: auto-detect from the installed datastream
   --openscap-datastream PATH
                            Override the OpenSCAP datastream path when auto-detection is wrong
   --openscap-results-dir PATH
@@ -70,9 +81,13 @@ Optional:
   --openscap-scan-hours N  OpenSCAP scan interval in hours, default: 24
   --refresh-hours N        Inventory push interval in hours, default: 6
   --use-hardinfo-fallback  Install hardinfo and enable it as a fallback source for display details
+  --require-salt           Fail the bootstrap if Salt installation does not succeed
   --collector-url URL      Download the Linux collector from URL instead of local repo copy
   --help                   Show this message
-EOF
+
+Environment overrides:
+  ITMS_SALT_BOOTSTRAP_VERSION  Salt release passed to bootstrap-salt, default: 3006
+EOF2
 }
 
 log() {
@@ -94,8 +109,9 @@ append_if_available() {
 
 install_salt_minion() {
   if ! package_exists "salt-minion"; then
-    log 'Salt Minion package is not available from current apt sources. Continuing without Salt.'
-    return 1
+    log 'Salt Minion package is not available from current apt sources. Trying the Salt bootstrap installer.'
+    install_salt_minion_with_bootstrap
+    return $?
   fi
 
   if dpkg-query -W -f='${Status}' salt-minion 2>/dev/null | grep -q 'install ok installed'; then
@@ -110,7 +126,41 @@ install_salt_minion() {
     return 0
   fi
 
-  log 'Salt Minion installation failed because apt could not resolve matching Salt packages. Continuing without Salt so the ITMS collector and sync can still be installed.'
+  log 'Salt Minion installation via apt failed. Trying the Salt bootstrap installer.'
+  install_salt_minion_with_bootstrap
+}
+
+install_salt_minion_with_bootstrap() {
+  local bootstrap_script
+  local first_line
+  bootstrap_script="$(mktemp)"
+
+  if ! curl -fsSL "$SALT_BOOTSTRAP_URL" -o "$bootstrap_script"; then
+    rm -f "$bootstrap_script"
+    log 'Salt bootstrap installer download failed.'
+    return 1
+  fi
+
+  first_line="$(head -n 1 "$bootstrap_script" || true)"
+  if [[ "$first_line" != '#!'*sh* ]]; then
+    rm -f "$bootstrap_script"
+    log 'Salt bootstrap installer download returned an unexpected payload instead of a shell script.'
+    return 1
+  fi
+
+  chmod 0755 "$bootstrap_script"
+  log "Installing Salt Minion via bootstrap-salt stable ${SALT_BOOTSTRAP_VERSION}"
+  if bash "$bootstrap_script" stable "$SALT_BOOTSTRAP_VERSION"; then
+    rm -f "$bootstrap_script"
+    if dpkg-query -W -f='${Status}' salt-minion 2>/dev/null | grep -q 'install ok installed'; then
+      return 0
+    fi
+    log 'Salt bootstrap installer finished but salt-minion is still not installed.'
+    return 1
+  fi
+
+  rm -f "$bootstrap_script"
+  log 'Salt bootstrap installer failed.'
   return 1
 }
 
@@ -202,7 +252,7 @@ write_env_file() {
 
 install_collector() {
   install -d -m 0755 "$INSTALL_DIR"
-  if [[ -f "$COLLECTOR_SOURCE_DEFAULT" ]]; then
+  if [[ -n "$COLLECTOR_SOURCE_DEFAULT" && -f "$COLLECTOR_SOURCE_DEFAULT" ]]; then
     install -m 0755 "$COLLECTOR_SOURCE_DEFAULT" "$COLLECTOR_TARGET"
     return
   fi
@@ -222,13 +272,14 @@ configure_salt_minion() {
   fi
 
   install -d -m 0755 /etc/salt/minion.d
-  cat > /etc/salt/minion.d/itms.conf <<EOF
+  cat > /etc/salt/minion.d/itms.conf <<EOF2
 master: $SALT_MASTER
-EOF
+EOF2
 }
 
 configure_wazuh_agent() {
   local config_file="/var/ossec/etc/ossec.conf"
+  local backup_file="${config_file}.itms-backup"
 
   if [[ -z "$WAZUH_MANAGER" ]]; then
     log 'Wazuh agent installed without a configured manager. Pass --wazuh-manager to bind it during bootstrap.'
@@ -240,6 +291,8 @@ configure_wazuh_agent() {
     return
   fi
 
+  cp "$config_file" "$backup_file"
+
   python3 - "$config_file" "$WAZUH_MANAGER" "$WAZUH_GROUP" <<'PY'
 import pathlib
 import sys
@@ -248,12 +301,23 @@ import xml.etree.ElementTree as ET
 config_path = pathlib.Path(sys.argv[1])
 manager = sys.argv[2].strip()
 group = sys.argv[3].strip()
-tree = ET.parse(config_path)
-root = tree.getroot()
+raw_text = config_path.read_text(encoding='utf-8')
 
-client = root.find('client')
+wrapped_root = None
+target_root = None
+
+try:
+    tree = ET.ElementTree(ET.fromstring(raw_text))
+    target_root = tree.getroot()
+except ET.ParseError:
+    wrapped_root = ET.fromstring(f'<itms_root>{raw_text}</itms_root>')
+    target_root = wrapped_root.find('ossec_config')
+    if target_root is None:
+        raise
+
+client = target_root.find('client')
 if client is None:
-    client = ET.SubElement(root, 'client')
+    client = ET.SubElement(target_root, 'client')
 
 server = client.find('server')
 if server is None:
@@ -264,17 +328,21 @@ if address is None:
     address = ET.SubElement(server, 'address')
 address.text = manager
 
-if group:
-    agent_cfg = root.find('agent')
-    if agent_cfg is None:
-        agent_cfg = ET.SubElement(root, 'agent')
-    groups = agent_cfg.find('groups')
-    if groups is None:
-        groups = ET.SubElement(agent_cfg, 'groups')
-    groups.text = group
+for unsupported_agent in list(target_root.findall('agent')):
+    target_root.remove(unsupported_agent)
 
-tree.write(config_path, encoding='unicode', xml_declaration=False)
+if wrapped_root is None:
+    tree.write(config_path, encoding='unicode', xml_declaration=False)
+else:
+    serialized_children = []
+    for child in wrapped_root:
+        serialized_children.append(ET.tostring(child, encoding='unicode'))
+    config_path.write_text('\n'.join(serialized_children) + '\n', encoding='utf-8')
 PY
+
+  if [[ -n "$WAZUH_GROUP" ]]; then
+    log 'Wazuh group assignment is handled during package installation. The runtime config rewrite keeps ossec.conf limited to supported client settings.'
+  fi
 }
 
 detect_openscap_datastream() {
@@ -285,7 +353,6 @@ detect_openscap_datastream() {
 
   local candidates=()
   if [[ -f /etc/os-release ]]; then
-    # shellcheck disable=SC1091
     . /etc/os-release
     local version_id="${VERSION_ID%%.*}"
     candidates+=(
@@ -316,7 +383,6 @@ openscap_platform_id() {
     return 1
   fi
 
-  # shellcheck disable=SC1091
   . /etc/os-release
   if [[ -z "${ID:-}" || -z "${VERSION_ID:-}" ]]; then
     return 1
@@ -329,7 +395,7 @@ download_openscap_datastream() {
   local platform_id
   platform_id="$(openscap_platform_id || true)"
   if [[ -z "$platform_id" ]]; then
-    log 'Unable to determine OS platform for OpenSCAP content download.'
+    log 'Unable to determine OS platform for OpenSCAP content download.' >&2
     return 1
   fi
 
@@ -348,26 +414,92 @@ download_openscap_datastream() {
   archive_path="$tmp_dir/scap-security-guide.zip"
   trap 'rm -rf "$tmp_dir"' RETURN
 
-  log "Downloading OpenSCAP content ${release_tag} for ${platform_id}"
+  log "Downloading OpenSCAP content ${release_tag} for ${platform_id}" >&2
   if ! curl -fsSL "$archive_url" -o "$archive_path"; then
-    log 'OpenSCAP content download failed.'
+    log 'OpenSCAP content download failed.' >&2
     return 1
   fi
 
   archive_member="$(unzip -Z1 "$archive_path" | grep "/${datastream_name}$" | head -n 1 || true)"
   if [[ -z "$archive_member" ]]; then
-    log "OpenSCAP datastream ${datastream_name} was not present in ${archive_url}."
+    log "OpenSCAP datastream ${datastream_name} was not present in ${archive_url}." >&2
     return 1
   fi
 
   install -d -m 0755 "$OPENSCAP_CONTENT_DIR"
   if ! unzip -p "$archive_path" "$archive_member" > "$target_path"; then
-    log 'Failed to extract OpenSCAP datastream from downloaded archive.'
+    log 'Failed to extract OpenSCAP datastream from downloaded archive.' >&2
     rm -f "$target_path"
     return 1
   fi
   chmod 0644 "$target_path"
   printf '%s\n' "$target_path"
+}
+
+resolve_openscap_profile() {
+  local datastream="$1"
+  local requested_profile="${OPENSCAP_PROFILE:-auto}"
+  local category_normalized="${CATEGORY,,}"
+  local -a available_profiles=()
+  local -a preferred_profiles=()
+  local profile
+
+  if ! command -v oscap >/dev/null 2>&1; then
+    log 'OpenSCAP profile auto-detection skipped because oscap is not installed.'
+    return 1
+  fi
+
+  mapfile -t available_profiles < <(
+    oscap info "$datastream" 2>/dev/null | awk '
+      /^Profiles:/ { in_profiles = 1; next }
+      in_profiles && /^[[:alpha:]][[:alnum:] _-]*:/ { exit }
+      in_profiles && /^[[:space:]]*Id:[[:space:]]*/ {
+        sub(/^[[:space:]]*Id:[[:space:]]*/, "")
+        print
+      }
+    '
+  )
+
+  if [[ ${#available_profiles[@]} -eq 0 ]]; then
+    log "OpenSCAP profiles could not be read from ${datastream}."
+    return 1
+  fi
+
+  if [[ -n "$requested_profile" && "$requested_profile" != "auto" ]]; then
+    for profile in "${available_profiles[@]}"; do
+      if [[ "$profile" == "$requested_profile" ]]; then
+        printf '%s\n' "$profile"
+        return 0
+      fi
+    done
+    log "Requested OpenSCAP profile ${requested_profile} is not available in ${datastream}. Falling back to an available profile."
+  fi
+
+  if [[ "$category_normalized" == "server" ]]; then
+    preferred_profiles=(
+      "xccdf_org.ssgproject.content_profile_cis_level1_server"
+      "xccdf_org.ssgproject.content_profile_standard"
+      "xccdf_org.ssgproject.content_profile_cis_level1_workstation"
+    )
+  else
+    preferred_profiles=(
+      "xccdf_org.ssgproject.content_profile_cis_level1_workstation"
+      "xccdf_org.ssgproject.content_profile_standard"
+      "xccdf_org.ssgproject.content_profile_cis_level1_server"
+    )
+  fi
+
+  local candidate
+  for candidate in "${preferred_profiles[@]}"; do
+    for profile in "${available_profiles[@]}"; do
+      if [[ "$profile" == "$candidate" ]]; then
+        printf '%s\n' "$profile"
+        return 0
+      fi
+    done
+  done
+
+  printf '%s\n' "${available_profiles[0]}"
 }
 
 install_openscap_runner() {
@@ -387,15 +519,20 @@ install_openscap_runner() {
   fi
 
   OPENSCAP_DATASTREAM="$datastream"
+  OPENSCAP_PROFILE="$(resolve_openscap_profile "$datastream" || true)"
+  if [[ -z "$OPENSCAP_PROFILE" ]]; then
+    log 'OpenSCAP profile could not be resolved from the detected datastream. Pass --openscap-profile to configure scanning.'
+    return
+  fi
+  log "Using OpenSCAP profile ${OPENSCAP_PROFILE}"
   install -d -m 0755 "$INSTALL_DIR" "$OPENSCAP_RESULTS_DIR"
-  cat > "$OPENSCAP_RUNNER" <<'EOF'
+  cat > "$OPENSCAP_RUNNER" <<'EOF2'
 #!/usr/bin/env bash
 set -uo pipefail
 
 ENV_FILE="/etc/itms-agent.env"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
-  # shellcheck disable=SC1090
   . "$ENV_FILE"
   set +a
 fi
@@ -411,7 +548,11 @@ if [[ -z "${ITMS_OPENSCAP_DATASTREAM:-}" || ! -f "${ITMS_OPENSCAP_DATASTREAM}" ]
 fi
 
 RESULTS_DIR="${ITMS_OPENSCAP_RESULTS_DIR:-/var/lib/itms/openscap}"
-PROFILE="${ITMS_OPENSCAP_PROFILE:-xccdf_org.ssgproject.content_profile_standard}"
+PROFILE="${ITMS_OPENSCAP_PROFILE:-}"
+if [[ -z "$PROFILE" ]]; then
+  echo "OpenSCAP profile is not configured" >&2
+  exit 1
+fi
 mkdir -p "$RESULTS_DIR"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RESULTS_FILE="$RESULTS_DIR/openscap-results-$STAMP.xml"
@@ -431,7 +572,7 @@ if [[ "${ITMS_INCLUDE_OPENSCAP_REPORT:-true}" == "true" && -f "$RESULTS_FILE" ]]
 fi
 
 exit "$SCAN_EXIT"
-EOF
+EOF2
   chmod 0755 "$OPENSCAP_RUNNER"
 }
 
@@ -440,7 +581,7 @@ write_openscap_units() {
     return
   fi
 
-  cat > "$OPENSCAP_SERVICE" <<EOF
+  cat > "$OPENSCAP_SERVICE" <<EOF2
 [Unit]
 Description=Run ITMS OpenSCAP scan
 After=network-online.target
@@ -452,9 +593,9 @@ ExecStart=$OPENSCAP_RUNNER
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF2
 
-  cat > "$OPENSCAP_TIMER" <<EOF
+  cat > "$OPENSCAP_TIMER" <<EOF2
 [Unit]
 Description=Run ITMS OpenSCAP scan every $OPENSCAP_SCAN_HOURS hours
 
@@ -465,11 +606,11 @@ Unit=itms-openscap-scan.service
 
 [Install]
 WantedBy=timers.target
-EOF
+EOF2
 }
 
 write_clamav_units() {
-  cat > "$CLAMAV_SERVICE" <<EOF
+  cat > "$CLAMAV_SERVICE" <<EOF2
 [Unit]
 Description=Run ITMS ClamAV scan and report
 After=network-online.target
@@ -482,9 +623,9 @@ ExecStart=/usr/bin/python3 $COLLECTOR_TARGET --include-clamav-report
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF2
 
-  cat > "$CLAMAV_TIMER" <<EOF
+  cat > "$CLAMAV_TIMER" <<EOF2
 [Unit]
 Description=Run ITMS ClamAV scan every day at 12:00
 
@@ -495,7 +636,7 @@ Unit=itms-clamav-scan.service
 
 [Install]
 WantedBy=timers.target
-EOF
+EOF2
 }
 
 install_wazuh_agent() {
@@ -524,7 +665,7 @@ install_wazuh_agent() {
 }
 
 write_systemd_units() {
-  cat > "$SYSTEMD_SERVICE" <<EOF
+  cat > "$SYSTEMD_SERVICE" <<EOF2
 [Unit]
 Description=Push ITMS inventory snapshot
 After=network-online.target
@@ -537,9 +678,9 @@ ExecStart=/usr/bin/python3 $COLLECTOR_TARGET
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF2
 
-  cat > "$SYSTEMD_TIMER" <<EOF
+  cat > "$SYSTEMD_TIMER" <<EOF2
 [Unit]
 Description=Run ITMS inventory refresh every $REFRESH_HOURS hours
 
@@ -550,7 +691,7 @@ Unit=itms-inventory-refresh.service
 
 [Install]
 WantedBy=timers.target
-EOF
+EOF2
 }
 
 run_initial_inventory_push() {
@@ -587,7 +728,6 @@ run_initial_inventory_push() {
   fi
 
   set -a
-  # shellcheck disable=SC1090
   . "$ENV_FILE"
   set +a
   "${collector_args[@]}"
@@ -763,15 +903,32 @@ main() {
   apt-get update
   apt-get install -y "${INSTALL_PACKAGES[@]}"
 
-  log 'Installing Salt minion when available'
-  install_salt_minion || true
+  salt_install_succeeded=false
+  if [[ -n "$SALT_MASTER" ]]; then
+    log 'Installing Salt minion for the configured Salt master'
+    if install_salt_minion; then
+      salt_install_succeeded=true
+    else
+      log 'Salt Minion installation failed while --salt-master was provided. Aborting bootstrap because Salt enrollment is required for this path.'
+      exit 1
+    fi
+  else
+    log 'Installing Salt minion when available'
+    if install_salt_minion; then
+      salt_install_succeeded=true
+    else
+      log 'Continuing without Salt because no --salt-master was requested.'
+    fi
+  fi
 
   log 'Installing Wazuh agent'
   install_wazuh_agent
 
   log 'Deploying ITMS collector and config'
   install_collector
-  configure_salt_minion
+  if [[ "$salt_install_succeeded" == "true" ]]; then
+    configure_salt_minion
+  fi
   configure_wazuh_agent
   install_openscap_runner
   write_env_file
@@ -781,12 +938,14 @@ main() {
 
   log 'Enabling services'
   systemctl daemon-reload
-  systemctl enable --now salt-minion || true
+  if [[ "$salt_install_succeeded" == "true" ]]; then
+    systemctl enable --now salt-minion || true
+  fi
   systemctl enable --now clamav-daemon || true
   systemctl enable --now clamav-freshclam || true
   systemctl enable --now wazuh-agent || true
   systemctl enable --now itms-inventory-refresh.timer
-  if [[ -n "$SALT_MASTER" ]]; then
+  if [[ "$salt_install_succeeded" == "true" && -n "$SALT_MASTER" ]]; then
     systemctl restart salt-minion || true
   fi
   if [[ -n "$WAZUH_MANAGER" ]]; then
