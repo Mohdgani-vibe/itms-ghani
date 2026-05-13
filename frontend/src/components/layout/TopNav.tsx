@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
   Search, Bell, MonitorSmartphone, ChevronDown, Moon, LogOut
 } from 'lucide-react';
 import { apiRequest, resolveWebSocketUrl } from '../../lib/api';
+import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
+import { getPageAccessRedirect } from '../../lib/portalGuards';
 import { clearStoredSession, getPortalSegmentForRole, getPreferredPortalPath, getStoredSession } from '../../lib/session';
+import { getTopNavNotificationAccess } from '../../lib/topNavNotifications';
 import { getStoredTheme, toggleStoredTheme, type AppTheme } from '../../lib/theme';
 
 interface NotificationAnnouncement {
@@ -19,23 +22,15 @@ interface NotificationChatChannel {
   id: string;
   name: string;
   kind: string;
-}
-
-interface NotificationChatMessage {
-  id: string;
-  body: string;
-  createdAt: string;
-  author: {
-    id: string;
-    fullName: string;
-  };
+  createdAt?: string;
+  latestMessage?: ChatLatestMessageLike;
 }
 
 interface NotificationChatItem {
   id: string;
   name: string;
   kind: string;
-  latestMessage?: NotificationChatMessage;
+  latestMessage?: NotificationChatChannel['latestMessage'];
 }
 
 interface NotificationRequest {
@@ -86,7 +81,7 @@ const portalNavItems = {
   admin: [
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
-    { name: 'Stock Inventory', path: '/stock' },
+    { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
     { name: 'Requests', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
@@ -97,6 +92,17 @@ const portalNavItems = {
   it: [
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
+    { name: 'Alerts', path: '/alerts' },
+    { name: 'Requests', path: '/requests' },
+    { name: 'Gatepass', path: '/gatepass' },
+    { name: 'Chat', path: '/chat' },
+    { name: 'Announcements', path: '/announcements' },
+    { name: 'View Settings', path: '/settings' },
+  ],
+  audit: [
+    { name: 'Users', path: '/users' },
+    { name: 'Patch', path: '/patch' },
+    { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
     { name: 'Requests', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
@@ -128,10 +134,13 @@ export default function TopNav() {
   const session = getStoredSession();
   const sessionToken = session?.token || '';
   const sessionRole = session?.user.role || '';
-  const portalMatch = location.pathname.match(/^\/(admin|it|emp)(?:\/|$)/);
+  const isAuditor = sessionRole === 'auditor';
+  const notificationAccess = getTopNavNotificationAccess(sessionRole);
+  const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/);
   const currentPortal = portalMatch?.[1] || (session ? getPortalSegmentForRole(session.user.role) : 'emp');
   const basePath = portalMatch ? `/${portalMatch[1]}` : `/${currentPortal}`;
-  const navItems = portalNavItems[currentPortal as keyof typeof portalNavItems] || portalNavItems.emp;
+  const navItems = (portalNavItems[currentPortal as keyof typeof portalNavItems] || portalNavItems.emp)
+    .filter((item) => !session || !getPageAccessRedirect(`${basePath}${item.path}`, session.user));
   const notificationAudiences = getNotificationAudiences(sessionRole);
 
   const isActive = (path: string) => {
@@ -160,10 +169,20 @@ export default function TopNav() {
           : `/api/requests?paginate=1&page=1&page_size=${NOTIFICATION_PAGE_SIZE}`;
 
         notificationAudiences.forEach((audience) => announcementParams.append('audience', audience));
+        const shouldLoadAnnouncements = notificationAccess.announcements;
+        const shouldLoadChat = notificationAccess.chat;
+        const shouldLoadRequests = notificationAccess.requests;
+
         const [announcementResult, chatChannelsResult, requestsResult] = await Promise.allSettled([
-          apiRequest<NotificationListResponse<NotificationAnnouncement>>(`/api/announcements?${announcementParams.toString()}`),
-          apiRequest<NotificationListResponse<NotificationChatChannel>>(`/api/chat/channels?paginate=1&page=1&page_size=${NOTIFICATION_PAGE_SIZE}`),
-          apiRequest<NotificationListResponse<NotificationRequest>>(requestsPath),
+          shouldLoadAnnouncements
+            ? apiRequest<NotificationListResponse<NotificationAnnouncement>>(`/api/announcements?${announcementParams.toString()}`)
+            : Promise.resolve({ items: [], total: 0 }),
+          shouldLoadChat
+            ? apiRequest<NotificationListResponse<NotificationChatChannel>>(`/api/chat/channels?paginate=1&page=1&page_size=${NOTIFICATION_PAGE_SIZE}`)
+            : Promise.resolve({ items: [], total: 0 }),
+          shouldLoadRequests
+            ? apiRequest<NotificationListResponse<NotificationRequest>>(requestsPath)
+            : Promise.resolve({ items: [], total: 0 }),
         ]);
         if (!cancelled) {
           const announcementData = announcementResult.status === 'fulfilled' ? announcementResult.value : null;
@@ -173,26 +192,14 @@ export default function TopNav() {
           let chatCount = 0;
           if (chatChannelsResult.status === 'fulfilled') {
             const chatData = chatChannelsResult.value;
-            const latestMessageResults = await Promise.allSettled(
-              chatData.items.map(async (channel) => {
-                const messages = await apiRequest<NotificationListResponse<NotificationChatMessage>>(`/api/chat/channels/${channel.id}/messages?paginate=1&page=1&page_size=1`);
-                const latestMessage = messages.items?.[0];
-                return {
-                  id: channel.id,
-                  name: channel.name,
-                  kind: channel.kind,
-                  latestMessage,
-                } satisfies NotificationChatItem;
-              }),
-            );
-
-            chatItems = latestMessageResults
-              .flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []))
-              .sort((left, right) => {
-                const leftTime = left.latestMessage?.createdAt ? new Date(left.latestMessage.createdAt).getTime() : 0;
-                const rightTime = right.latestMessage?.createdAt ? new Date(right.latestMessage.createdAt).getTime() : 0;
-                return rightTime - leftTime;
-              });
+            chatItems = sortByRecentChatActivity((chatData.items ?? [])
+              .map((channel) => ({
+                id: channel.id,
+                name: channel.name,
+                kind: channel.kind,
+                createdAt: channel.createdAt,
+                latestMessage: channel.latestMessage,
+              })));
             chatCount = chatData.total || chatItems.length;
           }
 
@@ -217,7 +224,7 @@ export default function TopNav() {
 
     void loadNotifications();
 
-    if (sessionToken) {
+    if (sessionToken && notificationAccess.announcements) {
       announcementSocket = new WebSocket(announcementSocketUrl(), announcementSocketProtocols(sessionToken));
       announcementSocket.onmessage = () => {
         if (!cancelled) {
@@ -250,10 +257,10 @@ export default function TopNav() {
       window.removeEventListener(REQUESTS_UPDATED_EVENT, handleRequestUpdate);
       announcementSocket?.close();
     };
-  }, [location.pathname, notificationAudiences, sessionRole, sessionToken]);
+  }, [location.pathname, notificationAccess.announcements, notificationAccess.chat, notificationAccess.requests, notificationAudiences, sessionRole, sessionToken]);
 
-  const notificationSections = useMemo(() => {
-    return [
+  const notificationSections = (() => {
+    const sections = [
       {
         key: 'announcements',
         title: 'Announcements',
@@ -276,7 +283,13 @@ export default function TopNav() {
         items: requestNotifications,
       },
     ] as const;
-  }, [announcementNotifications, announcementTotal, basePath, chatNotifications, chatTotal, requestNotifications, requestTotal]);
+
+    if (sessionRole === 'auditor') {
+      return sections.filter((section) => section.key === 'announcements');
+    }
+
+    return sections;
+  })();
 
   const totalNotificationCount = announcementTotal + chatTotal + requestTotal;
 
@@ -304,10 +317,10 @@ export default function TopNav() {
               <NavLink
                 key={item.name}
                 to={`${basePath}${item.path}`}
-                className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
+                className={`portal-nav-link px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
                   active
-                    ? 'bg-brand-600 dark:bg-brand-600 text-white shadow-sm'
-                    : 'text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800/50 hover:text-zinc-900 dark:hover:text-white'
+                    ? 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
+                    : 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
                 }`}
               >
                 {item.name}
@@ -318,22 +331,22 @@ export default function TopNav() {
 
         {/* Right Actions */}
         <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-          <div className="relative hidden lg:block">
+          {!isAuditor ? <div className="relative hidden lg:block">
             <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
             </div>
             <input
               type="text"
-              className="block w-48 pl-9 pr-3 py-1.5 border border-zinc-200 dark:border-zinc-800 rounded bg-zinc-50 dark:bg-zinc-900 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-brand-500 focus:border-brand-500 sm:text-xs transition-colors"
+              className="block w-48 rounded border border-zinc-200 bg-white py-1.5 pl-9 pr-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500 sm:text-xs"
               placeholder="Search..."
             />
-          </div>
+          </div> : null}
           
-          <div className="relative">
+          {!isAuditor ? <div className="relative">
             <button
               type="button"
               onClick={() => setIsNotificationsOpen((current) => !current)}
-              className="p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white rounded-md transition-colors relative"
+              className="relative rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white dark:focus:ring-zinc-700"
             >
               <Bell className="h-4 w-4" />
               {totalNotificationCount > 0 ? <span className="absolute top-1 right-1 block h-1.5 w-1.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-900" /> : null}
@@ -355,7 +368,7 @@ export default function TopNav() {
                         key={section.key}
                         to={section.href}
                         onClick={() => setIsNotificationsOpen(false)}
-                        className="rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700"
+                        className="rounded-lg border border-zinc-200 bg-white px-2 py-2 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
                       >
                         <div>{section.title}</div>
                         <div className="mt-1 text-sm text-zinc-900 dark:text-white">{section.total}</div>
@@ -368,18 +381,18 @@ export default function TopNav() {
                     <div key={section.key} className="border-b border-zinc-100 px-4 py-3 last:border-b-0 dark:border-zinc-800">
                       <div className="mb-2 flex items-center justify-between gap-3">
                         <div className="text-xs font-bold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{section.title}</div>
-                        <Link to={section.href} onClick={() => setIsNotificationsOpen(false)} className="text-xs font-bold text-brand-600 hover:text-brand-500">
+                        <Link to={section.href} onClick={() => setIsNotificationsOpen(false)} className="text-xs font-bold text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
                           Open
                         </Link>
                       </div>
                       {section.items.length === 0 ? (
-                        <div className="rounded-lg bg-zinc-50 px-3 py-3 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">No recent {section.title.toLowerCase()}.</div>
+                        <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-xs text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">No recent {section.title.toLowerCase()}.</div>
                       ) : null}
                       {section.key === 'announcements' ? (section.items as NotificationAnnouncement[]).map((item) => (
-                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-100 px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/70">
+                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-200 bg-white px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/70">
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-sm font-semibold text-zinc-900 dark:text-white">{item.title}</div>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${item.urgent ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300'}`}>
+                            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
                               {item.urgent ? 'Urgent' : item.audience}
                             </span>
                           </div>
@@ -387,13 +400,13 @@ export default function TopNav() {
                         </Link>
                       )) : null}
                       {section.key === 'chat' ? (section.items as NotificationChatItem[]).map((item) => (
-                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-100 px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/70">
+                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-200 bg-white px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/70">
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-sm font-semibold text-zinc-900 dark:text-white">{item.name}</div>
-                            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300">{item.kind}</span>
+                            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{item.kind}</span>
                           </div>
                           <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                            {item.latestMessage ? `${item.latestMessage.author.fullName}: ${item.latestMessage.body}` : 'No recent messages'}
+                            {chatPreviewText(item.latestMessage, 'No recent messages')}
                           </div>
                           <div className="mt-1 text-[11px] text-zinc-400 dark:text-zinc-500">
                             {item.latestMessage?.createdAt ? new Date(item.latestMessage.createdAt).toLocaleString() : 'Waiting for activity'}
@@ -401,10 +414,10 @@ export default function TopNav() {
                         </Link>
                       )) : null}
                       {section.key === 'requests' ? (section.items as NotificationRequest[]).map((item) => (
-                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-100 px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800/70">
+                        <Link key={item.id} to={section.href} onClick={() => setIsNotificationsOpen(false)} className="mb-2 block rounded-lg border border-zinc-200 bg-white px-3 py-3 transition last:mb-0 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/70">
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-sm font-semibold text-zinc-900 dark:text-white">{item.title}</div>
-                            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">{formatRequestStatus(item.status)}</span>
+                            <span className="rounded-full border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">{formatRequestStatus(item.status)}</span>
                           </div>
                           <div className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{item.type} • {new Date(item.createdAt).toLocaleString()}</div>
                         </Link>
@@ -414,9 +427,9 @@ export default function TopNav() {
                 </div>
               </div>
             ) : null}
-          </div>
+          </div> : null}
           
-          <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1"></div>
+          {!isAuditor ? <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 mx-1"></div> : null}
 
           <div className="relative">
              <button 
@@ -424,31 +437,31 @@ export default function TopNav() {
                   setIsNotificationsOpen(false);
                   setIsMenuOpen(!isMenuOpen);
                 }}
-                className="flex items-center gap-2 pl-1 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 p-1 rounded-md transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 group"
+                className="group flex items-center gap-2 rounded-md border border-zinc-200 bg-white p-1 pl-1 transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/50 dark:hover:border-zinc-700 dark:focus:ring-zinc-700"
              >
-                <div className="h-7 w-7 rounded-sm bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-brand-700 dark:text-brand-400 font-bold text-xs ring-1 ring-black/5 dark:ring-white/10">
+                <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-zinc-200 bg-white text-zinc-700 font-bold text-xs ring-1 ring-black/5 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:ring-white/10">
                   {session?.shortName || 'SA'}
                 </div>
                 <ChevronDown className={`h-3 w-3 text-zinc-400 dark:text-zinc-500 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
              </button>
              
              {isMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-lg rounded-lg py-1 z-50 animate-in fade-in slide-in-from-top-2">
+                 <div className="absolute right-0 mt-2 w-48 rounded-lg border border-zinc-200 bg-white py-1 shadow-lg z-50 animate-in fade-in slide-in-from-top-2 dark:border-zinc-800 dark:bg-zinc-900">
                    <button 
                       onClick={() => {
                        setTheme(toggleStoredTheme());
                          setIsMenuOpen(false);
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 flex items-center transition-colors"
+                     className="flex w-full items-center px-4 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
                    >
                       <Moon className="w-4 h-4 mr-2" />
                      {theme === 'dark' ? 'Use Light Mode' : 'Use Dark Mode'}
                    </button>
-                   {session ? (
+                   {session && !isAuditor ? (
                      <Link
                        to={getPreferredPortalPath(session.user)}
                        onClick={() => setIsMenuOpen(false)}
-                       className="block w-full px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
+                       className="block w-full px-4 py-2 text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
                      >
                        My Profile
                      </Link>
@@ -459,7 +472,7 @@ export default function TopNav() {
                        clearStoredSession();
                          window.location.href = '/login';
                       }}
-                      className="w-full text-left px-4 py-2 text-sm text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-900/20 flex items-center transition-colors"
+                       className="flex w-full items-center px-4 py-2 text-left text-sm text-zinc-700 transition-colors hover:bg-zinc-50 dark:text-zinc-300 dark:hover:bg-zinc-800/50"
                    >
                       <LogOut className="w-4 h-4 mr-2" />
                       Secure Logout

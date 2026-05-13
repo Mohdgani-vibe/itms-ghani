@@ -3,32 +3,38 @@ import { Outlet, useLocation } from 'react-router-dom';
 import TopNav from './TopNav';
 import { getAllowedPortalSegments, getPortalSegmentForRole, getStoredSession } from '../../lib/session';
 
-type PortalSegment = 'admin' | 'it' | 'emp';
+type PortalSegment = 'admin' | 'it' | 'audit' | 'emp';
 
 const preloadedChunks = new Set<string>();
 
 const portalChunkLoaders: Record<PortalSegment, Array<{ key: string; matches: string[]; load: () => Promise<unknown> }>> = {
   admin: [
-    { key: 'devices', matches: ['/devices'], load: () => import('../../pages/Devices') },
-    { key: 'alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
-    { key: 'requests', matches: ['/requests'], load: () => import('../../pages/live/RequestsQueuePage') },
-    { key: 'gatepass', matches: ['/gatepass'], load: () => import('../../pages/Gatepass') },
-    { key: 'chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
-    { key: 'settings', matches: ['/settings'], load: () => import('../../pages/live/SettingsPage') },
+    { key: 'admin:devices', matches: ['/devices'], load: () => import('../../pages/Devices') },
+    { key: 'admin:alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
+    { key: 'admin:requests', matches: ['/requests'], load: () => import('../../pages/live/RequestsQueuePage') },
+    { key: 'admin:gatepass', matches: ['/gatepass'], load: () => import('../../pages/Gatepass') },
+    { key: 'admin:chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
+    { key: 'admin:settings', matches: ['/settings'], load: () => import('../../pages/live/SettingsPage') },
+    { key: 'admin:inventory', matches: ['/inventory'], load: () => import('../../pages/Inventory') },
   ],
   it: [
-    { key: 'devices', matches: ['/devices'], load: () => import('../../pages/Devices') },
-    { key: 'alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
-    { key: 'patch', matches: ['/patch'], load: () => import('../../pages/live/PatchDashboardPage') },
-    { key: 'requests', matches: ['/requests'], load: () => import('../../pages/live/RequestsQueuePage') },
-    { key: 'chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
-    { key: 'settings', matches: ['/settings'], load: () => import('../../pages/live/SettingsPage') },
+    { key: 'it:devices', matches: ['/devices'], load: () => import('../../pages/Devices') },
+    { key: 'it:alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
+    { key: 'it:patch', matches: ['/patch'], load: () => import('../../pages/live/PatchDashboardPage') },
+    { key: 'it:requests', matches: ['/requests'], load: () => import('../../pages/live/RequestsQueuePage') },
+    { key: 'it:chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
+    { key: 'it:settings', matches: ['/settings'], load: () => import('../../pages/live/SettingsPage') },
+  ],
+  audit: [
+    { key: 'audit:devices', matches: ['/devices'], load: () => import('../../pages/Devices') },
+    { key: 'audit:alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
+    { key: 'audit:announcements', matches: ['/announcements'], load: () => import('../../pages/Announcements') },
   ],
   emp: [
-    { key: 'alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
-    { key: 'requests', matches: ['/requests'], load: () => import('../../pages/live/MyRequestsPage') },
-    { key: 'chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
-    { key: 'announcements', matches: ['/announcements'], load: () => import('../../pages/Announcements') },
+    { key: 'emp:alerts', matches: ['/alerts'], load: () => import('../../pages/Alerts') },
+    { key: 'emp:requests', matches: ['/requests'], load: () => import('../../pages/live/MyRequestsPage') },
+    { key: 'emp:chat', matches: ['/chat'], load: () => import('../../pages/Chat') },
+    { key: 'emp:announcements', matches: ['/announcements'], load: () => import('../../pages/Announcements') },
   ],
 };
 
@@ -49,15 +55,16 @@ function scheduleIdle(task: () => void) {
 export default function PortalLayout() {
   const location = useLocation();
   const session = getStoredSession();
-  const sessionUser = session?.user;
+  const sessionRole = session?.user.role || '';
 
   useEffect(() => {
-    if (!sessionUser?.role) {
+    if (!sessionRole) {
       return;
     }
 
-    const portalFromPath = location.pathname.match(/^\/(admin|it|emp)(?:\/|$)/)?.[1] as PortalSegment | undefined;
-    const fallbackPortal = getAllowedPortalSegments(sessionUser)[0] || getPortalSegmentForRole(sessionUser.role);
+    const allowedPortals = session?.user ? getAllowedPortalSegments(session.user) : [];
+    const portalFromPath = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/)?.[1] as PortalSegment | undefined;
+    const fallbackPortal = allowedPortals[0] || getPortalSegmentForRole(sessionRole);
     const portal = (portalFromPath || fallbackPortal) as PortalSegment;
     const candidates = portalChunkLoaders[portal].filter((candidate) => !candidate.matches.some((match) => location.pathname.includes(match)));
 
@@ -71,12 +78,12 @@ export default function PortalLayout() {
         void candidate.load();
       });
     });
-  }, [location.pathname, sessionUser]);
+  }, [location.pathname, session, sessionRole]);
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100 flex flex-col">
       <TopNav />
-      <main className="flex-1 overflow-hidden flex flex-col">
+      <main className="flex-1 flex flex-col">
          <Outlet />
       </main>
     </div>

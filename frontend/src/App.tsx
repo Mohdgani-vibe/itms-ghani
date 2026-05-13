@@ -1,20 +1,21 @@
-import { Suspense, lazy, type ReactElement, useEffect, useState } from 'react';
+import { Suspense, lazy, type ComponentType, type ReactElement, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavigationMetrics from './components/NavigationMetrics';
-import { getAllowedPortalSegments, getPreferredPortalPath, getStoredSession } from './lib/session';
+import { getPreferredPortalPath, getStoredSession } from './lib/session';
+import { getPageAccessRedirect, getPortalAccessRedirect, getRoleAccessRedirect } from './lib/portalGuards';
 import { validateStoredSession } from './lib/api';
 
 const Login = lazy(() => import('./pages/Login'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPage = lazy(() => import('./pages/live/DashboardPage'));
 const UsersPage = lazy(() => import('./pages/live/UsersPage'));
-const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
+const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage') as Promise<{ default: ComponentType<any> }>);
 const Devices = lazy(() => import('./pages/Devices'));
 const DeviceDetailPage = lazy(() => import('./pages/live/DeviceDetailPage'));
 const SettingsPage = lazy(() => import('./pages/live/SettingsPage'));
 const PatchDashboardPage = lazy(() => import('./pages/live/PatchDashboardPage'));
 const PatchList = lazy(() => import('./pages/PatchList'));
-const Stock = lazy(() => import('./pages/Stock'));
+const Inventory = lazy(() => import('./pages/Inventory'));
 const Gatepass = lazy(() => import('./pages/Gatepass'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Alerts = lazy(() => import('./pages/Alerts'));
@@ -23,6 +24,7 @@ const MyAssetsPage = lazy(() => import('./pages/live/MyAssetsPage'));
 const MyRequestsPage = lazy(() => import('./pages/live/MyRequestsPage'));
 const RequestsQueuePage = lazy(() => import('./pages/live/RequestsQueuePage'));
 const TerminalConsole = lazy(() => import('./pages/TerminalConsole'));
+const SshTerminalPage = lazy(() => import('./pages/SshTerminalPage'));
 
 function RouteFallback() {
   return (
@@ -35,12 +37,6 @@ function RouteFallback() {
 }
 
 function LoginRoute() {
-  const session = getStoredSession();
-
-  if (session) {
-    return <Navigate to={getPreferredPortalPath(session.user)} replace />;
-  }
-
   return <Login />;
 }
 
@@ -98,11 +94,29 @@ function RequireAuth({ children }: { children: ReactElement }) {
     return <RouteFallback />;
   }
 
-  const currentPortalMatch = location.pathname.match(/^\/(admin|it|emp)(?:\/|$)/);
-  const allowedPortals = getAllowedPortalSegments(session.user);
+  const portalAccessRedirect = getPortalAccessRedirect(location.pathname, session.user);
+  if (portalAccessRedirect) {
+    return <Navigate to={portalAccessRedirect} replace />;
+  }
 
-  if (currentPortalMatch && !allowedPortals.includes(currentPortalMatch[1])) {
-    return <Navigate to={getPreferredPortalPath(session.user)} replace />;
+  const pageAccessRedirect = getPageAccessRedirect(location.pathname, session.user);
+  if (pageAccessRedirect) {
+    return <Navigate to={pageAccessRedirect} replace />;
+  }
+
+  return children;
+}
+
+function RequireRoles({ children, roles }: { children: ReactElement; roles: string[] }) {
+  const session = getStoredSession();
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const roleAccessRedirect = getRoleAccessRedirect(session.user, roles);
+  if (roleAccessRedirect) {
+    return <Navigate to={roleAccessRedirect} replace />;
   }
 
   return children;
@@ -117,7 +131,8 @@ function App() {
           <Route path="/login" element={<LoginRoute />} />
           <Route path="/portal/superadmin/gatepass" element={<Navigate to="/admin/gatepass" replace />} />
           <Route path="/portal/it/gatepass" element={<Navigate to="/it/gatepass" replace />} />
-          <Route path="/terminal/:minionId" element={<RequireAuth><TerminalConsole /></RequireAuth>} />
+          <Route path="/terminal/:minionId" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><TerminalConsole /></RequireRoles></RequireAuth>} />
+          <Route path="/ssh/assets/:id" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><SshTerminalPage /></RequireRoles></RequireAuth>} />
 
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -126,7 +141,7 @@ function App() {
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
-            <Route path="stock" element={<Stock />} />
+            <Route path="inventory" element={<Inventory />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
@@ -144,13 +159,31 @@ function App() {
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
-            <Route path="stock" element={<Stock />} />
+            <Route path="inventory" element={<Inventory />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueuePage />} />
+            <Route path="announcements" element={<Announcements />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+
+          <Route path="/audit" element={<RequireAuth><PortalLayout /></RequireAuth>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="users/:id" element={<UserProfilePage />} />
+            <Route path="devices" element={<Devices />} />
+            <Route path="devices/:id" element={<DeviceDetailPage />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="alerts" element={<Alerts />} />
+            <Route path="gatepass" element={<Gatepass />} />
+            <Route path="chat" element={<Chat />} />
+            <Route path="requests" element={<RequestsQueuePage />} />
+            <Route path="patch" element={<PatchDashboardPage />} />
+            <Route path="patch/devices" element={<PatchList />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

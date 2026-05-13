@@ -43,11 +43,14 @@ interface AuthUserPayload {
 }
 
 function normalizePortals(role: string, portals?: string[]) {
-  const fallback = role.toLowerCase().includes('super')
+  const normalizedRole = role.toLowerCase();
+  const fallback = normalizedRole.includes('super')
     ? ['super_admin', 'it_team', 'employee']
-    : role.toLowerCase().includes('it')
+    : normalizedRole.includes('it')
       ? ['it_team', 'employee']
-      : ['employee'];
+      : normalizedRole.includes('audit')
+        ? ['auditor']
+        : ['employee'];
 
   const candidates = (portals && portals.length > 0 ? portals : fallback)
     .map((portal) => portal.trim())
@@ -88,11 +91,15 @@ function normalizePortalPath(defaultPortal: string | undefined, role: string) {
     return '/it/dashboard';
   }
 
+  if (defaultPortal === '/audit/dashboard') {
+    return '/audit/dashboard';
+  }
+
   if (defaultPortal === '/employee/dashboard') {
     return '/emp/dashboard';
   }
 
-  if (/^\/(admin|it|emp)(?:\/|$)/.test(defaultPortal)) {
+  if (/^\/(admin|it|audit|emp)(?:\/|$)/.test(defaultPortal)) {
     return defaultPortal;
   }
 
@@ -122,6 +129,10 @@ export function getPortalSegmentForRole(role: string) {
     return 'it';
   }
 
+  if (normalizedRole.includes('audit')) {
+    return 'audit';
+  }
+
   return 'emp';
 }
 
@@ -134,6 +145,10 @@ export function getDefaultPortalForRole(role: string) {
 
   if (segment === 'it') {
     return '/it/dashboard';
+  }
+
+  if (segment === 'audit') {
+    return '/audit/dashboard';
   }
 
   return '/emp/dashboard';
@@ -158,6 +173,8 @@ export function getAllowedPortalSegments(user: Pick<SessionUser, 'role' | 'porta
       allowed.add('admin');
     } else if (portal === 'it_team') {
       allowed.add('it');
+    } else if (portal === 'auditor') {
+      allowed.add('audit');
     } else if (portal === 'employee') {
       allowed.add('emp');
     }
@@ -179,6 +196,10 @@ export function getShortName(fullName: string, role: string) {
 
   if (normalizedRole.includes('it')) {
     return 'IT';
+  }
+
+  if (normalizedRole.includes('audit')) {
+    return 'AU';
   }
 
   const initials = fullName
