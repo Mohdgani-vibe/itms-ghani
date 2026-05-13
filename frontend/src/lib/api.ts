@@ -14,6 +14,7 @@ export class ApiError extends Error {
 }
 
 let authRedirectInFlight = false;
+const SESSION_VALIDATE_TIMEOUT_MS = 8000;
 
 export function resetAuthRedirectState() {
   authRedirectInFlight = false;
@@ -103,10 +104,12 @@ export async function apiRequest<T>(url: string, init: RequestInit = {}) {
       }
     }
 
-    const message = response.status === 502
-      ? 'Backend is not running. Start the API and try again.'
-      : typeof payload === 'object' && payload && 'error' in payload
+    const message = typeof payload === 'object' && payload && 'error' in payload
       ? String(payload.error)
+      : typeof payload === 'string' && payload.trim()
+      ? payload.trim()
+      : response.status === 502
+      ? 'Backend is not running. Start the API and try again.'
       : response.statusText || 'Request failed';
 
     throw new ApiError(message, response.status);
@@ -121,11 +124,17 @@ export async function validateStoredSession() {
     return false;
   }
 
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller
+    ? globalThis.setTimeout(() => controller.abort(), SESSION_VALIDATE_TIMEOUT_MS)
+    : null;
+
   try {
     const response = await fetch(resolveApiUrl('/api/auth/me'), {
       headers: {
         Authorization: `Bearer ${session.token}`,
       },
+      signal: controller?.signal,
     });
 
     if (!response.ok) {
@@ -136,5 +145,9 @@ export async function validateStoredSession() {
     return true;
   } catch {
     return false;
+  } finally {
+    if (timeoutId !== null) {
+      globalThis.clearTimeout(timeoutId);
+    }
   }
 }
