@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$REPO_ROOT/backend/.env}"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$(dirname "$BACKEND_ENV_FILE")/.env.secrets}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:3001}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
@@ -27,9 +28,9 @@ Usage:
 
 Options:
   --backend-url URL          Backend base URL, default: http://127.0.0.1:3001
-  --admin-email EMAIL        Admin login email, default: DEFAULT_ADMIN_EMAIL from backend/.env
-  --admin-password PASS      Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend/.env
-  --token TOKEN              Inventory ingest token, default: INVENTORY_INGEST_TOKEN from backend/.env
+  --admin-email EMAIL        Admin login email, default: DEFAULT_ADMIN_EMAIL from backend env files
+  --admin-password PASS      Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend env files
+  --token TOKEN              Inventory ingest token, default: INVENTORY_INGEST_TOKEN from backend env files
   --hostname NAME            Hostname to match in ITMS, default: current short hostname
   --asset-id UUID            Skip asset discovery and use this asset id
   --wazuh-agent-id ID        Wazuh agent id to report through the collector
@@ -61,11 +62,9 @@ require_command() {
 }
 
 load_env_defaults() {
-  if [[ -f "$BACKEND_ENV_FILE" ]]; then
-    set -a
+  if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
     # shellcheck disable=SC1090
-    source "$BACKEND_ENV_FILE"
-    set +a
+    source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
     ADMIN_EMAIL="${ADMIN_EMAIL:-${DEFAULT_ADMIN_EMAIL:-}}"
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD:-}}"
     INGEST_TOKEN="${INGEST_TOKEN:-${INVENTORY_INGEST_TOKEN:-}}"

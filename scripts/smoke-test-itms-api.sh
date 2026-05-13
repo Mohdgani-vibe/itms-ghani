@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="$REPO_ROOT/backend/.env"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$(dirname "$BACKEND_ENV_FILE")/.env.secrets}"
 API_BASE_URL="${API_BASE_URL:-http://localhost:3001}"
 ADMIN_EMAIL="${DEFAULT_ADMIN_EMAIL:-admin@zerodha.com}"
 ADMIN_PASSWORD="${DEFAULT_ADMIN_PASSWORD:-replace-with-a-strong-admin-password}"
@@ -18,11 +19,9 @@ require_command() {
 require_command curl
 require_command python3
 
-if [[ -f "$BACKEND_ENV_FILE" ]]; then
-  set -a
+if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
   # shellcheck disable=SC1090
-  source "$BACKEND_ENV_FILE"
-  set +a
+  source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
   ADMIN_EMAIL="${DEFAULT_ADMIN_EMAIL:-$ADMIN_EMAIL}"
   ADMIN_PASSWORD="${DEFAULT_ADMIN_PASSWORD:-$ADMIN_PASSWORD}"
 fi
@@ -84,8 +83,8 @@ if attempt_login "$ADMIN_EMAIL" "$ADMIN_PASSWORD"; then
 elif [[ -n "$SEEDED_ADMIN_PASSWORD" && "$ADMIN_PASSWORD" != "$SEEDED_ADMIN_PASSWORD" ]] && attempt_login "$ADMIN_EMAIL" "$SEEDED_ADMIN_PASSWORD"; then
   login_payload="$LOGIN_BODY"
   login_source="seeded fallback password"
-  echo "Warning: DEFAULT_ADMIN_PASSWORD in $BACKEND_ENV_FILE does not match the live admin credential." >&2
-  echo "Warning: ITMS only seeds the default admin on first insert, so changing backend/.env does not rotate the stored password automatically." >&2
+  echo "Warning: DEFAULT_ADMIN_PASSWORD in the backend env files does not match the live admin credential." >&2
+  echo "Warning: ITMS only seeds the default admin on first insert, so changing the env files does not rotate the stored password automatically." >&2
 else
   echo "Admin login failed for $ADMIN_EMAIL." >&2
   echo "Configured password status: $LOGIN_STATUS" >&2

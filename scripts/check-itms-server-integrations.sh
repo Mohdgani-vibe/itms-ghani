@@ -4,12 +4,11 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$REPO_ROOT/backend/.env}"
 BACKEND_ENV_DIR="$(dirname "$BACKEND_ENV_FILE")"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$BACKEND_ENV_DIR/.env.secrets}"
 
-if [[ -f "$BACKEND_ENV_FILE" ]]; then
-  set -a
+if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
   # shellcheck disable=SC1090
-  source "$BACKEND_ENV_FILE"
-  set +a
+  source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
 fi
 
 print_check() {
@@ -58,6 +57,10 @@ service_status() {
 
 env_value() {
   local key="$1"
+  if [[ -f "$BACKEND_SECRETS_FILE" ]]; then
+    grep -E "^${key}=" "$BACKEND_SECRETS_FILE" | tail -n 1 | cut -d'=' -f2-
+    return 0
+  fi
   if [[ -f "$BACKEND_ENV_FILE" ]]; then
     grep -E "^${key}=" "$BACKEND_ENV_FILE" | tail -n 1 | cut -d'=' -f2-
   fi
