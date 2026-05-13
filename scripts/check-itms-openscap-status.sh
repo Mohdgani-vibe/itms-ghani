@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$REPO_ROOT/backend/.env}"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$(dirname "$BACKEND_ENV_FILE")/.env.secrets}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:3001}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
@@ -21,8 +22,8 @@ Usage:
 
 Options:
   --backend-url URL      Backend base URL, default: http://127.0.0.1:3001
-  --admin-email EMAIL    Admin login email, default: DEFAULT_ADMIN_EMAIL from backend/.env
-  --admin-password PASS  Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend/.env
+  --admin-email EMAIL    Admin login email, default: DEFAULT_ADMIN_EMAIL from backend env files
+  --admin-password PASS  Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend env files
   --hostname NAME        Hostname to match in ITMS, default: current short hostname
   --asset-id UUID        Skip asset discovery and use this asset id
   --scope MODE           Timer scope: auto, user, or system. Default: auto
@@ -39,11 +40,9 @@ require_command() {
 }
 
 load_env_defaults() {
-  if [[ -f "$BACKEND_ENV_FILE" ]]; then
-    set -a
+  if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
     # shellcheck disable=SC1090
-    source "$BACKEND_ENV_FILE"
-    set +a
+    source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
     ADMIN_EMAIL="${ADMIN_EMAIL:-${DEFAULT_ADMIN_EMAIL:-}}"
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD:-}}"
   fi
@@ -137,11 +136,6 @@ discover_asset() {
     map(select((.hostname // "") == $host or (.name // "") == $host or (.asset_tag // "") == $host))
     | .[0].id // empty
   ')"
-
-  if [[ -z "$ASSET_ID" ]]; then
-    echo "Unable to find asset for hostname ${HOSTNAME_MATCH}" >&2
-    exit 1
-  fi
 }
 
 determine_scope() {
@@ -221,6 +215,11 @@ print_timer_status() {
 }
 
 print_latest_alert() {
+  if [[ -z "$ASSET_ID" ]]; then
+    printf 'null'
+    return 0
+  fi
+
   local alert_json
   alert_json="$(fetch_global_openscap_alerts)"
   printf '%s' "$alert_json" | jq -c --arg assetId "$ASSET_ID" '
@@ -264,13 +263,18 @@ main() {
     jq -n \
       --arg assetId "$ASSET_ID" \
       --arg hostname "$HOSTNAME_MATCH" \
+      --arg assetMatched "$(if [[ -n "$ASSET_ID" ]]; then printf true; else printf false; fi)" \
       --argjson timer "$timer_json" \
       --argjson latestAlert "$alert_json" \
-      '{assetId:$assetId, hostname:$hostname, timer:$timer, latestAlert:$latestAlert}'
+      '{assetId:$assetId, hostname:$hostname, assetMatched:($assetMatched == "true"), timer:$timer, latestAlert:$latestAlert}'
     return 0
   fi
 
-  printf 'Host asset id: %s\n' "$ASSET_ID"
+  if [[ -n "$ASSET_ID" ]]; then
+    printf 'Host asset id: %s\n' "$ASSET_ID"
+  else
+    printf 'Host asset id: not found for hostname %s\n' "$HOSTNAME_MATCH"
+  fi
   printf '%s\n' "$timer_json" | jq -r '
     if .installed == false then
       "OpenSCAP timer: not installed"
@@ -282,6 +286,10 @@ main() {
       "OpenSCAP service state: " + .service.active + " / " + .service.result + " / exit=" + .service.exitStatus
     end
   '
+  if [[ -z "$ASSET_ID" ]]; then
+    printf 'OpenSCAP alert: skipped because no ITMS asset matched hostname %s\n' "$HOSTNAME_MATCH"
+    return 0
+  fi
   if [[ "$alert_json" == 'null' ]]; then
     printf 'OpenSCAP alert: none found for asset %s\n' "$ASSET_ID"
     return 0

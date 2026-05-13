@@ -3,6 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$REPO_ROOT/backend/.env}"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$(dirname "$BACKEND_ENV_FILE")/.env.secrets}"
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:3001}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
@@ -24,8 +25,8 @@ Usage:
 Options:
   --action NAME         Alert action: acknowledge or resolve
   --backend-url URL     Backend base URL, default: http://127.0.0.1:3001
-  --admin-email EMAIL   Admin login email, default: DEFAULT_ADMIN_EMAIL from backend/.env
-  --admin-password PASS Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend/.env
+  --admin-email EMAIL   Admin login email, default: DEFAULT_ADMIN_EMAIL from backend env files
+  --admin-password PASS Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend env files
   --hostname NAME       Hostname to match in ITMS, default: current short hostname
   --asset-id UUID       Skip asset discovery and use this asset id
   --alert-id UUID       Apply the action to a specific alert id instead of auto-selecting the latest unresolved OpenSCAP alert
@@ -43,11 +44,9 @@ require_command() {
 }
 
 load_env_defaults() {
-  if [[ -f "$BACKEND_ENV_FILE" ]]; then
-    set -a
+  if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
     # shellcheck disable=SC1090
-    source "$BACKEND_ENV_FILE"
-    set +a
+    source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
     ADMIN_EMAIL="${ADMIN_EMAIL:-${DEFAULT_ADMIN_EMAIL:-}}"
     ADMIN_PASSWORD="${ADMIN_PASSWORD:-${DEFAULT_ADMIN_PASSWORD:-}}"
   fi
