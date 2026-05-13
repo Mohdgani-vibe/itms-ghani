@@ -55,7 +55,7 @@ export default function Pagination({ currentPage, totalItems, pageSize, onPageCh
             key={page}
             type="button"
             onClick={() => onPageChange(page)}
-            className={`rounded-lg px-3 py-2 text-sm font-semibold ${page === currentPage ? 'bg-zinc-900 text-white' : 'border border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50'}`}
+            className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
           >
             {page}
           </button>
