@@ -515,3 +515,4 @@ export default function UserProfilePage() {
     </div>
   );
 }
+export { UserProfilePage };
