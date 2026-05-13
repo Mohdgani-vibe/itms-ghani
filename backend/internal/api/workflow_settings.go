@@ -16,9 +16,21 @@ import (
 
 const workflowSettingsKey = "workflow_settings"
 
+var validPatchRings = map[string]struct{}{
+	"pilot":    {},
+	"standard": {},
+	"broad":    {},
+	"critical": {},
+}
+
 type workflowRoute struct {
 	Match      string `json:"match"`
 	AssigneeID string `json:"assigneeId"`
+}
+
+type patchDepartmentRing struct {
+	Match string `json:"match"`
+	Ring  string `json:"ring"`
 }
 
 type workflowSettings struct {
@@ -32,6 +44,11 @@ type workflowSettings struct {
 	RequestTypeRoutes         []workflowRoute `json:"requestTypeRoutes"`
 	RequestSubjectRoutes      []workflowRoute `json:"requestSubjectRoutes"`
 	ChatSubjectRoutes         []workflowRoute `json:"chatSubjectRoutes"`
+	PatchWindowEnabled        bool            `json:"patchWindowEnabled"`
+	PatchWindowStart          string          `json:"patchWindowStart"`
+	PatchWindowEnd            string          `json:"patchWindowEnd"`
+	PatchAllowedRings         []string        `json:"patchAllowedRings"`
+	PatchDepartmentRings      []patchDepartmentRing `json:"patchDepartmentRings"`
 	UpdatedAt                 string          `json:"updatedAt,omitempty"`
 }
 
@@ -46,7 +63,25 @@ type workflowSettingsResponse struct {
 	RequestTypeRoutes         []workflowRoute `json:"requestTypeRoutes"`
 	RequestSubjectRoutes      []workflowRoute `json:"requestSubjectRoutes"`
 	ChatSubjectRoutes         []workflowRoute `json:"chatSubjectRoutes"`
+	PatchWindowEnabled        bool            `json:"patchWindowEnabled"`
+	PatchWindowStart          string          `json:"patchWindowStart"`
+	PatchWindowEnd            string          `json:"patchWindowEnd"`
+	PatchAllowedRings         []string        `json:"patchAllowedRings"`
+	PatchDepartmentRings      []patchDepartmentRing `json:"patchDepartmentRings"`
 	UpdatedAt                 string          `json:"updatedAt,omitempty"`
+}
+
+type patchPolicyDecision struct {
+	Department     string   `json:"department"`
+	Ring           string   `json:"ring"`
+	AllowedRings   []string `json:"allowedRings,omitempty"`
+	WindowEnforced bool     `json:"windowEnforced"`
+	WindowStart    string   `json:"windowStart,omitempty"`
+	WindowEnd      string   `json:"windowEnd,omitempty"`
+	WithinWindow   bool     `json:"withinWindow"`
+	Allowed        bool     `json:"allowed"`
+	Reason         string   `json:"reason,omitempty"`
+	EvaluatedAt    string   `json:"evaluatedAt"`
 }
 
 func defaultWorkflowSettings() workflowSettings {
@@ -59,6 +94,11 @@ func defaultWorkflowSettings() workflowSettings {
 		RequestTypeRoutes:        []workflowRoute{},
 		RequestSubjectRoutes:     []workflowRoute{},
 		ChatSubjectRoutes:        []workflowRoute{},
+		PatchWindowEnabled:       false,
+		PatchWindowStart:         "22:00",
+		PatchWindowEnd:           "06:00",
+		PatchAllowedRings:        []string{},
+		PatchDepartmentRings:     []patchDepartmentRing{},
 	}
 }
 
@@ -77,7 +117,144 @@ func normalizeWorkflowSettings(settings workflowSettings) workflowSettings {
 	settings.RequestTypeRoutes = normalizeWorkflowRoutes(settings.RequestTypeRoutes)
 	settings.RequestSubjectRoutes = normalizeWorkflowRoutes(settings.RequestSubjectRoutes)
 	settings.ChatSubjectRoutes = normalizeWorkflowRoutes(settings.ChatSubjectRoutes)
+	settings.PatchWindowStart = normalizePatchWindowTime(settings.PatchWindowStart)
+	settings.PatchWindowEnd = normalizePatchWindowTime(settings.PatchWindowEnd)
+	settings.PatchAllowedRings = normalizePatchRingList(settings.PatchAllowedRings)
+	settings.PatchDepartmentRings = normalizePatchDepartmentRings(settings.PatchDepartmentRings)
+	if settings.PatchWindowStart == "" {
+		settings.PatchWindowStart = defaultWorkflowSettings().PatchWindowStart
+	}
+	if settings.PatchWindowEnd == "" {
+		settings.PatchWindowEnd = defaultWorkflowSettings().PatchWindowEnd
+	}
 	return settings
+}
+
+func normalizePatchWindowTime(value string) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	parsed, err := time.Parse("15:04", value)
+	if err != nil {
+		return ""
+	}
+	return parsed.Format("15:04")
+}
+
+func normalizePatchRing(value string) string {
+	value = strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(value))), " ")
+	if _, ok := validPatchRings[value]; !ok {
+		return ""
+	}
+	return value
+}
+
+func normalizePatchRingList(values []string) []string {
+	normalized := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		ring := normalizePatchRing(value)
+		if ring == "" {
+			continue
+		}
+		if _, ok := seen[ring]; ok {
+			continue
+		}
+		seen[ring] = struct{}{}
+		normalized = append(normalized, ring)
+	}
+	return normalized
+}
+
+func normalizePatchDepartmentName(value string) string {
+	return strings.Join(strings.Fields(strings.ToLower(strings.TrimSpace(value))), " ")
+}
+
+func normalizePatchDepartmentRings(routes []patchDepartmentRing) []patchDepartmentRing {
+	normalized := make([]patchDepartmentRing, 0, len(routes))
+	seen := make(map[string]struct{}, len(routes))
+	for _, route := range routes {
+		match := normalizePatchDepartmentName(route.Match)
+		ring := normalizePatchRing(route.Ring)
+		if match == "" || ring == "" {
+			continue
+		}
+		if _, ok := seen[match]; ok {
+			continue
+		}
+		seen[match] = struct{}{}
+		normalized = append(normalized, patchDepartmentRing{Match: match, Ring: ring})
+	}
+	return normalized
+}
+
+func patchWindowContains(now time.Time, start string, end string) bool {
+	startParsed, startErr := time.Parse("15:04", start)
+	endParsed, endErr := time.Parse("15:04", end)
+	if startErr != nil || endErr != nil {
+		return true
+	}
+	minutesNow := now.Hour()*60 + now.Minute()
+	minutesStart := startParsed.Hour()*60 + startParsed.Minute()
+	minutesEnd := endParsed.Hour()*60 + endParsed.Minute()
+	if minutesStart == minutesEnd {
+		return true
+	}
+	if minutesStart < minutesEnd {
+		return minutesNow >= minutesStart && minutesNow < minutesEnd
+	}
+	return minutesNow >= minutesStart || minutesNow < minutesEnd
+}
+
+func patchRingForDepartment(departmentName string, rules []patchDepartmentRing) string {
+	normalizedDepartment := normalizePatchDepartmentName(departmentName)
+	for _, rule := range rules {
+		if rule.Match == normalizedDepartment {
+			return rule.Ring
+		}
+	}
+	return "standard"
+}
+
+func evaluatePatchPolicy(now time.Time, departmentName string, settings workflowSettings) patchPolicyDecision {
+	departmentName = strings.TrimSpace(departmentName)
+	if departmentName == "" {
+		departmentName = "Unassigned"
+	}
+	decision := patchPolicyDecision{
+		Department:     departmentName,
+		Ring:           patchRingForDepartment(departmentName, settings.PatchDepartmentRings),
+		AllowedRings:   append([]string(nil), settings.PatchAllowedRings...),
+		WindowEnforced: settings.PatchWindowEnabled,
+		WindowStart:    settings.PatchWindowStart,
+		WindowEnd:      settings.PatchWindowEnd,
+		WithinWindow:   true,
+		Allowed:        true,
+		EvaluatedAt:    now.Format(time.RFC3339),
+	}
+	if settings.PatchWindowEnabled {
+		decision.WithinWindow = patchWindowContains(now, settings.PatchWindowStart, settings.PatchWindowEnd)
+		if !decision.WithinWindow {
+			decision.Allowed = false
+			decision.Reason = fmt.Sprintf("current time is outside the configured patch approval window %s-%s", settings.PatchWindowStart, settings.PatchWindowEnd)
+			return decision
+		}
+	}
+	if len(settings.PatchAllowedRings) > 0 {
+		allowed := false
+		for _, ring := range settings.PatchAllowedRings {
+			if ring == decision.Ring {
+				allowed = true
+				break
+			}
+		}
+		if !allowed {
+			decision.Allowed = false
+			decision.Reason = fmt.Sprintf("patch ring %q is not enabled for live execution", decision.Ring)
+		}
+	}
+	return decision
 }
 
 func normalizeWorkflowIDs(ids []string) []string {
@@ -121,6 +298,11 @@ func workflowSettingsAPIResponse(settings workflowSettings) workflowSettingsResp
 		RequestTypeRoutes:         settings.RequestTypeRoutes,
 		RequestSubjectRoutes:      settings.RequestSubjectRoutes,
 		ChatSubjectRoutes:         settings.ChatSubjectRoutes,
+		PatchWindowEnabled:        settings.PatchWindowEnabled,
+		PatchWindowStart:          settings.PatchWindowStart,
+		PatchWindowEnd:            settings.PatchWindowEnd,
+		PatchAllowedRings:         settings.PatchAllowedRings,
+		PatchDepartmentRings:      settings.PatchDepartmentRings,
 		UpdatedAt:                 settings.UpdatedAt,
 	}
 }
@@ -403,6 +585,10 @@ func (server *apiServer) updateWorkflowSettings(c *gin.Context) {
 			return
 		}
 	}
+	if err := validatePatchPolicySettings(input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
 	if err := server.validateWorkflowScopeAssignments(input); err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -414,6 +600,18 @@ func (server *apiServer) updateWorkflowSettings(c *gin.Context) {
 	}
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "settings_changed", TargetType: "settings", TargetID: workflowSettingsKey, Detail: settings})
 	httpx.JSON(c, http.StatusOK, workflowSettingsAPIResponse(settings))
+}
+
+func validatePatchPolicySettings(settings workflowSettings) error {
+	if settings.PatchWindowEnabled {
+		if settings.PatchWindowStart == "" || settings.PatchWindowEnd == "" {
+			return fmt.Errorf("patch approval window requires both start and end times")
+		}
+	}
+	if (settings.PatchWindowStart == "") != (settings.PatchWindowEnd == "") {
+		return fmt.Errorf("patch approval window requires both start and end times")
+	}
+	return nil
 }
 
 func firstMatchingWorkflowRoute(routes []workflowRoute, subject string, exact bool) string {
