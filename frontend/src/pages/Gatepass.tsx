@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, FileArchive, FilePlus2, PenSquare } from 'lucide-react';
+import GatepassCreateForm from '../components/gatepass/GatepassCreateForm';
+import GatepassSidebar from '../components/gatepass/GatepassSidebar';
+import GatepassReportsSection from '../components/gatepass/GatepassReportsSection';
 import { apiRequest } from '../lib/api';
+import GatepassPreviewOverlay from '../components/gatepass/GatepassPreviewOverlay';
 import { getStoredSession } from '../lib/session';
 
 const RECENT_GATEPASS_PAGE_SIZE = 3;
@@ -70,7 +74,7 @@ interface UserOption {
   department?: string | null;
 }
 
-interface StockItem {
+interface InventoryItem {
   id: string;
   itemCode: string;
   category: string;
@@ -91,8 +95,8 @@ interface PaginatedUsersResponse {
   pageSize: number;
 }
 
-interface PaginatedStockResponse {
-  items: StockItem[];
+interface PaginatedInventoryResponse {
+  items: InventoryItem[];
   total: number;
   page: number;
   pageSize: number;
@@ -109,6 +113,7 @@ interface DeviceRecord {
   id: string;
   assetId: string;
   hostname: string;
+  serialNumber?: string;
   deviceType?: string;
   osName?: string;
   status: string;
@@ -124,7 +129,6 @@ interface AssetSuggestion {
   description: string;
   assetType?: string;
   serialNumber?: string;
-  osPlatform?: string;
   originBranch: string;
 }
 
@@ -138,7 +142,6 @@ interface GatepassForm {
   assetRef: string;
   assetType: string;
   serialNumber: string;
-  osPlatform: string;
   expectedReturn: string;
   assetDescription: string;
   purpose: string;
@@ -150,23 +153,13 @@ interface GatepassForm {
 type GatepassFormErrors = Partial<Record<keyof GatepassForm, string>>;
 
 type GatepassSection = 'create' | 'pending' | 'records' | 'reports';
-const PURPOSE_OPTIONS = [
-  'Work from home',
-  'Branch transfer',
-  'Repair / RMA',
-  'Vendor handover',
-  'Temporary assignment',
-  'Other',
-] as const;
+const DEFAULT_PURPOSE = 'Work from home';
 
-const formControlClassName = 'w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-sky-300 focus:ring-4 focus:ring-sky-100';
-const formTextareaClassName = 'w-full rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900 outline-none transition focus:border-sky-300 focus:ring-4 focus:ring-sky-100';
-
-function todayDate() {
+export function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatDisplayDate(value: string) {
+export function formatDisplayDate(value: string) {
   const normalized = (value || '').trim();
   if (!normalized) {
     return '-';
@@ -187,11 +180,11 @@ function formatDisplayDate(value: string) {
   return `${day}-${monthLabel}-${year}`;
 }
 
-function userDisplayName(user: UserOption) {
+export function userDisplayName(user: UserOption) {
   return user.fullName || user.full_name || '';
 }
 
-function validateGatepassForm(form: GatepassForm): GatepassFormErrors {
+export function validateGatepassForm(form: GatepassForm): GatepassFormErrors {
   const errors: GatepassFormErrors = {};
 
   if (!form.originBranch.trim()) {
@@ -228,31 +221,15 @@ function validateGatepassForm(form: GatepassForm): GatepassFormErrors {
   return errors;
 }
 
-function FieldError({ message }: { message?: string }) {
-  if (!message) {
-    return null;
-  }
-  return <p className="mt-2 text-xs font-medium text-rose-600">{message}</p>;
-}
-
-function FieldLabel({ label, required = false }: { label: string; required?: boolean }) {
-  return (
-    <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-      {label}
-      {required ? <span className="ml-1 text-rose-500">*</span> : null}
-    </span>
-  );
-}
-
-function hasDisplayValue(value?: string) {
+export function hasDisplayValue(value?: string) {
   return Boolean(value && value.trim());
 }
 
-function fieldDisplayValue(value?: string) {
+export function fieldDisplayValue(value?: string) {
   return hasDisplayValue(value) ? value!.trim() : '— not filled —';
 }
 
-function formatIssueTime(value?: string) {
+export function formatIssueTime(value?: string) {
   const source = value ? new Date(value) : new Date();
   if (Number.isNaN(source.getTime())) {
     return '09:42 AM';
@@ -265,7 +242,7 @@ function formatIssueTime(value?: string) {
   }).toUpperCase();
 }
 
-function initialsFromName(value?: string) {
+export function initialsFromName(value?: string) {
   const parts = (value || '')
     .trim()
     .split(/\s+/)
@@ -281,38 +258,7 @@ function initialsFromName(value?: string) {
     .join('');
 }
 
-function PreviewFieldCard({ label, value, strong = false }: { label: string; value?: string; strong?: boolean }) {
-  const filled = hasDisplayValue(value);
-
-  return (
-    <div className="rounded-[3px] border border-zinc-300 bg-zinc-100 px-2.5 py-2 shadow-[inset_2px_0_0_0_#0d0d0d]">
-      <div className="text-[8px] font-semibold uppercase tracking-[0.08em] text-zinc-500">{label}</div>
-      <div className={`mt-1 text-[11px] leading-[1.3] ${filled ? `${strong ? 'font-bold' : 'font-medium'} text-zinc-900` : 'italic text-zinc-400'}`}>{fieldDisplayValue(value)}</div>
-    </div>
-  );
-}
-
-function PreviewSignatureCard({ role, name }: { role: string; name?: string }) {
-  return (
-    <div className="flex min-h-[128px] flex-col rounded-[3px] border border-zinc-300 border-t-[3px] border-t-zinc-950 bg-white px-3 py-2.5">
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full border border-zinc-300 bg-zinc-100 text-[9px] font-bold text-zinc-900">
-          {initialsFromName(name)}
-        </div>
-        <div>
-          <div className="text-[8px] uppercase tracking-[0.08em] text-zinc-500">{role}</div>
-          <div className="mt-0.5 text-[11px] font-bold text-zinc-900">{fieldDisplayValue(name)}</div>
-        </div>
-      </div>
-      <div className="mt-auto flex items-end justify-between border-b border-dashed border-zinc-300 pt-6 pb-1">
-        <span className="text-[8px] text-zinc-400">Signature</span>
-        <span className="text-[8px] text-zinc-400">Date &amp; time</span>
-      </div>
-    </div>
-  );
-}
-
-function escapeHtml(value: string) {
+export function escapeHtml(value: string) {
   return value
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
@@ -368,7 +314,7 @@ const CODE39_PATTERNS: Record<string, string> = {
   '*': 'nwnnwnwnn',
 };
 
-function normalizeBarcodeValue(value: string) {
+export function normalizeBarcodeValue(value: string) {
   const cleaned = (value || '').trim().toUpperCase();
   if (!cleaned) {
     return 'PENDING';
@@ -376,7 +322,7 @@ function normalizeBarcodeValue(value: string) {
   return Array.from(cleaned).map((char) => (CODE39_PATTERNS[char] ? char : '-')).join('');
 }
 
-function createBarcodeGeometry(value: string) {
+export function createBarcodeGeometry(value: string) {
   const encoded = `*${normalizeBarcodeValue(value)}*`;
   const narrow = 2;
   const wide = 5;
@@ -414,7 +360,7 @@ function BarcodePreview({ value, label, className = '' }: { value: string; label
   );
 }
 
-function renderBarcodeSvgMarkup(value: string, label: string) {
+export function renderBarcodeSvgMarkup(value: string, label: string) {
   const geometry = createBarcodeGeometry(value);
   const rects = geometry.bars
     .map((bar) => `<rect x="${bar.x}" y="0" width="${bar.width}" height="28" fill="#0d0d0d"></rect>`)
@@ -423,12 +369,16 @@ function renderBarcodeSvgMarkup(value: string, label: string) {
   return `<svg viewBox="0 0 ${geometry.width} ${geometry.height}" aria-label="${escapeHtml(label)}" role="img" preserveAspectRatio="xMidYMid meet" shape-rendering="crispEdges" xmlns="http://www.w3.org/2000/svg">${rects}</svg>`;
 }
 
-function draftGatepassNumber(issueDate: string) {
+export function draftGatepassNumber(issueDate: string) {
   const normalizedDate = (issueDate || todayDate()).replaceAll('-', '');
   return `ZGP-${normalizedDate}-0001`;
 }
 
-function gatepassDisplayNumber(gatepass: Pick<GatepassRecord, 'id' | 'gatepassNumber'>) {
+export function formatStatusLabel(status: string) {
+  return (status || 'pending').replaceAll('_', ' ');
+}
+
+export function gatepassDisplayNumber(gatepass: Pick<GatepassRecord, 'id' | 'gatepassNumber'>) {
   return gatepass.gatepassNumber || gatepass.id;
 }
 
@@ -437,192 +387,335 @@ async function loadJsPdf() {
   return module.jsPDF;
 }
 
-async function buildGatepassPdf(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'osPlatform' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'securitySignedName' | 'createdAt'>) {
+async function buildGatepassPdf(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'securitySignedName' | 'createdAt'>) {
   const jsPDF = await loadJsPdf();
   const document = new jsPDF({ unit: 'pt', format: 'a4' });
   const gatepassNumber = gatepassDisplayNumber(record);
   const issueDateLabel = formatDisplayDate(record.issueDate);
-  const issueTimeLabel = formatIssueTime(record.createdAt);
   const expectedReturnLabel = formatDisplayDate(record.expectedReturn || '');
   const pageWidth = document.internal.pageSize.getWidth();
   const pageHeight = document.internal.pageSize.getHeight();
-  const left = 36;
-  const top = 22;
-  const contentWidth = pageWidth - (left * 2);
-  const black = [13, 13, 13] as const;
-  const dark = [26, 26, 26] as const;
-  const grayText = [120, 120, 120] as const;
-  const lightGray = [242, 242, 242] as const;
-  const borderGray = [204, 204, 204] as const;
-
-  const drawSectionHeader = (index: string, title: string, y: number) => {
-    document.setFillColor(...black);
-    document.rect(left, y, contentWidth, 13, 'F');
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(8);
-    document.setTextColor(255, 255, 255);
-    document.text(`${index}  ·  ${title}`, left + 10, y + 9);
-  };
-
-  const drawFieldCard = (label: string, value: string | undefined, x: number, y: number, width: number, height: number, strong = false) => {
-    const filled = hasDisplayValue(value);
-    document.setFillColor(...lightGray);
-    document.setDrawColor(...borderGray);
-    document.roundedRect(x, y, width, height, 2, 2, 'FD');
-    document.setFillColor(...black);
-    document.rect(x, y, 2, height, 'F');
-
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(6.5);
-    document.setTextColor(...grayText);
-    document.text(label, x + 8, y + 10);
-
-    document.setFont('helvetica', strong ? 'bold' : filled ? 'normal' : 'italic');
-    document.setFontSize(10.5);
-    document.setTextColor(filled ? dark[0] : 170, filled ? dark[1] : 170, filled ? dark[2] : 170);
-    const lines = document.splitTextToSize(fieldDisplayValue(value), width - 16);
-    document.text(lines.slice(0, 3), x + 8, y + 23);
-  };
-
-  const drawSignatureCard = (role: string, name: string | undefined, x: number, y: number, width: number) => {
-    document.setFillColor(255, 255, 255);
-    document.setDrawColor(187, 187, 187);
-    document.roundedRect(x, y, width, 122, 2, 2, 'FD');
-    document.setFillColor(...black);
-    document.rect(x, y, width, 3, 'F');
-
-    document.setFillColor(232, 232, 232);
-    document.circle(x + 20, y + 26, 11, 'F');
-    document.setDrawColor(187, 187, 187);
-    document.circle(x + 20, y + 26, 11, 'S');
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(8);
-    document.setTextColor(...dark);
-    document.text(initialsFromName(name), x + 20, y + 28.5, { align: 'center' });
-
-    document.setFont('helvetica', 'normal');
-    document.setFontSize(6.5);
-    document.setTextColor(...grayText);
-    document.text(role, x + 38, y + 22);
-    document.setFont('helvetica', 'bold');
-    document.setFontSize(10);
-    document.setTextColor(...dark);
-    document.text(fieldDisplayValue(name), x + 38, y + 34);
-
-    document.setDrawColor(187, 187, 187);
-    document.setLineDashPattern([2, 2], 0);
-    document.line(x + 10, y + 101, x + width - 10, y + 101);
-    document.setLineDashPattern([], 0);
-    document.setFont('helvetica', 'normal');
-    document.setFontSize(6.5);
-    document.setTextColor(170, 170, 170);
-    document.text('Signature', x + 10, y + 110);
-    document.text('Date & time', x + width - 10, y + 110, { align: 'right' });
-  };
-
-  document.setFillColor(255, 255, 255);
-  document.rect(0, 0, pageWidth, pageHeight, 'F');
-
-  document.setFillColor(...black);
-  document.rect(left, top, contentWidth, 76, 'F');
-  document.setDrawColor(51, 51, 51);
-  document.line(left, top + 76, left + contentWidth, top + 76);
-
-  document.setFont('helvetica', 'bold');
-  document.setFontSize(24);
-  document.setTextColor(255, 255, 255);
-  document.text('ZERODHA', left + 14, top + 28);
-  document.setFont('helvetica', 'normal');
-  document.setFontSize(10);
-  document.setTextColor(170, 170, 170);
-  document.text('IT GATEPASS', left + 14, top + 48);
-
-  const dividerX = left + 208;
-  document.setDrawColor(60, 60, 60);
-  document.line(dividerX, top + 16, dividerX, top + 60);
-
-  document.setFont('helvetica', 'bold');
-  document.setFontSize(12);
-  document.setTextColor(255, 255, 255);
-  document.text(gatepassNumber, left + contentWidth - 14, top + 16, { align: 'right' });
-
+  const margin = 32;
+  const contentWidth = pageWidth - (margin * 2);
+  const bottomLimit = pageHeight - 72;
+  const statusLabel = formatStatusLabel(record.status || 'pending');
+  const ink: [number, number, number] = [17, 24, 39];
+  const text: [number, number, number] = [55, 65, 81];
+  const muted: [number, number, number] = [148, 163, 184];
+  const line: [number, number, number] = [226, 232, 240];
+  const panel: [number, number, number] = [248, 250, 252];
+  const accent: [number, number, number] = [2, 132, 199];
+  const accentTint: [number, number, number] = [232, 244, 253];
   const barcodeGeometry = createBarcodeGeometry(gatepassNumber);
-  const barcodeScale = 140 / barcodeGeometry.width;
-  const barcodeX = left + contentWidth - 14 - (barcodeGeometry.width * barcodeScale);
-  const barcodeY = top + 22;
-  document.setFillColor(255, 255, 255);
-  document.rect(barcodeX - 6, barcodeY - 3, (barcodeGeometry.width * barcodeScale) + 12, 31, 'F');
-  document.setFillColor(...black);
-  barcodeGeometry.bars.forEach((bar) => {
-    document.rect(barcodeX + (bar.x * barcodeScale), barcodeY, Math.max(bar.width * barcodeScale, 0.7), 24, 'F');
-  });
+  let cursorY = 266;
+
+  const drawPageChrome = () => {
+    document.setFillColor(255, 255, 255);
+    document.rect(0, 0, pageWidth, pageHeight, 'F');
+    document.setDrawColor(...line);
+    document.rect(margin, 36, contentWidth, pageHeight - 78);
+    document.setDrawColor(...ink);
+    document.setLineWidth(1.2);
+    document.line(margin, 36, pageWidth - margin, 36);
+    document.setLineWidth(1);
+    document.setDrawColor(...line);
+    document.line(margin, pageHeight - 44, pageWidth - margin, pageHeight - 44);
+    document.setFont('helvetica', 'normal');
+    document.setFontSize(8);
+    document.setTextColor(...muted);
+    document.text('System-generated document · Valid only with authorised signatures and stamp', margin, pageHeight - 20);
+    document.setFont('helvetica', 'bold');
+    document.setTextColor(...text);
+    document.text(`ZERODHA · ${gatepassNumber} · A4 LAYOUT V2`, pageWidth - margin, pageHeight - 20, { align: 'right' });
+  };
+
+  const ensureSpace = (requiredHeight: number) => {
+    if (cursorY + requiredHeight <= bottomLimit) {
+      return;
+    }
+    document.addPage();
+    drawPageChrome();
+    cursorY = 64;
+  };
+
+  const drawSectionHeading = (title: string) => {
+    ensureSpace(20);
+    document.setFont('helvetica', 'bold');
+    document.setFontSize(9);
+    document.setTextColor(...text);
+    document.text(title.toUpperCase(), margin + 12, cursorY);
+    const labelWidth = document.getTextWidth(title.toUpperCase()) + 24;
+    document.setDrawColor(...line);
+    document.line(margin + labelWidth, cursorY - 4, pageWidth - margin - 12, cursorY - 4);
+    cursorY += 11;
+  };
+
+  const measureFieldHeight = (value: string, width: number, wide = false) => {
+    document.setFont('helvetica', wide ? 'bold' : 'normal');
+    document.setFontSize(wide ? 10.5 : 9.75);
+    return Math.max(1, document.splitTextToSize(value, width).length) * (wide ? 12 : 11);
+  };
+
+  const drawFieldBox = (x: number, y: number, width: number, label: string, value?: string, options?: { height?: number; strong?: boolean }) => {
+    const strong = options?.strong ?? true;
+    const resolvedValue = fieldDisplayValue(value);
+    const innerWidth = width - 20;
+    const computedHeight = 18 + measureFieldHeight(resolvedValue, innerWidth, strong) + 14;
+    const height = Math.max(options?.height ?? 0, computedHeight, 48);
+    document.setFillColor(...panel);
+    document.setDrawColor(...line);
+    document.roundedRect(x, y, width, height, 6, 6, 'FD');
+    document.setDrawColor(...accent);
+    document.line(x + 1, y + 1, x + width - 1, y + 1);
+    document.setFont('helvetica', 'normal');
+    document.setFontSize(8);
+    document.setTextColor(...muted);
+    document.text(label.toUpperCase(), x + 10, y + 16);
+    document.setFont('helvetica', strong ? 'bold' : 'normal');
+    document.setFontSize(strong ? 10.5 : 9.75);
+    document.setTextColor(...ink);
+    const lines = document.splitTextToSize(resolvedValue, innerWidth);
+    document.text(lines, x + 10, y + 31);
+    return height;
+  };
+
+  const drawStatPanel = () => {
+    const panelY = 144;
+    const panelHeight = 64;
+    const sectionWidth = contentWidth / 3;
+    document.setFillColor(...panel);
+    document.setDrawColor(...line);
+    document.rect(margin, panelY, contentWidth, panelHeight, 'FD');
+    [1, 2].forEach((index) => {
+      const x = margin + (sectionWidth * index);
+      document.line(x, panelY + 10, x, panelY + panelHeight - 10);
+    });
+
+    const leftX = margin + 14;
+    const midX = margin + sectionWidth + 14;
+    const rightX = margin + (sectionWidth * 2) + 14;
+    const labelY = panelY + 16;
+    const valueY = panelY + 27;
+    const lowerLabelY = panelY + 38;
+    const lowerValueY = panelY + 51;
+
+    document.setFont('helvetica', 'normal');
+    document.setFontSize(8);
+    document.setTextColor(...muted);
+    document.text('PASS NO.', leftX, labelY);
+    document.text('VALID UNTIL', midX, labelY);
+    document.text('SCAN TO VERIFY GATE PASS', rightX, labelY);
+    document.text('EMPLOYEE', leftX, lowerLabelY);
+    document.text('STATUS', midX, lowerLabelY);
+
+    document.setFont('helvetica', 'bold');
+    document.setFontSize(10.25);
+    document.setTextColor(...ink);
+    document.text(gatepassNumber, leftX, valueY);
+    document.text(expectedReturnLabel, midX, valueY);
+    document.text(record.employeeCode || '-', leftX, lowerValueY);
+    document.setFillColor(...accentTint);
+    document.roundedRect(midX - 4, lowerValueY - 9, 76, 15, 7, 7, 'F');
+    document.setTextColor(...accent);
+    document.setFontSize(9);
+    document.text(statusLabel.toUpperCase(), midX + 34, lowerValueY, { align: 'center' });
+
+    const barcodeScale = 170 / barcodeGeometry.width;
+    const barcodeWrapX = rightX - 4;
+    const barcodeWrapY = panelY + 15;
+    const barcodeWrapWidth = sectionWidth - 24;
+    const barcodeWrapHeight = 24;
+    document.setFillColor(255, 255, 255);
+    document.setDrawColor(...line);
+    document.roundedRect(barcodeWrapX, barcodeWrapY, barcodeWrapWidth, barcodeWrapHeight, 4, 4, 'FD');
+    const barcodeX = barcodeWrapX + 8;
+    const barcodeY = barcodeWrapY + 2;
+    document.setFillColor(...ink);
+    barcodeGeometry.bars.forEach((bar) => {
+      document.rect(barcodeX + (bar.x * barcodeScale), barcodeY, Math.max(0.8, bar.width * barcodeScale), 26, 'F');
+    });
+    document.setFont('helvetica', 'bold');
+    document.setFontSize(7.5);
+    document.setTextColor(...text);
+    document.text(`${gatepassNumber} · ${record.employeeCode || '-'} · ${issueDateLabel.toUpperCase()}`, pageWidth - margin - 14, panelY + 54, { align: 'right' });
+  };
+
+  const drawMetricRow = () => {
+    const rowY = 208;
+    const rowHeight = 30;
+    const columnWidth = contentWidth / 4;
+    document.setDrawColor(...line);
+    document.rect(margin, rowY, contentWidth, rowHeight);
+    [1, 2, 3].forEach((index) => {
+      const x = margin + (columnWidth * index);
+      document.line(x, rowY + 8, x, rowY + rowHeight - 8);
+    });
+    const items = [
+      { label: 'Issued', value: issueDateLabel },
+      { label: 'Return', value: expectedReturnLabel },
+      { label: 'Purpose', value: fieldDisplayValue(record.purpose) },
+      { label: 'Status', value: formatStatusLabel(record.status || 'pending') },
+    ];
+    items.forEach((item, index) => {
+      const x = margin + (index * columnWidth) + 14;
+      document.setFont('helvetica', 'normal');
+      document.setFontSize(8);
+      document.setTextColor(...muted);
+      document.text(item.label.toUpperCase(), x, rowY + 11);
+      document.setFont('helvetica', 'bold');
+      document.setFontSize(9.25);
+      document.setTextColor(...ink);
+      const lines = document.splitTextToSize(item.value, columnWidth - 24);
+      document.text(lines[0] || '-', x, rowY + 21);
+    });
+  };
+
+  const drawThreeColumnFields = (fields: Array<{ label: string; value?: string; strong?: boolean }>) => {
+    ensureSpace(64);
+    const gap = 8;
+    const fieldWidth = (contentWidth - (gap * 2)) / 3;
+    let maxHeight = 0;
+    fields.forEach((field, index) => {
+      const x = margin + (index * (fieldWidth + gap));
+      const height = drawFieldBox(x, cursorY, fieldWidth, field.label, field.value, { strong: field.strong });
+      maxHeight = Math.max(maxHeight, height);
+    });
+    cursorY += maxHeight + 8;
+  };
+
+  const drawFourColumnFields = (fields: Array<{ label: string; value?: string; strong?: boolean }>) => {
+    ensureSpace(64);
+    const gap = 8;
+    const fieldWidth = (contentWidth - (gap * 3)) / 4;
+    let maxHeight = 0;
+    fields.forEach((field, index) => {
+      const x = margin + (index * (fieldWidth + gap));
+      const height = drawFieldBox(x, cursorY, fieldWidth, field.label, field.value, { strong: field.strong });
+      maxHeight = Math.max(maxHeight, height);
+    });
+    cursorY += maxHeight + 8;
+  };
+
+  const drawFullWidthField = (label: string, value?: string) => {
+    ensureSpace(70);
+    const height = drawFieldBox(margin, cursorY, contentWidth, label, value, { height: 56, strong: true });
+    cursorY += height + 8;
+  };
+
+  const drawSignatureRow = () => {
+    ensureSpace(70);
+    const gap = 20;
+    const sectionWidth = (contentWidth - (gap * 2)) / 3;
+    const signatures = [
+      { title: 'Issued By', subtitle: record.issuerSignedName || record.requesterName || 'ITMS Super Admin' },
+      { title: 'Employee Signature', subtitle: record.employeeName || 'Receiving Employee' },
+      { title: 'Approved By', subtitle: record.approverName || 'Approver' },
+    ];
+    signatures.forEach((signature, index) => {
+      const x = margin + (index * (sectionWidth + gap));
+      document.setFont('helvetica', 'bold');
+      document.setFontSize(8.5);
+      document.setTextColor(...text);
+      document.text(signature.title, x, cursorY + 10);
+      document.setFont('helvetica', 'normal');
+      document.setFontSize(7.5);
+      document.setTextColor(...muted);
+      document.text(signature.subtitle, x, cursorY + 24);
+      document.setDrawColor(...muted);
+      document.setLineDashPattern([2, 3], 0);
+      document.line(x, cursorY + 36, x + sectionWidth, cursorY + 36);
+      document.setLineDashPattern([], 0);
+    });
+    cursorY += 48;
+  };
+
+  drawPageChrome();
 
   document.setFont('helvetica', 'normal');
-  document.setFontSize(7);
-  document.setTextColor(136, 136, 136);
-  document.text(`Date of issue: ${issueDateLabel} · ${issueTimeLabel}`, left + contentWidth - 14, top + 66, { align: 'right' });
+  document.setFontSize(8.5);
+  document.setTextColor(...muted);
+  document.text('ZERODHA · ASSET MANAGEMENT SYSTEM', margin + 12, 66);
+  document.setFillColor(...accentTint);
+  document.roundedRect(margin + 12, 74, 92, 16, 8, 8, 'F');
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(8);
+  document.setTextColor(...accent);
+  document.text('A4 LAYOUT V2', margin + 58, 85, { align: 'center' });
 
-  let cursorY = top + 88;
-  drawSectionHeader('01', 'DISPATCH DETAILS', cursorY);
-  cursorY += 19;
-  const gap = 10;
-  const halfWidth = (contentWidth - gap) / 2;
-  drawFieldCard('FROM BRANCH', record.originBranch, left, cursorY, halfWidth, 36, true);
-  drawFieldCard('RECEIVER BRANCH', record.recipientBranch, left + halfWidth + gap, cursorY, halfWidth, 36, true);
-
-  cursorY += 50;
-  drawSectionHeader('02', 'RECIPIENT DETAILS', cursorY);
-  cursorY += 19;
-  const tripleGap = 10;
-  const tripleWidth = (contentWidth - (tripleGap * 2)) / 3;
-  drawFieldCard('EMPLOYEE NAME', record.employeeName, left, cursorY, tripleWidth, 36);
-  drawFieldCard('EMPLOYEE ID', record.employeeCode, left + tripleWidth + tripleGap, cursorY, tripleWidth, 36);
-  drawFieldCard('DEPARTMENT', record.departmentName, left + ((tripleWidth + tripleGap) * 2), cursorY, tripleWidth, 36);
-  cursorY += 46;
-  drawFieldCard('APPROVER NAME', record.approverName, left, cursorY, halfWidth, 36);
-  drawFieldCard('CONTACT NUMBER', record.contactNumber, left + halfWidth + gap, cursorY, halfWidth, 36);
-
-  cursorY += 50;
-  drawSectionHeader('03', 'ASSET DETAILS', cursorY);
-  cursorY += 19;
-  const quadGap = 8;
-  const quadWidth = (contentWidth - (quadGap * 3)) / 4;
-  drawFieldCard('ASSET TAG / ID', record.assetRef, left, cursorY, quadWidth, 36);
-  drawFieldCard('ASSET TYPE', record.assetType, left + quadWidth + quadGap, cursorY, quadWidth, 36);
-  drawFieldCard('SERIAL NUMBER', record.serialNumber, left + ((quadWidth + quadGap) * 2), cursorY, quadWidth, 36);
-  drawFieldCard('OS / PLATFORM', record.osPlatform, left + ((quadWidth + quadGap) * 3), cursorY, quadWidth, 36);
-  cursorY += 46;
-  const tripleInfoWidth = (contentWidth - (tripleGap * 2)) / 3;
-  drawFieldCard('PURPOSE', record.purpose, left, cursorY, tripleInfoWidth, 36);
-  drawFieldCard('ISSUE DATE', `${issueDateLabel} · ${issueTimeLabel}`, left + tripleInfoWidth + tripleGap, cursorY, tripleInfoWidth, 36);
-  drawFieldCard('EXPECTED RETURN', expectedReturnLabel, left + ((tripleInfoWidth + tripleGap) * 2), cursorY, tripleInfoWidth, 36);
-  cursorY += 46;
-  drawFieldCard('ASSET DESCRIPTION', record.assetDescription, left, cursorY, contentWidth, 42);
-
-  cursorY += 56;
-  drawSectionHeader('04', 'AUTHORISATION & SIGNATURES', cursorY);
-  cursorY += 18;
-  const signatureGap = 10;
-  const signatureWidth = (contentWidth - (signatureGap * 2)) / 3;
-  drawSignatureCard('ISSUED BY', record.issuerSignedName || record.requesterName || 'ITMS Super Admin', left, cursorY, signatureWidth);
-  drawSignatureCard('APPROVED BY', record.approverName || 'Approver', left + signatureWidth + signatureGap, cursorY, signatureWidth);
-  drawSignatureCard('SECURITY CHECK', record.securitySignedName || 'Security Guard', left + ((signatureWidth + signatureGap) * 2), cursorY, signatureWidth);
-
-  document.setFillColor(...black);
-  document.rect(left, pageHeight - 34, contentWidth, 18, 'F');
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(25);
+  document.setTextColor(...ink);
+  document.text('GATE PASS', margin + 12, 106);
   document.setFont('helvetica', 'normal');
-  document.setFontSize(6.5);
-  document.setTextColor(170, 170, 170);
-  document.text('Zerodha Gatepass · Admin & IT Division · iteam@zerodha.com', left + 10, pageHeight - 22);
-  document.text(`${gatepassNumber} · ${issueDateLabel}`, left + contentWidth - 10, pageHeight - 22, { align: 'right' });
+  document.setFontSize(8.5);
+  document.setTextColor(...muted);
+  document.text('ASSET MOVEMENT AUTHORIZATION DOCUMENT', margin + 12, 123);
+
+  const headerRightX = pageWidth - margin - 172;
+  document.setDrawColor(...line);
+  document.line(headerRightX, 58, headerRightX, 132);
+  document.line(headerRightX + 14, 74, pageWidth - margin - 12, 74);
+  document.setFont('helvetica', 'normal');
+  document.setFontSize(8);
+  document.setTextColor(...muted);
+  document.text('DOCUMENT ID', headerRightX + 14, 84);
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(9.75);
+  document.setTextColor(...accent);
+  document.text(gatepassNumber, pageWidth - margin - 14, 84, { align: 'right' });
+  document.setFont('helvetica', 'bold');
+  document.setFontSize(15);
+  document.setTextColor(...ink);
+  document.text(gatepassNumber, headerRightX + 14, 104);
+  document.setFont('helvetica', 'normal');
+  document.setFontSize(8);
+  document.setTextColor(...text);
+  document.text(issueDateLabel.toUpperCase(), headerRightX + 14, 120);
+
+  drawStatPanel();
+  drawMetricRow();
+
+  drawSectionHeading('Employee Details');
+  drawFourColumnFields([
+    { label: 'Employee Name', value: record.employeeName },
+    { label: 'Employee ID', value: record.employeeCode },
+    { label: 'Department', value: record.departmentName },
+    { label: 'Contact', value: record.contactNumber },
+  ]);
+
+  drawSectionHeading('Movement Details');
+  drawThreeColumnFields([
+    { label: 'From Branch', value: record.originBranch },
+    { label: 'Receiver Branch', value: record.recipientBranch },
+    { label: 'Approver', value: record.approverName },
+  ]);
+
+  drawSectionHeading('Asset Information');
+  drawFullWidthField('Asset Description', record.assetDescription);
+  drawThreeColumnFields([
+    { label: 'Asset Tag / ID', value: record.assetRef },
+    { label: 'Asset Category', value: record.assetType },
+    { label: 'Serial Number', value: record.serialNumber },
+  ]);
+
+  drawSectionHeading('Authorization & Schedule');
+  drawFourColumnFields([
+    { label: 'Issue Date', value: issueDateLabel },
+    { label: 'Return Date', value: expectedReturnLabel },
+    { label: 'Authorized By', value: record.approverName || record.requesterName },
+    { label: 'Purpose', value: record.purpose },
+  ]);
+
+  drawSectionHeading('Verification');
+  drawSignatureRow();
 
   return document;
 }
 
-async function openGatepassClientPdf(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'osPlatform' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'securitySignedName' | 'createdAt'>, inline = true) {
+async function openGatepassClientPdf(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'securitySignedName' | 'createdAt'>, inline = true) {
   const pdfDocument = await buildGatepassPdf(record);
   if (!inline) {
-    pdfDocument.save(`${gatepassDisplayNumber(record)}.pdf`);
+    pdfDocument.save(`${gatepassDisplayNumber(record)}-a4-layout-v2.pdf`);
     return;
   }
 
@@ -633,7 +726,7 @@ async function openGatepassClientPdf(record: Pick<GatepassRecord, 'id' | 'gatepa
   if (!pdfWindow) {
     const anchor = document.createElement('a');
     anchor.href = objectUrl;
-    anchor.download = `${gatepassDisplayNumber(record)}.pdf`;
+    anchor.download = `${gatepassDisplayNumber(record)}-a4-layout-v2.pdf`;
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
@@ -642,7 +735,7 @@ async function openGatepassClientPdf(record: Pick<GatepassRecord, 'id' | 'gatepa
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
 }
 
-function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'osPlatform' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'issuerSignedAt' | 'receiverSignedName' | 'receiverSignedAt' | 'securitySignedName' | 'securitySignedAt' | 'createdAt'>) {
+function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNumber' | 'assetRef' | 'assetType' | 'serialNumber' | 'expectedReturn' | 'assetDescription' | 'purpose' | 'originBranch' | 'recipientBranch' | 'issueDate' | 'employeeName' | 'employeeCode' | 'departmentName' | 'contactNumber' | 'status' | 'requesterName' | 'approverName' | 'issuerSignedName' | 'issuerSignedAt' | 'receiverSignedName' | 'receiverSignedAt' | 'securitySignedName' | 'securitySignedAt' | 'createdAt'>) {
   const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=960,height=900');
   if (!printWindow) {
     return;
@@ -662,48 +755,48 @@ function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNu
       <style>
         @page { size: A4; margin: 0; }
         * { box-sizing: border-box; }
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; color: #0d0d0d; background: #e5e5e5; padding: 24px; }
-        .page { width: 210mm; min-height: 297mm; margin: 0 auto; background: #ffffff; display: flex; flex-direction: column; }
-        .header { background: #0d0d0d; padding: 18px 20px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #333; }
-        .header-left { display: flex; flex-direction: column; gap: 4px; }
-        .header-title { color: #fff; font-size: 26px; font-weight: 700; line-height: 1; }
-        .header-sub { color: #aaa; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; }
-        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
-        .gp-num { color: #fff; font-size: 15px; font-weight: 700; letter-spacing: 0.5px; }
-        .gp-date { color: #888; font-size: 10px; }
-        .barcode-wrap { background: #fff; padding: 3px 6px; }
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 0; color: #0f172a; background: #f8fafc; padding: 24px; }
+        .page { width: 210mm; min-height: 297mm; margin: 0 auto; background: #ffffff; display: flex; flex-direction: column; padding: 20px; }
+        .header { display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid #cbd5e1; padding-bottom: 14px; }
+        .header-left { display: flex; flex-direction: column; gap: 6px; }
+        .header-title { color: #0f172a; font-size: 28px; font-weight: 700; line-height: 1; }
+        .header-sub { color: #64748b; font-size: 12px; letter-spacing: 0.5px; text-transform: uppercase; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+        .gp-num { color: #0f172a; font-size: 14px; font-weight: 700; letter-spacing: 0.3px; }
+        .gp-date { color: #64748b; font-size: 10px; }
+        .barcode-wrap { border: 1px solid #e2e8f0; background: #f8fafc; padding: 6px 8px; border-radius: 10px; }
         .barcode-wrap svg { display: block; width: 160px; height: 32px; }
-        .body { flex: 1; padding: 0 20px; }
-        .section-head { background: #0d0d0d; color: #fff; font-size: 10px; font-weight: 700; letter-spacing: 1.5px; padding: 5px 10px; margin-top: 14px; margin-bottom: 10px; }
+        .body { flex: 1; padding-top: 18px; }
+        .section-head { color: #334155; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 6px; border-bottom: 1px solid #e2e8f0; margin-top: 18px; margin-bottom: 10px; }
         .grid-2, .grid-3, .grid-4 { display: grid; gap: 8px; margin-bottom: 8px; }
         .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        .field-card { background: #f2f2f2; border: 0.5px solid #ccc; border-radius: 3px; padding: 7px 10px 8px; box-shadow: inset 2px 0 0 #0d0d0d; }
-        .field-label { font-size: 8px; font-weight: 600; color: #777; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
-        .field-value { font-size: 11px; color: #0d0d0d; line-height: 1.3; }
+        .field-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 10px 12px; }
+        .field-label { font-size: 10px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+        .field-value { font-size: 12px; color: #0f172a; line-height: 1.4; }
         .field-value.strong { font-weight: 700; }
-        .field-value.empty { color: #aaa; font-style: italic; }
+        .field-value.empty { color: #94a3b8; font-style: italic; }
         .sig-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-        .sig-card { min-height: 120px; border: 0.5px solid #bbb; border-top: 3px solid #0d0d0d; border-radius: 3px; padding: 10px; display: flex; flex-direction: column; }
+        .sig-card { min-height: 120px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; display: flex; flex-direction: column; }
         .sig-top { display: flex; align-items: center; gap: 8px; }
-        .sig-circle { width: 32px; height: 32px; border-radius: 999px; background: #e8e8e8; border: 0.5px solid #bbb; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; }
-        .sig-role { font-size: 8px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
-        .sig-name { font-size: 11px; font-weight: 700; margin-top: 1px; }
-        .sig-line { margin-top: auto; padding-top: 24px; padding-bottom: 2px; border-bottom: 1px dashed #bbb; display: flex; justify-content: space-between; }
-        .sig-line span { font-size: 8px; color: #aaa; }
-        .footer { background: #0d0d0d; padding: 10px 20px; margin-top: 16px; display: flex; align-items: center; justify-content: space-between; }
-        .footer span { font-size: 9px; color: #aaa; }
+        .sig-circle { width: 34px; height: 34px; border-radius: 999px; background: #f8fafc; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+        .sig-role { font-size: 10px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sig-name { font-size: 12px; font-weight: 700; margin-top: 2px; }
+        .sig-line { margin-top: auto; padding-top: 28px; padding-bottom: 2px; border-bottom: 1px dashed #cbd5e1; display: flex; justify-content: space-between; }
+        .sig-line span { font-size: 10px; color: #94a3b8; }
+        .footer { border-top: 1px solid #cbd5e1; padding-top: 12px; margin-top: 18px; display: flex; align-items: center; justify-content: space-between; }
+        .footer span { font-size: 10px; color: #64748b; }
         @media screen and (max-width: 900px) {
           body { padding: 12px; }
           .page { width: 100%; }
-          .header { flex-direction: column; align-items: flex-start; }
+          .header { flex-direction: column; align-items: flex-start; gap: 12px; }
           .header-right { align-items: flex-start; }
           .grid-2, .grid-3, .grid-4, .sig-grid { grid-template-columns: 1fr; }
         }
         @media print {
           body { padding: 0; background: #ffffff; }
-          .page { width: 100%; }
+          .page { width: 100%; padding: 20px; }
         }
       </style>
     </head>
@@ -711,8 +804,8 @@ function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNu
       <div class="page">
         <div class="header">
           <div class="header-left">
-            <div class="header-title">ZERODHA</div>
-            <div class="header-sub">IT GATEPASS</div>
+            <div class="header-title">Gatepass</div>
+            <div class="header-sub">Zerodha IT movement pass</div>
           </div>
           <div class="header-right">
             <div class="gp-num">${escapeHtml(gatepassNumber)}</div>
@@ -739,12 +832,18 @@ function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNu
             <div class="field-card"><div class="field-label">Contact Number</div><div class="field-value${hasDisplayValue(record.contactNumber) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.contactNumber))}</div></div>
           </div>
 
-          <div class="section-head">03 · ASSET DETAILS</div>
+          <div class="section-head">03 · GATEPASS SUMMARY</div>
+          <div class="grid-3">
+            <div class="field-card"><div class="field-label">Gatepass Number</div><div class="field-value strong">${escapeHtml(fieldDisplayValue(gatepassNumber))}</div></div>
+            <div class="field-card"><div class="field-label">Requested By</div><div class="field-value${hasDisplayValue(record.requesterName) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.requesterName))}</div></div>
+            <div class="field-card"><div class="field-label">Status</div><div class="field-value${hasDisplayValue(record.status) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(formatStatusLabel(record.status || 'pending')))}</div></div>
+          </div>
+
+          <div class="section-head">04 · ASSET DETAILS</div>
           <div class="grid-4">
             <div class="field-card"><div class="field-label">Asset Tag / ID</div><div class="field-value${hasDisplayValue(record.assetRef) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.assetRef))}</div></div>
             <div class="field-card"><div class="field-label">Asset Type</div><div class="field-value${hasDisplayValue(record.assetType) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.assetType))}</div></div>
             <div class="field-card"><div class="field-label">Serial Number</div><div class="field-value${hasDisplayValue(record.serialNumber) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.serialNumber))}</div></div>
-            <div class="field-card"><div class="field-label">OS / Platform</div><div class="field-value${hasDisplayValue(record.osPlatform) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.osPlatform))}</div></div>
           </div>
           <div class="grid-3">
             <div class="field-card"><div class="field-label">Purpose</div><div class="field-value${hasDisplayValue(record.purpose) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.purpose))}</div></div>
@@ -755,7 +854,7 @@ function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNu
             <div class="field-card"><div class="field-label">Asset Description</div><div class="field-value${hasDisplayValue(record.assetDescription) ? '' : ' empty'}">${escapeHtml(fieldDisplayValue(record.assetDescription))}</div></div>
           </div>
 
-          <div class="section-head">04 · AUTHORISATION &amp; SIGNATURES</div>
+          <div class="section-head">05 · AUTHORISATION &amp; SIGNATURES</div>
           <div class="sig-grid">
             <div class="sig-card">
               <div class="sig-top"><div class="sig-circle">${escapeHtml(initialsFromName(record.issuerSignedName || record.requesterName || 'ITMS Super Admin'))}</div><div><div class="sig-role">Issued by</div><div class="sig-name">${escapeHtml(fieldDisplayValue(record.issuerSignedName || record.requesterName || 'ITMS Super Admin'))}</div></div></div>
@@ -788,6 +887,7 @@ function openGatepassPrintWindow(record: Pick<GatepassRecord, 'id' | 'gatepassNu
 
 export default function Gatepass() {
   const session = getStoredSession();
+  const isAuditor = session?.user.role === 'auditor';
   const [gatepasses, setGatepasses] = useState<GatepassRecord[]>([]);
   const [branches, setBranches] = useState<LookupOption[]>([]);
   const [departments, setDepartments] = useState<LookupOption[]>([]);
@@ -799,7 +899,7 @@ export default function Gatepass() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-  const [activeSection, setActiveSection] = useState<GatepassSection>('create');
+  const [activeSection, setActiveSection] = useState<GatepassSection>('reports');
   const [formErrors, setFormErrors] = useState<GatepassFormErrors>({});
   const [showPreview, setShowPreview] = useState(false);
   const [assetDescriptionLocked, setAssetDescriptionLocked] = useState(false);
@@ -814,10 +914,9 @@ export default function Gatepass() {
     assetRef: '',
     assetType: '',
     serialNumber: '',
-    osPlatform: '',
     expectedReturn: '',
     assetDescription: '',
-    purpose: PURPOSE_OPTIONS[0],
+    purpose: DEFAULT_PURPOSE,
     originBranch: '',
     recipientBranch: '',
     issueDate: todayDate(),
@@ -837,10 +936,9 @@ export default function Gatepass() {
       assetRef: '',
       assetType: '',
       serialNumber: '',
-      osPlatform: '',
       expectedReturn: '',
       assetDescription: '',
-      purpose: PURPOSE_OPTIONS[0],
+      purpose: DEFAULT_PURPOSE,
       originBranch: branchOptions[0]?.name || '',
       recipientBranch: branchOptions[1]?.name || branchOptions[0]?.name || '',
       issueDate: todayDate(),
@@ -885,7 +983,6 @@ export default function Gatepass() {
     assetRef: form.assetRef,
     assetType: form.assetType,
     serialNumber: form.serialNumber,
-    osPlatform: form.osPlatform,
     expectedReturn: form.expectedReturn,
     assetDescription: form.assetDescription,
     purpose: form.purpose,
@@ -918,7 +1015,6 @@ export default function Gatepass() {
     form.expectedReturn,
     form.issueDate,
     form.originBranch,
-    form.osPlatform,
     form.purpose,
     form.recipientBranch,
     form.serialNumber,
@@ -926,6 +1022,7 @@ export default function Gatepass() {
     session?.user.fullName,
   ]);
   const recentGatepasses = useMemo(() => gatepasses, [gatepasses]);
+  const recentGatepassLookup = useMemo(() => new Map(recentGatepasses.map((gatepass) => [gatepass.id, gatepass])), [recentGatepasses]);
 
   const sidebarItems = [
     { id: 'create' as const, label: 'Create Gatepass', detail: 'Draft and issue movement pass', icon: FilePlus2 },
@@ -933,6 +1030,13 @@ export default function Gatepass() {
     { id: 'records' as const, label: 'Vault & Records', detail: 'Completed and rejected passes', icon: FileArchive },
     { id: 'reports' as const, label: 'Reports', detail: 'Movement and print summary', icon: BarChart3 },
   ];
+  const visibleSidebarItems = isAuditor ? sidebarItems.filter((item) => item.id !== 'create') : sidebarItems;
+
+  useEffect(() => {
+    if (isAuditor && activeSection === 'create') {
+      setActiveSection('reports');
+    }
+  }, [activeSection, isAuditor]);
 
   const branchNameById = useMemo(() => Object.fromEntries(branches.map((branch) => [branch.id, branch.name])), [branches]);
   const departmentNames = useMemo(() => {
@@ -996,8 +1100,8 @@ export default function Gatepass() {
     const timeoutId = window.setTimeout(async () => {
       try {
         const searchParams = new URLSearchParams({ paginate: '1', page: '1', page_size: '20', search: query });
-        const [stockData, deviceData] = await Promise.all([
-          apiRequest<PaginatedStockResponse>(`/api/stock?${searchParams.toString()}`).catch(() => ({ items: [], total: 0, page: 1, pageSize: 20 })),
+        const [inventoryData, deviceData] = await Promise.all([
+          apiRequest<PaginatedInventoryResponse>(`/api/inventory?${searchParams.toString()}`).catch(() => ({ items: [], total: 0, page: 1, pageSize: 20 })),
           apiRequest<PaginatedDevicesResponse>(`/api/devices?${searchParams.toString()}`).catch(() => ({ items: [], total: 0, page: 1, pageSize: 20 })),
         ]);
         if (!cancelled) {
@@ -1009,25 +1113,23 @@ export default function Gatepass() {
               label: `${device.assetId} - ${device.hostname}`,
               description: description || device.hostname || device.assetId,
               assetType: device.deviceType || 'Workstation',
-              serialNumber: device.hostname || '',
-              osPlatform: device.osName || '',
+              serialNumber: device.serialNumber || '',
               originBranch: device.branch?.name || '',
             };
           });
-          const stockAssets = (stockData.items || []).map((item) => {
-            const description = [item.name, item.category, item.serialNumber || item.specs].filter(Boolean).join(' • ');
+          const inventoryAssets = (inventoryData.items || []).map((item) => {
+            const description = [item.name, item.category, item.serialNumber || item.specs].filter(Boolean).join('  ');
             return {
-              key: `stock-${item.id}`,
+              key: `inventory-${item.id}`,
               assetRef: item.itemCode,
               label: `${item.itemCode} - ${item.name}`,
               description: description || item.name || item.itemCode,
               assetType: item.category || item.name || '',
               serialNumber: item.serialNumber || '',
-              osPlatform: item.specs || '',
               originBranch: branchNameById[item.branchId] || '',
             };
           });
-          setAssetSuggestions([...deviceAssets, ...stockAssets].sort((left, right) => left.label.localeCompare(right.label)));
+          setAssetSuggestions([...deviceAssets, ...inventoryAssets].sort((left, right) => left.label.localeCompare(right.label)));
         }
       } catch {
         if (!cancelled) {
@@ -1106,7 +1208,6 @@ export default function Gatepass() {
         assetRef: selectedAsset.assetRef,
         assetType: selectedAsset.assetType || current.assetType,
         serialNumber: selectedAsset.serialNumber || current.serialNumber,
-        osPlatform: selectedAsset.osPlatform || current.osPlatform,
         assetDescription: selectedAsset.description,
         originBranch: selectedAsset.originBranch || current.originBranch,
       }));
@@ -1125,7 +1226,6 @@ export default function Gatepass() {
       assetRef: value,
       assetType: current.assetRef === value ? current.assetType : '',
       serialNumber: current.assetRef === value ? current.serialNumber : '',
-      osPlatform: current.assetRef === value ? current.osPlatform : '',
       assetDescription: current.assetRef === value ? current.assetDescription : '',
     }));
     setFormErrors((current) => ({
@@ -1143,6 +1243,60 @@ export default function Gatepass() {
     }
   };
 
+  const handleViewReport = (gatepassId: string) => {
+    const gatepass = recentGatepassLookup.get(gatepassId);
+    if (!gatepass) {
+      setError('Unable to open the selected gatepass report.');
+      return;
+    }
+
+    void openGatepassClientPdf(gatepass);
+  };
+
+  const handleDownloadReport = (gatepassId: string) => {
+    const gatepass = recentGatepassLookup.get(gatepassId);
+    if (!gatepass) {
+      setError('Unable to download the selected gatepass report.');
+      return;
+    }
+
+    void openGatepassClientPdf(gatepass, false);
+  };
+
+  const handleDownloadCsv = () => {
+    const escapeCsvCell = (value: string) => {
+      if (/[",\n]/.test(value)) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const rows = [
+      ['gatepass_number', 'employee_name', 'employee_code', 'asset_ref', 'status', 'issue_date', 'origin_branch', 'recipient_branch'],
+      ...recentGatepasses.map((gatepass) => [
+        gatepassDisplayNumber(gatepass),
+        gatepass.employeeName || '',
+        gatepass.employeeCode || '',
+        gatepass.assetRef || '',
+        gatepass.status || '',
+        gatepass.issueDate || '',
+        gatepass.originBranch || '',
+        gatepass.recipientBranch || '',
+      ]),
+    ];
+
+    const csv = rows
+      .map((row) => row.map((cell) => escapeCsvCell(String(cell ?? ''))).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = objectUrl;
+    anchor.download = 'gatepass-report-register.csv';
+    anchor.click();
+    URL.revokeObjectURL(objectUrl);
+  };
+
   const openPreview = () => {
     const errors = validateGatepassForm(form);
     setFormErrors(errors);
@@ -1152,6 +1306,20 @@ export default function Gatepass() {
     }
     setError('');
     setShowPreview(true);
+  };
+
+  const handleClosePreview = () => {
+    setShowPreview(false);
+  };
+
+  const handleDownloadPreviewPdf = async () => {
+    await openGatepassClientPdf(previewRecord, false);
+    setShowPreview(false);
+  };
+
+  const handlePrintPreview = () => {
+    openGatepassPrintWindow(previewRecord);
+    setShowPreview(false);
   };
 
   const handleCreate = async (event: React.FormEvent) => {
@@ -1201,403 +1369,95 @@ export default function Gatepass() {
 
   return (
     <div className="gatepass-page w-full space-y-6">
-      {showPreview ? (
-        <div className="gatepass-preview-overlay fixed inset-0 z-40 flex items-center justify-center bg-zinc-950/70 p-4 print:bg-white print:p-0">
-          <div className="gatepass-print-sheet max-h-[90vh] w-full max-w-[210mm] overflow-y-auto rounded-xl bg-white shadow-2xl print:max-h-none print:max-w-none print:overflow-visible print:rounded-none print:shadow-none">
-            <div className="flex items-center justify-between border-b border-zinc-800 bg-zinc-950 px-5 py-4">
-              <div>
-                <div className="text-[2rem] font-bold leading-none tracking-[-0.03em] text-white">ZERODHA</div>
-                <div className="mt-2 text-[11px] uppercase tracking-[0.08em] text-zinc-400">IT GATEPASS</div>
-              </div>
-              <div className="text-right">
-                <div className="text-[15px] font-bold tracking-[0.03em] text-white">{previewGatepassNumber}</div>
-                <div className="mt-2 inline-flex bg-white px-2 py-1">
-                  <BarcodePreview value={previewGatepassNumber} label={`Barcode for ${previewGatepassNumber}`} className="h-8 w-40" />
-                </div>
-                <div className="mt-2 text-[10px] text-zinc-400">Date of issue: {formatDisplayDate(previewRecord.issueDate)} · {formatIssueTime(previewRecord.createdAt)}</div>
-              </div>
-            </div>
-
-            <div className="space-y-3 px-5 pb-5">
-              <section>
-                <div className="mt-4 bg-zinc-950 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">01 · Dispatch Details</div>
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <PreviewFieldCard label="From Branch" value={previewRecord.originBranch} strong />
-                  <PreviewFieldCard label="Receiver Branch" value={previewRecord.recipientBranch} strong />
-                </div>
-              </section>
-
-              <section>
-                <div className="bg-zinc-950 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">02 · Recipient Details</div>
-                <div className="mt-2 grid gap-2 md:grid-cols-3">
-                  <PreviewFieldCard label="Employee Name" value={previewRecord.employeeName} />
-                  <PreviewFieldCard label="Employee ID" value={previewRecord.employeeCode} />
-                  <PreviewFieldCard label="Department" value={previewRecord.departmentName} />
-                </div>
-                <div className="mt-2 grid gap-2 md:grid-cols-2">
-                  <PreviewFieldCard label="Approver Name" value={previewRecord.approverName} />
-                  <PreviewFieldCard label="Contact Number" value={previewRecord.contactNumber} />
-                </div>
-              </section>
-
-              <section>
-                <div className="bg-zinc-950 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">03 · Asset Details</div>
-                <div className="mt-2 grid gap-2 md:grid-cols-4">
-                  <PreviewFieldCard label="Asset Tag / ID" value={previewRecord.assetRef} />
-                  <PreviewFieldCard label="Asset Type" value={previewRecord.assetType} />
-                  <PreviewFieldCard label="Serial Number" value={previewRecord.serialNumber} />
-                  <PreviewFieldCard label="OS / Platform" value={previewRecord.osPlatform} />
-                </div>
-                <div className="mt-2 grid gap-2 md:grid-cols-3">
-                  <PreviewFieldCard label="Purpose" value={previewRecord.purpose} />
-                  <PreviewFieldCard label="Issue Date" value={`${formatDisplayDate(previewRecord.issueDate)} · ${formatIssueTime(previewRecord.createdAt)}`} />
-                  <PreviewFieldCard label="Expected Return" value={formatDisplayDate(previewRecord.expectedReturn || '')} />
-                </div>
-                <div className="mt-2">
-                  <PreviewFieldCard label="Asset Description" value={previewRecord.assetDescription} />
-                </div>
-              </section>
-
-              <section>
-                <div className="bg-zinc-950 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-white">04 · Authorisation &amp; Signatures</div>
-                <div className="mt-2 grid gap-2.5 md:grid-cols-3">
-                  <PreviewSignatureCard role="Issued by" name={previewRecord.issuerSignedName || previewRecord.requesterName || 'ITMS Super Admin'} />
-                  <PreviewSignatureCard role="Approved by" name={previewRecord.approverName || 'Approver'} />
-                  <PreviewSignatureCard role="Security check" name={previewRecord.securitySignedName || 'Security Guard'} />
-                </div>
-              </section>
-            </div>
-
-            <div className="flex items-center justify-between bg-zinc-950 px-5 py-2.5 text-[9px] text-zinc-400">
-              <span>Zerodha Gatepass · Admin &amp; IT Division · iteam@zerodha.com</span>
-              <span>{previewGatepassNumber} · {formatDisplayDate(previewRecord.issueDate)}</span>
-            </div>
-
-            <div className="gatepass-preview-actions flex flex-wrap justify-end gap-3 border-t border-zinc-200 px-6 py-4">
-              <button type="button" onClick={() => setShowPreview(false)} className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50">
-                Back to Edit
-              </button>
-              <button
-                type="button"
-                onClick={() => void openGatepassClientPdf(previewRecord, false)}
-                className="rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800"
-              >
-                Download PDF
-              </button>
-              <button type="button" onClick={() => openGatepassPrintWindow(previewRecord)} className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-100">
-                Print Preview
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <GatepassPreviewOverlay
+        showPreview={showPreview}
+        previewGatepassNumber={previewGatepassNumber}
+        previewRecord={previewRecord}
+        formatDisplayDate={formatDisplayDate}
+        formatIssueTime={formatIssueTime}
+        onClose={handleClosePreview}
+        onDownloadPdf={() => { void handleDownloadPreviewPdf(); }}
+        onPrintPreview={handlePrintPreview}
+      />
 
       <div>
         <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Gatepass</h1>
         <p className="mt-1 text-sm text-zinc-500">Admin and IT dispatch tracking with creation, pending signatures, saved PDFs, and reporting.</p>
       </div>
 
+      {isAuditor ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          Auditor access is read-only on gatepass. You can review movement summaries and existing records, but drafting and issuing new gatepasses is disabled.
+        </div>
+      ) : null}
+
       {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
       {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{successMessage}</div> : null}
 
+      {activeSection === 'create' && !isAuditor ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+          <div className="max-h-full w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div className="text-lg font-bold text-sky-950">Create Gatepass</div>
+                <div className="text-sm text-blue-700/80">Use the same popup-style workflow as inventory add item to draft and issue a gatepass.</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSection('reports')}
+                className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+              >
+                Close
+              </button>
+            </div>
+            <GatepassCreateForm
+              form={form}
+              formErrors={formErrors}
+              submitting={submitting}
+              branches={branches}
+              departmentNames={departmentNames}
+              employeeSuggestions={employeeSuggestions}
+              employeeLookupLoading={employeeLookupLoading}
+              assetSuggestions={assetSuggestions}
+              assetLookupLoading={assetLookupLoading}
+              assetDescriptionLocked={assetDescriptionLocked}
+              formatDisplayDate={formatDisplayDate}
+              onSubmit={handleCreate}
+              onFieldChange={updateField}
+              onEmployeeLookupChange={handleEmployeeLookupChange}
+              onAssetLookupChange={handleAssetLookupChange}
+              onUnlockAssetDescription={() => setAssetDescriptionLocked(false)}
+              onReset={resetForm}
+              onOpenPreview={openPreview}
+            />
+          </div>
+        </div>
+      ) : null}
+
       <div className="grid items-start gap-6 md:grid-cols-[250px_minmax(0,1fr)]">
-        <aside className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm md:sticky md:top-6">
-          <div>
-            <div className="text-lg font-bold text-zinc-900">Gatepass Pro</div>
-            <p className="mt-1 text-sm text-zinc-500">Dispatch and tracking</p>
-          </div>
-
-          <div className="mt-5 space-y-2">
-            {sidebarItems.map((item) => {
-              const Icon = item.icon;
-              const active = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => setActiveSection(item.id)}
-                  className={`flex w-full items-start justify-between rounded-xl border px-3 py-3 text-left transition ${active ? 'border-zinc-300 bg-zinc-50 text-zinc-900' : 'border-transparent text-zinc-700 hover:border-zinc-200 hover:bg-zinc-50'}`}
-                >
-                  <div className="flex gap-3">
-                    <Icon className={`mt-0.5 h-4 w-4 ${active ? 'text-zinc-700' : 'text-zinc-400'}`} />
-                    <div>
-                      <div className="text-sm font-bold">{item.label}</div>
-                      <div className="mt-1 text-xs text-zinc-500">{item.detail}</div>
-                    </div>
-                  </div>
-                  {typeof item.badge === 'number' && item.badge > 0 ? <span className="rounded-full border border-zinc-300 px-2 py-0.5 text-xs font-bold text-zinc-700">{item.badge}</span> : null}
-                </button>
-              );
-            })}
-          </div>
-
-        </aside>
+        <GatepassSidebar items={visibleSidebarItems} activeSection={activeSection} onSectionChange={setActiveSection} />
 
         <div className="min-w-0 space-y-5">
         {activeSection === 'reports' ? (
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Scan Station</div>
-                  <div className="mt-2 text-2xl font-bold text-zinc-900">Gatepass barcode board</div>
-                  <div className="mt-2 text-sm text-zinc-500">Use these larger barcode cards to verify movement records quickly from reports.</div>
-                </div>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {recentGatepasses.map((gatepass) => (
-                    <div key={`scan-station-${gatepass.id}`} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
-                      <div className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">{gatepass.status}</div>
-                      <div className="mt-2 text-sm font-semibold text-zinc-900">{gatepassDisplayNumber(gatepass)}</div>
-                      <BarcodePreview value={gatepassDisplayNumber(gatepass)} label={`Barcode for ${gatepassDisplayNumber(gatepass)}`} className="mt-4 h-16 w-full" />
-                      <div className="mt-3 text-xs text-zinc-500">{gatepass.employeeName || gatepass.assetRef || 'Gatepass record'}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Created</div>
-                <div className="mt-3 text-3xl font-bold text-zinc-900">{gatepassSummary.total}</div>
-                <div className="mt-2 text-sm text-zinc-500">All gatepasses issued from this portal.</div>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Pending</div>
-                <div className="mt-3 text-3xl font-bold text-amber-600">{gatepassSummary.pending}</div>
-                <div className="mt-2 text-sm text-zinc-500">Awaiting approval, print, or signature completion.</div>
-              </div>
-              <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-                <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500">Archived</div>
-                <div className="mt-3 text-3xl font-bold text-zinc-900">{gatepassSummary.archived}</div>
-                <div className="mt-2 text-sm text-zinc-500">Approved and rejected records in the vault.</div>
-              </div>
-            </div>
-          </div>
+          <GatepassReportsSection
+            recentGatepasses={recentGatepasses.map((gatepass) => ({
+              id: gatepass.id,
+              status: gatepass.status,
+              displayNumber: gatepassDisplayNumber(gatepass),
+              employeeName: gatepass.employeeName,
+              assetRef: gatepass.assetRef,
+              issueDate: gatepass.issueDate,
+              subjectLabel: gatepass.employeeName || gatepass.assetRef || 'Gatepass record',
+            }))}
+            total={gatepassSummary.total}
+            pending={gatepassSummary.pending}
+            archived={gatepassSummary.archived}
+            renderBarcode={(value, label, className) => <BarcodePreview value={value} label={label} className={className} />}
+            onViewReport={handleViewReport}
+            onDownloadReport={handleDownloadReport}
+            onDownloadCsv={handleDownloadCsv}
+          />
         ) : null}
-
-        {activeSection === 'create' ? (
-        <form onSubmit={handleCreate} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm space-y-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-zinc-900">Draft New Gatepass</h2>
-              <p className="mt-0.5 text-sm text-zinc-500">Capture branch transfer details and issue the official gatepass.</p>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-300 bg-white text-xs font-bold text-zinc-700">01</div>
-              <div>
-                <div className="text-sm font-bold text-zinc-900">Dispatch Details</div>
-                <div className="mt-0.5 text-xs text-zinc-500">Set the branch and issue date for this movement pass.</div>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 xl:grid-cols-12">
-              <div className="xl:col-span-6">
-                <label>
-                  <FieldLabel label="From Branch" required />
-                </label>
-                <select value={form.originBranch} onChange={(event) => updateField('originBranch', event.target.value)} className={formControlClassName}>
-                  {branches.map((branch) => <option key={`origin-${branch.id}`} value={branch.name}>{branch.name}</option>)}
-                </select>
-                <FieldError message={formErrors.originBranch} />
-              </div>
-
-              <div className="xl:col-span-6">
-                <label>
-                  <FieldLabel label="Receiver Branch" required />
-                </label>
-                <select value={form.recipientBranch} onChange={(event) => updateField('recipientBranch', event.target.value)} className={formControlClassName}>
-                  {branches.map((branch) => <option key={`recipient-${branch.id}`} value={branch.name}>{branch.name}</option>)}
-                </select>
-                <FieldError message={formErrors.recipientBranch} />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-300 bg-white text-xs font-bold text-zinc-700">02</div>
-              <div>
-                <div className="text-sm font-bold text-zinc-900">Recipient Details</div>
-                <div className="mt-0.5 text-xs text-zinc-500">Identify who is taking the asset and who approves the movement.</div>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 xl:grid-cols-10">
-              <div className="xl:col-span-4">
-                <label>
-                  <FieldLabel label="Employee Name" required />
-                </label>
-                <>
-                  <input
-                    list="gatepass-employee-suggestions"
-                    value={form.employeeName}
-                    onChange={(event) => handleEmployeeLookupChange(event.target.value)}
-                    className={formControlClassName}
-                    placeholder="Search by employee name or ID"
-                  />
-                  <datalist id="gatepass-employee-suggestions">
-                    {employeeSuggestions.map((user) => {
-                      const name = userDisplayName(user);
-                      const code = user.employeeCode || user.emp_id || '';
-                      return <option key={user.id} value={name}>{code ? `${name} - ${code}` : name}</option>;
-                    })}
-                  </datalist>
-                </>
-                {!formErrors.employeeName ? (
-                  <p className="mt-2 text-[11px] text-zinc-500">
-                    {form.employeeName.trim().length < 2
-                      ? 'Type at least 2 characters to search employees.'
-                      : employeeLookupLoading
-                        ? 'Searching employees...'
-                        : employeeSuggestions.length > 0
-                          ? `${employeeSuggestions.length} employee suggestion${employeeSuggestions.length === 1 ? '' : 's'} ready.`
-                          : 'No employee matches found for this search.'}
-                  </p>
-                ) : null}
-                <FieldError message={formErrors.employeeName} />
-              </div>
-              <div className="xl:col-span-3">
-                <label>
-                  <FieldLabel label="Employee ID" required />
-                </label>
-                <input value={form.employeeCode} onChange={(event) => updateField('employeeCode', event.target.value)} className={formControlClassName} placeholder="Employee code" />
-                <FieldError message={formErrors.employeeCode} />
-              </div>
-              <div className="xl:col-span-3">
-                <label>
-                  <FieldLabel label="Department" required />
-                </label>
-                <select value={form.departmentName} onChange={(event) => updateField('departmentName', event.target.value)} className={formControlClassName}>
-                  <option value="">Select department</option>
-                  {departmentNames.map((departmentName) => <option key={departmentName} value={departmentName}>{departmentName}</option>)}
-                </select>
-                <FieldError message={formErrors.departmentName} />
-              </div>
-              <div className="xl:col-span-5">
-                <label>
-                  <FieldLabel label="Approver Name" required />
-                </label>
-                <input value={form.approverName} onChange={(event) => updateField('approverName', event.target.value)} className={formControlClassName} placeholder="Approver name" />
-                <FieldError message={formErrors.approverName} />
-              </div>
-              <div className="xl:col-span-5">
-                <label>
-                  <FieldLabel label="Contact Number" />
-                </label>
-                <input value={form.contactNumber} onChange={(event) => updateField('contactNumber', event.target.value)} className={formControlClassName} placeholder="Contact number" />
-                <FieldError message={formErrors.contactNumber} />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 p-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border border-zinc-300 bg-white text-xs font-bold text-zinc-700">03</div>
-              <div>
-                <div className="text-sm font-bold text-zinc-900">Asset Details</div>
-                <div className="mt-0.5 text-xs text-zinc-500">Choose the asset, complete the hardware details, and set the movement dates.</div>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-3 xl:grid-cols-10">
-              <div className="xl:col-span-4">
-                <label>
-                  <FieldLabel label="Asset Tag / ID" required />
-                </label>
-                <>
-                  <input list="gatepass-asset-suggestions" value={form.assetRef} onChange={(event) => handleAssetLookupChange(event.target.value)} className={formControlClassName} placeholder="Start typing asset tag, stock code, or hostname" />
-                  <datalist id="gatepass-asset-suggestions">
-                    {assetSuggestions.map((asset) => <option key={asset.key} value={asset.assetRef}>{asset.label}</option>)}
-                  </datalist>
-                </>
-                <p className="mt-2 text-[11px] text-zinc-500">
-                  {form.assetRef.trim().length < 2
-                    ? 'Type at least 2 characters to search devices and stock assets. A known asset auto-fills the hardware fields and from branch.'
-                    : assetLookupLoading
-                      ? 'Searching assets...'
-                      : assetSuggestions.length > 0
-                        ? `${assetSuggestions.length} asset suggestion${assetSuggestions.length === 1 ? '' : 's'} ready. Choosing a known asset auto-fills the hardware fields and from branch.`
-                        : 'No asset matches found for this search.'}
-                </p>
-                <FieldError message={formErrors.assetRef} />
-              </div>
-              <div className="xl:col-span-2">
-                <label>
-                  <FieldLabel label="Asset Type" />
-                </label>
-                <input value={form.assetType} onChange={(event) => updateField('assetType', event.target.value)} className={formControlClassName} placeholder="Workstation" />
-              </div>
-              <div className="xl:col-span-4">
-                <label>
-                  <FieldLabel label="Serial Number" />
-                </label>
-                <input value={form.serialNumber} onChange={(event) => updateField('serialNumber', event.target.value)} className={formControlClassName} placeholder="Serial or hostname" />
-              </div>
-              <div className="xl:col-span-3">
-                <label>
-                  <FieldLabel label="OS / Platform" />
-                </label>
-                <input value={form.osPlatform} onChange={(event) => updateField('osPlatform', event.target.value)} className={formControlClassName} placeholder="Ubuntu 24.04 LTS" />
-              </div>
-              <div className="xl:col-span-3">
-                <label>
-                  <FieldLabel label="Purpose" required />
-                </label>
-                <select value={form.purpose} onChange={(event) => updateField('purpose', event.target.value)} className={formControlClassName}>
-                  {PURPOSE_OPTIONS.map((purpose) => <option key={purpose} value={purpose}>{purpose}</option>)}
-                </select>
-                <FieldError message={formErrors.purpose} />
-              </div>
-              <div className="xl:col-span-2">
-                <label>
-                  <FieldLabel label="Issue Date" required />
-                </label>
-                <input type="date" value={form.issueDate} onChange={(event) => updateField('issueDate', event.target.value)} className={formControlClassName} />
-                <p className="mt-1.5 text-[11px] text-zinc-500">Displays as {formatDisplayDate(form.issueDate)}.</p>
-                <FieldError message={formErrors.issueDate} />
-              </div>
-              <div className="xl:col-span-2">
-                <label>
-                  <FieldLabel label="Expected Return" />
-                </label>
-                <input type="date" value={form.expectedReturn} onChange={(event) => updateField('expectedReturn', event.target.value)} className={formControlClassName} />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between gap-3">
-                <label>
-                  <FieldLabel label="Asset Description" required />
-                </label>
-                {assetDescriptionLocked ? <button type="button" onClick={() => setAssetDescriptionLocked(false)} className="text-[11px] font-semibold text-zinc-500 hover:text-zinc-700">Unlock Edit</button> : null}
-              </div>
-              <textarea value={form.assetDescription} readOnly={assetDescriptionLocked} onChange={(event) => updateField('assetDescription', event.target.value)} rows={3} className={`${formTextareaClassName} ${assetDescriptionLocked ? 'border-zinc-300 bg-zinc-100 text-zinc-600 focus:border-zinc-300 focus:ring-0' : ''}`} placeholder="Describe the asset being moved" />
-              {assetDescriptionLocked ? <p className="mt-1.5 text-[11px] text-zinc-500">Description came from the matched inventory record. Unlock edit if you need to override it.</p> : null}
-              <FieldError message={formErrors.assetDescription} />
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <button type="button" onClick={() => resetForm()} className="self-start rounded-lg px-1 py-1 text-sm font-semibold text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700">
-                Clear Form
-              </button>
-              <div className="grid w-full gap-2.5 md:w-auto md:min-w-[360px] md:grid-cols-2">
-                <button type="button" onClick={openPreview} className="w-full rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50">
-                Preview Draft
-                </button>
-                <button type="submit" disabled={submitting} className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60">
-                {submitting ? 'Generating...' : 'Generate Official Gatepass'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </form>
-        ) : null}
-
         {activeSection !== 'create' ? (
         <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
           <h2 className="text-lg font-bold text-zinc-900">
