@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS stock_items (
   branch_id TEXT,
   assigned_user_id TEXT,
   warranty_expires_at TEXT,
+  cost TEXT,
   status TEXT NOT NULL,
   created_at TEXT NOT NULL,
   FOREIGN KEY(branch_id) REFERENCES branches(id),
