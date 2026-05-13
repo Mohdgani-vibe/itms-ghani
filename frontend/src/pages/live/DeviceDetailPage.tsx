@@ -1,9 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Activity, ArrowLeft, Cpu, HardDrive, MonitorSmartphone, Package, Play, ShieldCheck, TerminalSquare } from 'lucide-react';
+import { Cpu, HardDrive, Pencil } from 'lucide-react';
 import { apiRequest } from '../../lib/api';
+import PatchRunReportModal from '../../components/PatchRunReportModal';
+import { type SaltActionValue } from '../../lib/salt';
+import { type PatchRunReport } from '../../lib/patchReports';
 import { getStoredSession } from '../../lib/session';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import EmbeddedConsoleModal, { type EmbeddedConsoleState } from '../../components/EmbeddedConsoleModal';
+import DeviceAlertDetailModal from '../../components/devices/DeviceAlertDetailModal';
+import DeviceAssignmentPanel, { deviceAssignmentActionsReadOnly } from '../../components/devices/DeviceAssignmentPanel';
+import DetailSectionCard from '../../components/devices/DetailSectionCard';
+import DeviceDetailOverview from '../../components/devices/DeviceDetailOverview';
+import DeviceLifecycleEditor, { deviceLifecycleActionsReadOnly } from '../../components/devices/DeviceLifecycleEditor';
+import type { DeviceAlertRecord, DeviceNetworkInterfaceRecord, DevicePatchJobRecord, DeviceTerminalSessionRecord, DeviceVolumeRecord } from '../../components/devices/types';
+import { alertStatusBadgeClassName, alertStatusLabel, formatDate, formatDetailValue, severityBadgeClassName } from '../../components/devices/deviceDetailUtils';
+import { useDeviceDetailAccessWorkflow } from '../../components/devices/useDeviceDetailAccessWorkflow';
+import NetworkDetailsPanel from '../../components/devices/NetworkDetailsPanel';
+import OtherAlertsPanel from '../../components/devices/OtherAlertsPanel';
+import RemoteAccessPanel from '../../components/devices/RemoteAccessPanel';
+import SaltUpdatesPanel from '../../components/devices/SaltUpdatesPanel';
+import SecurityFindingsPanel from '../../components/devices/SecurityFindingsPanel';
+import SoftwareInventoryPanel from '../../components/devices/SoftwareInventoryPanel';
+import TerminalAccessPanel from '../../components/devices/TerminalAccessPanel';
+import VolumesPanel from '../../components/devices/VolumesPanel';
+import { buildDeviceDetailViewData } from './deviceDetailViewData';
 
 interface DeviceDetailNavigationState {
   enrollmentApprovalMessage?: string;
@@ -56,6 +77,12 @@ interface AssignableUserRecord {
 interface DeviceRecord {
   id: string;
   assetId: string;
+  cost?: string | null;
+  glpiId?: number | null;
+  saltMinionId?: string | null;
+  wazuhAgentId?: string | null;
+  anydeskId?: string | null;
+  rustdeskId?: string | null;
   hostname: string;
   serialNumber?: string | null;
   manufacturer?: string | null;
@@ -75,44 +102,29 @@ interface DeviceRecord {
   osBuild?: string | null;
   lastBootAt?: string | null;
   lastSeenAt?: string | null;
+  loggedInUsers?: string[];
   status: string;
-  patchStatus: string;
-  alertStatus: string;
+  patchStatus?: string;
+  alertStatus?: string;
   complianceScore: number;
   warrantyExpiresAt?: string | null;
-  user?: { id: string; fullName: string; email: string; employeeCode: string } | null;
+  user?: { id: string; fullName: string; email: string; employeeCode: string; status?: string | null } | null;
   department?: { name: string } | null;
   branch?: { name: string } | null;
-  installedApps?: Array<{ id: string; name: string; version?: string | null; publisher?: string | null }>;
+  network?: DeviceNetwork | null;
+  installedApps?: Array<{ id: string; name: string; version?: string | null; installDate?: string | null; source?: string | null }>;
+  diskLayout?: string | null;
+  volumes?: DeviceVolumeRecord[];
   toolStatus?: ToolStatusMap;
 }
 
-interface AlertRecord {
-  id: string;
-  source: string;
-  severity: string;
-  title: string;
-  detail: string;
-  acknowledged: boolean;
-  resolved: boolean;
-  createdAt: string;
-}
-
-interface PatchJob {
-  id: string;
-  jid: string;
-  status: string;
-  scope: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface TerminalSessionRecord {
-  id: string;
-  deviceId: string;
-  status: string;
-  createdAt: string;
-  requestedBy: string;
+interface DeviceNetwork {
+  wired_ip?: string | null;
+  wireless_ip?: string | null;
+  netbird_ip?: string | null;
+  dns?: string | null;
+  gateway?: string | null;
+  interface_stats?: Record<string, DeviceNetworkInterfaceRecord>;
 }
 
 interface ToolStatusEntry {
@@ -131,14 +143,48 @@ interface ToolStatusMap {
 
 interface InstallAgentConfig {
   saltApiConfigured: boolean;
-  portalInstallReady: boolean;
+  sshConfigured?: boolean;
+}
+
+interface EditableAssetRecord {
+  id: string;
+  asset_tag: string;
+  name: string;
+  hostname?: string | null;
+  category: string;
+  is_compute: boolean;
+  serial_number?: string | null;
+  model?: string | null;
+  entity_id: string;
+  assigned_to?: string | null;
+  dept_id?: string | null;
+  location_id?: string | null;
+  purchase_date?: string | null;
+  cost?: string | null;
+  warranty_until?: string | null;
+  status: string;
+  condition: string;
+  glpi_id?: number | null;
+  salt_minion_id?: string | null;
+  wazuh_agent_id?: string | null;
+  notes?: string | null;
+}
+
+interface DeviceLifecycleFormState {
+  assetTag: string;
+  category: string;
+  model: string;
+  purchaseDate: string;
+  warrantyUntil: string;
+  cost: string;
+  notes: string;
 }
 
 interface PendingAssetAction {
   kind: 'unassign' | 'delete';
 }
 
-function isPatchJobForDevice(job: PatchJob, device: DeviceRecord) {
+export function isPatchJobForDevice(job: DevicePatchJobRecord, device: DeviceRecord) {
   const scope = job.scope.trim().toLowerCase();
   const candidates = [
     device.hostname,
@@ -151,58 +197,61 @@ function isPatchJobForDevice(job: PatchJob, device: DeviceRecord) {
   return candidates.includes(scope);
 }
 
-function formatDate(value?: string | null) {
-  if (!value) {
-    return 'Not available';
-  }
-
-  return new Date(value).toLocaleString();
-}
-
-function isComputeAsset(device: DeviceRecord) {
+export function isComputeAsset(device: DeviceRecord) {
   const kind = (device.deviceType || '').toLowerCase();
   return ['laptop', 'desktop', 'workstation', 'server'].some((value) => kind.includes(value)) || Boolean(device.osName);
 }
 
-function formatDetailValue(value?: string | null, fallback = 'Not reported') {
-  if (!value) {
-    return fallback;
-  }
-
-  return value;
-}
-
-function severityBadgeClassName(severity: string) {
-  switch ((severity || '').toLowerCase()) {
-    case 'critical':
-    case 'high':
-      return 'bg-red-100 text-red-700';
-    case 'medium':
-    case 'warning':
-      return 'bg-amber-100 text-amber-700';
-    default:
-      return 'bg-sky-100 text-sky-700';
-  }
-}
-
 const dedicatedSecuritySources = new Set(['wazuh', 'clamav', 'openscap']);
+const keySoftwareTerms = ['antigravity', 'chrome', 'google-chrome', 'salt', 'clamav', 'wps', 'netbird', 'anydesk', 'rustdesk', 'wazuh', 'openscap'];
+const computeDetailSections = [
+  ['hardware', 'Hardware'],
+  ['operating-system', 'Operating System'],
+  ['assignment', 'Assignment'],
+  ['lifecycle', 'Lifecycle'],
+  ['enrollment', 'Enrollment'],
+  ['network', 'Network'],
+  ['volumes', 'Volumes'],
+  ['software', 'Software'],
+  ['remote-id', 'Remote Access & IDs'],
+  ['terminal', 'SSH Terminal'],
+  ['updates-salt', 'Salt Updates'],
+  ['security', 'Wazuh Findings'],
+  ['clamav', 'ClamScan'],
+  ['openscap', 'OpenSCAP'],
+  ['other-alerts', 'Other Alerts'],
+] as const;
+const accessoryDetailSections = [
+  ['hardware', 'Inventory'],
+  ['operating-system', 'Location & Assignment'],
+  ['assignment', 'Assignment'],
+  ['lifecycle', 'Lifecycle'],
+  ['enrollment', 'Enrollment'],
+  ['software', 'Asset Notes'],
+] as const;
+const auditorComputeDetailSections = [
+  ['hardware', 'Hardware'],
+  ['operating-system', 'Operating System'],
+  ['assignment', 'Assignment'],
+  ['lifecycle', 'Lifecycle'],
+  ['network', 'Network'],
+  ['volumes', 'Volumes'],
+  ['software', 'Software'],
+  ['security', 'Wazuh Findings'],
+  ['clamav', 'ClamScan'],
+  ['openscap', 'OpenSCAP'],
+  ['other-alerts', 'Other Alerts'],
+] as const;
+const auditorAccessoryDetailSections = [
+  ['hardware', 'Inventory'],
+  ['operating-system', 'Location & Assignment'],
+  ['assignment', 'Assignment'],
+  ['lifecycle', 'Lifecycle'],
+  ['software', 'Asset Notes'],
+] as const;
+const allDetailSectionIds = new Set<string>([...computeDetailSections, ...accessoryDetailSections].map(([sectionId]) => sectionId));
 
-function inferPlatform(osName?: string | null) {
-  const normalized = (osName || '').toLowerCase();
-  if (normalized.includes('windows')) {
-    return 'Windows';
-  }
-  if (normalized.includes('ubuntu') || normalized.includes('linux')) {
-    return 'Linux';
-  }
-  if (normalized.includes('mac')) {
-    return 'macOS';
-  }
-
-  return 'Unknown platform';
-}
-
-function parseEnrollmentDetails(description: string) {
+export function parseEnrollmentDetails(description: string) {
   return description
     .split('\n')
     .map((line) => line.trim())
@@ -221,11 +270,32 @@ function parseEnrollmentDetails(description: string) {
     }, {});
 }
 
-function formatStatusLabel(status: string) {
-  return status.replaceAll('_', ' ');
+export function formatStatusLabel(status: string) {
+  const normalizedStatus = status.trim();
+  if (!normalizedStatus) {
+    return 'Unknown';
+  }
+  return normalizedStatus.replaceAll('_', ' ');
 }
 
-function normalizeAssignableUsers(data: ApiUserRecord[]): AssignableUserRecord[] {
+export function formatLifecycleCurrency(value?: string | null) {
+  if (!value) {
+    return 'Cost not tracked';
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(parsed);
+}
+
+export function normalizeAssignableUsers(data: ApiUserRecord[]): AssignableUserRecord[] {
   return data
     .filter((user) => user.role !== 'super_admin')
     .map((user) => ({
@@ -237,7 +307,7 @@ function normalizeAssignableUsers(data: ApiUserRecord[]): AssignableUserRecord[]
   }));
 }
 
-function dedupeAssignableUsers(data: AssignableUserRecord[]) {
+export function dedupeAssignableUsers(data: AssignableUserRecord[]) {
   const seen = new Map<string, AssignableUserRecord>();
   data.forEach((user) => {
     if (!seen.has(user.id)) {
@@ -247,59 +317,12 @@ function dedupeAssignableUsers(data: AssignableUserRecord[]) {
   return Array.from(seen.values());
 }
 
-interface SecurityFindingsPanelProps {
-  title: string;
-  description: string;
-  alerts: AlertRecord[];
-  loading: boolean;
-  emptyMessage: string;
-  onSelectAlert: (alert: AlertRecord) => void;
-}
-
-function SecurityFindingsPanel({ title, description, alerts, loading, emptyMessage, onSelectAlert }: SecurityFindingsPanelProps) {
-  const latestAlert = alerts[0] ?? null;
-
-  return <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center text-sm font-bold uppercase tracking-wider text-zinc-500">
-        <ShieldCheck className="mr-2 h-4 w-4 text-brand-600" /> {title}
-      </div>
-      <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-700">{alerts.length} recent</span>
-    </div>
-    <p className="mt-2 text-sm text-zinc-500">{description}</p>
-    <div className="mt-4 rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-3">
-      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Latest Finding</div>
-      <div className="mt-2 text-sm font-semibold text-zinc-900">{latestAlert?.title || `No recent ${title.toLowerCase()}`}</div>
-      <div className="mt-1 text-xs text-zinc-500">{latestAlert ? formatDate(latestAlert.createdAt) : 'No timestamp available'}</div>
-    </div>
-    <div className="mt-4 space-y-3">
-      {loading ? <div className="text-sm text-zinc-500">Loading {title.toLowerCase()}...</div> : null}
-      {!loading && alerts.length === 0 ? <div className="rounded-xl bg-zinc-50 px-3 py-4 text-sm text-zinc-500">{emptyMessage}</div> : null}
-      {alerts.slice(0, 4).map((alert) => (
-        <button key={alert.id} type="button" onClick={() => onSelectAlert(alert)} className="block w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-3 text-left transition hover:border-zinc-200 hover:shadow-sm">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-sm font-semibold text-zinc-900">{alert.title}</div>
-              <div className="mt-1 text-xs text-zinc-500">{formatDate(alert.createdAt)}</div>
-            </div>
-            <span className={`rounded-full px-2 py-1 text-[11px] font-bold ${severityBadgeClassName(alert.severity)}`}>
-              {alert.severity}
-            </span>
-          </div>
-          <div className="mt-2 line-clamp-4 whitespace-pre-line text-sm text-zinc-600">{alert.detail}</div>
-          <div className="mt-2 text-xs font-medium text-zinc-400">Click for full details</div>
-        </button>
-      ))}
-    </div>
-  </div>;
-}
-
-function alertSourceLabel(source: string) {
+export function alertSourceLabel(source: string) {
   switch ((source || '').toLowerCase()) {
     case 'openscap':
       return 'OpenSCAP Hardening';
     case 'clamav':
-      return 'ClamAV';
+      return 'ClamScan';
     case 'wazuh':
       return 'Wazuh';
     case 'patch':
@@ -311,21 +334,67 @@ function alertSourceLabel(source: string) {
   }
 }
 
+export function softwareSourceLabel(source?: string | null) {
+  switch ((source || '').trim().toLowerCase()) {
+    case 'dpkg':
+      return 'dpkg';
+    case 'snapd':
+      return 'snapd';
+    case 'flatpak':
+      return 'flatpak';
+    case 'registry':
+      return 'Registry';
+    default:
+      return source || 'Unknown source';
+  }
+}
+
+export function toolStatusTone(status?: ToolStatusEntry['status']) {
+  switch (status) {
+    case 'linked':
+    case 'installed':
+    case 'detected':
+      return 'bg-emerald-100 text-emerald-700';
+    default:
+      return 'bg-zinc-100 text-zinc-700';
+  }
+}
+
+export function toDateInputValue(value?: string | null) {
+  return value ? value.slice(0, 10) : '';
+}
+
+export function buildLifecycleFormState(asset: EditableAssetRecord): DeviceLifecycleFormState {
+  return {
+    assetTag: asset.asset_tag || '',
+    category: asset.category || '',
+    model: asset.model || '',
+    purchaseDate: toDateInputValue(asset.purchase_date),
+    warrantyUntil: toDateInputValue(asset.warranty_until),
+    cost: asset.cost || '',
+    notes: asset.notes || '',
+  };
+}
+
 export default function DeviceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const basePath = location.pathname.split('/devices')[0];
   const session = getStoredSession();
-  const canOperate = session?.user.role.toLowerCase() !== 'employee';
+  const role = (session?.user.role || '').toLowerCase();
+  const canOperate = ['super_admin', 'it_team'].includes(role);
+  const isAuditor = role === 'auditor';
   const [device, setDevice] = useState<DeviceRecord | null>(null);
-  const [alerts, setAlerts] = useState<AlertRecord[]>([]);
-  const [patchJobs, setPatchJobs] = useState<PatchJob[]>([]);
-  const [terminalSessions, setTerminalSessions] = useState<TerminalSessionRecord[]>([]);
+  const [alerts, setAlerts] = useState<DeviceAlertRecord[]>([]);
+  const [patchJobs, setPatchJobs] = useState<DevicePatchJobRecord[]>([]);
+  const [terminalSessions, setTerminalSessions] = useState<DeviceTerminalSessionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [sidebarLoading, setSidebarLoading] = useState(true);
   const [runningPatch, setRunningPatch] = useState(false);
   const [startingTerminal, setStartingTerminal] = useState(false);
+  const [selectedSaltAction, setSelectedSaltAction] = useState<SaltActionValue>('system-update');
+  const [customSaltInput, setCustomSaltInput] = useState('');
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [enrollmentRequest, setEnrollmentRequest] = useState<EnrollmentRequestRecord | null>(null);
@@ -338,11 +407,21 @@ export default function DeviceDetailPage() {
   const [assigningDevice, setAssigningDevice] = useState(false);
   const [assetActionLoading, setAssetActionLoading] = useState(false);
   const [pendingAssetAction, setPendingAssetAction] = useState<PendingAssetAction | null>(null);
-  const [selectedAlert, setSelectedAlert] = useState<AlertRecord | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<DeviceAlertRecord | null>(null);
+  const [embeddedConsole, setEmbeddedConsole] = useState<EmbeddedConsoleState | null>(null);
+  const [patchReport, setPatchReport] = useState<PatchRunReport | null>(null);
+  const [editableAsset, setEditableAsset] = useState<EditableAssetRecord | null>(null);
+  const [lifecycleForm, setLifecycleForm] = useState<DeviceLifecycleFormState | null>(null);
+  const [lifecycleEditorOpen, setLifecycleEditorOpen] = useState(false);
+  const [savingLifecycle, setSavingLifecycle] = useState(false);
+  const [activeSection, setActiveSection] = useState('hardware');
   const alertCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const alertDialogRef = useRef<HTMLDivElement | null>(null);
+  const embeddedConsoleCloseButtonRef = useRef<HTMLButtonElement | null>(null);
   const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   const navigationState = (location.state ?? null) as DeviceDetailNavigationState | null;
+  const lifecycleReadOnly = deviceLifecycleActionsReadOnly(canOperate, device?.status);
+  const assignmentReadOnly = deviceAssignmentActionsReadOnly(canOperate, device?.status, device?.user?.status);
 
   const loadDeviceDetails = async (showLoading = true) => {
     if (!id) {
@@ -424,6 +503,31 @@ export default function DeviceDetailPage() {
   }, [selectedAlert]);
 
   useEffect(() => {
+    if (!embeddedConsole) {
+      return;
+    }
+
+    lastFocusedElementRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    embeddedConsoleCloseButtonRef.current?.focus();
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setEmbeddedConsole(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      lastFocusedElementRef.current?.focus();
+    };
+  }, [embeddedConsole]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadDevice = async () => {
@@ -474,16 +578,27 @@ export default function DeviceDetailPage() {
     const loadSidebarData = async () => {
       try {
         setSidebarLoading(true);
-        const [deviceAlerts, allPatchJobs, sessions] = await Promise.all([
-          apiRequest<AlertRecord[]>(`/api/devices/${id}/alerts`),
-          apiRequest<PatchJob[]>('/api/patch/jobs'),
-          apiRequest<TerminalSessionRecord[]>(`/api/terminal/session?deviceId=${id}`),
-        ]);
+        const deviceAlerts = await apiRequest<DeviceAlertRecord[]>(`/api/devices/${id}/alerts`);
         if (cancelled) {
           return;
         }
 
         setAlerts(deviceAlerts);
+
+        if (isAuditor) {
+          setPatchJobs([]);
+          setTerminalSessions([]);
+          return;
+        }
+
+        const [allPatchJobs, sessions] = await Promise.all([
+          apiRequest<DevicePatchJobRecord[]>('/api/patch/jobs'),
+          apiRequest<DeviceTerminalSessionRecord[]>(`/api/terminal/session?deviceId=${id}`),
+        ]);
+        if (cancelled) {
+          return;
+        }
+
         setPatchJobs(allPatchJobs.filter((job) => isPatchJobForDevice(job, device)).slice(0, 6));
         setTerminalSessions(sessions);
       } catch (requestError) {
@@ -502,7 +617,7 @@ export default function DeviceDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [device, id]);
+  }, [device, id, isAuditor]);
 
   useEffect(() => {
     if (!canOperate) {
@@ -536,6 +651,38 @@ export default function DeviceDetailPage() {
       cancelled = true;
     };
   }, [canOperate]);
+
+  useEffect(() => {
+    if (!id || !canOperate) {
+      setEditableAsset(null);
+      setLifecycleForm(null);
+      setLifecycleEditorOpen(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadEditableAsset = async () => {
+      try {
+        const asset = await apiRequest<EditableAssetRecord>(`/api/assets/${id}`);
+        if (cancelled) {
+          return;
+        }
+        setEditableAsset(asset);
+        setLifecycleForm(buildLifecycleFormState(asset));
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(requestError instanceof Error ? requestError.message : 'Failed to load editable asset details');
+        }
+      }
+    };
+
+    void loadEditableAsset();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canOperate, id]);
 
   useEffect(() => {
     if (!device || !canOperate) {
@@ -710,7 +857,14 @@ export default function DeviceDetailPage() {
     setSelectedAssignmentUserId(suggestedAssignmentUser?.id || assignableUsers[0].id);
   }, [assignableUsers, device?.user?.id, selectedAssignmentUserId, suggestedAssignmentUser]);
 
-  const installedApps = useMemo(() => device?.installedApps ?? [], [device?.installedApps]);
+  const installedApps = useMemo(
+    () => [...(device?.installedApps ?? [])].sort((left, right) => left.name.localeCompare(right.name)),
+    [device?.installedApps],
+  );
+  const highlightedInstalledApps = useMemo(
+    () => installedApps.filter((application) => keySoftwareTerms.some((term) => application.name.toLowerCase().includes(term))).slice(0, 12),
+    [installedApps],
+  );
   const wazuhAlerts = useMemo(() => alerts.filter((alert) => alert.source.toLowerCase() === 'wazuh'), [alerts]);
   const clamavAlerts = useMemo(() => alerts.filter((alert) => alert.source.toLowerCase() === 'clamav'), [alerts]);
   const openscapAlerts = useMemo(() => alerts.filter((alert) => alert.source.toLowerCase() === 'openscap'), [alerts]);
@@ -720,79 +874,30 @@ export default function DeviceDetailPage() {
       return;
     }
 
-    const [deviceAlerts, allPatchJobs, sessions] = await Promise.all([
-      apiRequest<AlertRecord[]>(`/api/devices/${id}/alerts`),
-      apiRequest<PatchJob[]>('/api/patch/jobs'),
-      apiRequest<TerminalSessionRecord[]>(`/api/terminal/session?deviceId=${id}`),
-    ]);
+    const deviceAlerts = await apiRequest<DeviceAlertRecord[]>(`/api/devices/${id}/alerts`);
     setAlerts(deviceAlerts);
+
+    if (isAuditor) {
+      setPatchJobs([]);
+      setTerminalSessions([]);
+      return;
+    }
+
+    const [allPatchJobs, sessions] = await Promise.all([
+      apiRequest<DevicePatchJobRecord[]>('/api/patch/jobs'),
+      apiRequest<DeviceTerminalSessionRecord[]>(`/api/terminal/session?deviceId=${id}`),
+    ]);
     setPatchJobs(allPatchJobs.filter((job) => isPatchJobForDevice(job, device)).slice(0, 6));
     setTerminalSessions(sessions);
   };
 
-  const handleRunPatch = async () => {
-    if (!device || !isComputeAsset(device)) {
-      return;
-    }
-
-    try {
-      setRunningPatch(true);
-      setError('');
-      setSuccessMessage('');
-      await apiRequest('/api/patch/run', {
-        method: 'POST',
-        body: JSON.stringify({ scope: device.hostname }),
-      });
-      await refreshSidebarData();
-      setSuccessMessage(`Patch run queued for ${device.hostname}.`);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Failed to queue patch run');
-    } finally {
-      setRunningPatch(false);
-    }
-  };
-
-  const handleStartTerminal = async () => {
-    if (!device || !isComputeAsset(device)) {
-      return;
-    }
-
-    const popup = window.open('', 'itms-terminal', 'popup=yes,width=1200,height=760,noopener,noreferrer');
-
-    try {
-      setStartingTerminal(true);
-      setError('');
-      setSuccessMessage('');
-      if (popup) {
-        popup.document.write('<title>ITMS Terminal</title><body style="font-family: sans-serif; padding: 24px; color: #18181b;">Preparing terminal session...</body>');
-      }
-      const session = await apiRequest<{ connection?: { url?: string } }>('/api/terminal/session', {
-        method: 'POST',
-        body: JSON.stringify({ deviceId: device.id }),
-      });
-      await refreshSidebarData();
-      if (session.connection?.url) {
-        if (popup) {
-          popup.location.replace(session.connection.url);
-          popup.focus();
-        } else {
-          window.open(session.connection.url, '_blank', 'noopener,noreferrer');
-        }
-      } else if (popup) {
-        popup.document.body.innerHTML = 'Terminal session was requested, but no terminal URL is configured for this environment.';
-      }
-      setSuccessMessage(`Terminal session started for ${device.hostname}.`);
-    } catch (requestError) {
-      if (popup && !popup.closed) {
-        popup.document.body.innerHTML = 'Terminal session could not be started.';
-      }
-      setError(requestError instanceof Error ? requestError.message : 'Failed to start terminal session');
-    } finally {
-      setStartingTerminal(false);
-    }
-  };
-
   const handleAssignDevice = async () => {
+    if (assignmentReadOnly) {
+      setError('This asset is retired. Assignment actions are read-only until the asset returns to an active lifecycle state.');
+      setSuccessMessage('');
+      return;
+    }
+
     if (!id || !selectedAssignmentUserId) {
       setError('Select a user before assigning this system.');
       return;
@@ -819,6 +924,13 @@ export default function DeviceDetailPage() {
   };
 
   const handleAssetAction = async (kind: 'unassign' | 'delete') => {
+    if (assignmentReadOnly) {
+      setError('This asset is retired. Assignment actions are read-only until the asset returns to an active lifecycle state.');
+      setSuccessMessage('');
+      setPendingAssetAction(null);
+      return;
+    }
+
     if (!id || !device) {
       return;
     }
@@ -846,6 +958,131 @@ export default function DeviceDetailPage() {
     }
   };
 
+  const handleLifecycleFieldChange = (field: keyof DeviceLifecycleFormState, value: string) => {
+    if (lifecycleReadOnly) {
+      return;
+    }
+    setLifecycleForm((current) => (current ? { ...current, [field]: value } : current));
+  };
+
+  const handleLifecycleCancel = () => {
+    if (!editableAsset) {
+      setLifecycleEditorOpen(false);
+      return;
+    }
+    setLifecycleForm(buildLifecycleFormState(editableAsset));
+    setLifecycleEditorOpen(false);
+  };
+
+  const handleLifecycleSave = async () => {
+    if (!id || !editableAsset || !lifecycleForm) {
+      return;
+    }
+
+    if (lifecycleReadOnly) {
+      setError('This asset is retired. Lifecycle details are read-only until the asset returns to an active lifecycle state.');
+      setSuccessMessage('');
+      return;
+    }
+
+    try {
+      setSavingLifecycle(true);
+      setError('');
+      setSuccessMessage('');
+      await apiRequest(`/api/assets/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          asset_tag: lifecycleForm.assetTag,
+          name: editableAsset.name,
+          hostname: editableAsset.hostname || '',
+          category: lifecycleForm.category,
+          is_compute: editableAsset.is_compute,
+          serial_number: editableAsset.serial_number || '',
+          model: lifecycleForm.model,
+          entity_id: editableAsset.entity_id,
+          assigned_to: editableAsset.assigned_to || '',
+          dept_id: editableAsset.dept_id || '',
+          location_id: editableAsset.location_id || '',
+          purchase_date: lifecycleForm.purchaseDate,
+          cost: lifecycleForm.cost,
+          warranty_until: lifecycleForm.warrantyUntil,
+          status: editableAsset.status,
+          condition: editableAsset.condition,
+          glpi_id: editableAsset.glpi_id || 0,
+          salt_minion_id: editableAsset.salt_minion_id || '',
+          wazuh_agent_id: editableAsset.wazuh_agent_id || '',
+          notes: lifecycleForm.notes,
+        }),
+      });
+
+      const refreshedAsset = await apiRequest<EditableAssetRecord>(`/api/assets/${id}`);
+      setEditableAsset(refreshedAsset);
+      setLifecycleForm(buildLifecycleFormState(refreshedAsset));
+      await loadDeviceDetails(false);
+      setLifecycleEditorOpen(false);
+      setSuccessMessage(`Updated lifecycle details for ${device?.hostname || 'this asset'}.`);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : 'Failed to save lifecycle details');
+    } finally {
+      setSavingLifecycle(false);
+    }
+  };
+
+  const computeAsset = device ? isComputeAsset(device) : true;
+  const detailSections = useMemo(() => {
+    if (isAuditor) {
+      return computeAsset ? auditorComputeDetailSections : auditorAccessoryDetailSections;
+    }
+
+    const sections = computeAsset ? computeDetailSections : accessoryDetailSections;
+    if (canOperate) {
+      return sections;
+    }
+    return sections.filter(([sectionId]) => sectionId !== 'terminal' && sectionId !== 'updates-salt');
+  }, [canOperate, computeAsset, isAuditor]);
+  const activeSectionLabel = detailSections.find(([sectionId]) => sectionId === activeSection)?.[1] || 'Details';
+
+  useEffect(() => {
+    const hashSection = location.hash.replace('#', '');
+    const validSectionIds = device ? new Set(detailSections.map(([sectionId]) => sectionId)) : allDetailSectionIds;
+    const nextSection = hashSection && validSectionIds.has(hashSection) ? hashSection : detailSections[0]?.[0] || 'hardware';
+
+    if (nextSection !== activeSection) {
+      setActiveSection(nextSection);
+    }
+  }, [activeSection, detailSections, device, location.hash]);
+
+  const handleSelectSection = (sectionId: string) => {
+    setActiveSection(sectionId);
+    navigate({ pathname: location.pathname, hash: `#${sectionId}` }, { replace: true });
+  };
+  const {
+    sshTerminalReady,
+    canStartTerminal,
+    canOpenPatchConsole,
+    patchActionButtonLabel,
+    terminalBlockedReason,
+    patchBlockedReason,
+    handleRunPatch,
+    handleStartTerminal,
+    handleOpenMainSaltConsole,
+  } = useDeviceDetailAccessWorkflow({
+    device,
+    computeAsset,
+    canOperate,
+    installConfig,
+    installConfigLoading,
+    selectedSaltAction,
+    customSaltInput,
+    setError,
+    setSuccessMessage,
+    setRunningPatch,
+    setStartingTerminal,
+    setEmbeddedConsole,
+    setPatchReport,
+    refreshSidebarData,
+  });
+
   if (loading) {
     return <div className="py-20 text-center text-sm text-zinc-500">Loading asset details...</div>;
   }
@@ -854,431 +1091,195 @@ export default function DeviceDetailPage() {
     return <div className="py-20 text-center text-sm text-rose-600">{error || 'Device not found.'}</div>;
   }
 
-  const computeAsset = isComputeAsset(device);
   const latestEnrollmentComment = enrollmentRequest?.comments.at(-1) || null;
   const isAssigned = Boolean(device.user?.id?.trim());
-  const saltIdentifier = device.toolStatus?.salt?.identifier?.trim();
-  const hasSaltTarget = Boolean(saltIdentifier);
-  const saltTargetConnected = device.toolStatus?.salt?.connected !== false;
-  const saltApiReady = Boolean(installConfig?.saltApiConfigured);
-  const terminalGatewayReady = Boolean(installConfig?.portalInstallReady);
-  const canStartTerminal = canOperate && computeAsset && hasSaltTarget && saltTargetConnected && terminalGatewayReady;
-  const canRunPatch = canOperate && computeAsset && hasSaltTarget && saltTargetConnected && saltApiReady;
-  const terminalBlockedReason = !canOperate || !computeAsset
-    ? ''
-    : !hasSaltTarget
-      ? 'Terminal sessions are unavailable until this asset reports a Salt minion ID.'
-      : !saltTargetConnected
-        ? 'Terminal sessions are unavailable because the linked Salt minion is not currently connected to the master.'
-      : installConfigLoading
-        ? 'Checking terminal gateway availability...'
-        : !terminalGatewayReady
-          ? 'Terminal sessions are unavailable because the server terminal gateway is not reachable.'
-          : '';
-  const patchBlockedReason = !canOperate || !computeAsset
-    ? ''
-    : !hasSaltTarget
-      ? 'Patch runs are unavailable until this asset reports a Salt minion ID.'
-      : !saltTargetConnected
-        ? 'Patch runs are unavailable because the linked Salt minion is not currently connected to the master.'
-      : installConfigLoading
-        ? 'Checking Salt API availability...'
-        : !saltApiReady
-          ? 'Patch runs are unavailable because the server Salt API is not reachable.'
-          : '';
-  const hardwareDetails = [
-    { label: 'Manufacturer', value: formatDetailValue(device.manufacturer, 'Unknown') },
-    { label: 'Model', value: formatDetailValue(device.model, 'Unknown') },
-    { label: 'Device Type', value: formatDetailValue(device.deviceType, 'Device') },
-    { label: 'Hardware Profile', value: formatDetailValue(device.model || device.manufacturer ? [device.manufacturer, device.model].filter(Boolean).join(' ') : device.model, device.model || 'Standard managed asset') },
-    { label: 'Processor', value: formatDetailValue(device.processor) },
-    { label: 'GPU', value: formatDetailValue(device.gpu) },
-    { label: 'Memory', value: formatDetailValue(device.memory) },
-    { label: 'Storage', value: formatDetailValue(device.storage) },
-    { label: 'Architecture', value: formatDetailValue(device.architecture) },
-    { label: 'Serial Number', value: formatDetailValue(device.serialNumber, 'Unavailable') },
-    { label: 'MAC Address', value: formatDetailValue(device.macAddress) },
-    { label: 'BIOS / Firmware', value: formatDetailValue(device.biosVersion) },
-    { label: 'Asset ID', value: formatDetailValue(device.assetId) },
-    { label: 'Warranty', value: formatDate(device.warrantyExpiresAt) },
-  ];
-  const operatingSystemDetails = [
-    { label: 'Platform', value: inferPlatform(device.osName) },
-    { label: 'OS Name', value: formatDetailValue(device.osName, 'Unknown') },
-    { label: 'OS Version', value: formatDetailValue(device.osVersion, 'Unknown') },
-    { label: 'OS Build', value: formatDetailValue(device.osBuild) },
-    { label: 'Kernel Version', value: formatDetailValue(device.kernelVersion) },
-    { label: 'Display', value: formatDetailValue(device.display) },
-    { label: 'Hostname', value: formatDetailValue(device.hostname) },
-    { label: 'Installed Software', value: `${installedApps.length}` },
-    { label: 'Status', value: formatDetailValue(device.status) },
-    { label: 'Last Boot', value: formatDate(device.lastBootAt) },
-    { label: 'Last Seen', value: formatDate(device.lastSeenAt) },
-  ];
+  const networkInterfaces = Object.entries(device.network?.interface_stats || {});
+  const {
+    encryptedVolumeCount,
+    hardwareDetails,
+    networkSummaryItems,
+    operatingSystemDetails,
+    overviewCards,
+    remoteIdentifierDetails,
+    remoteToolStatuses,
+  } = buildDeviceDetailViewData({
+    device,
+    computeAsset,
+    installedAppCount: installedApps.length,
+    sshTerminalReady,
+    formatDate,
+    formatDetailValue,
+  });
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 xl:px-6">
-      <div className="flex items-center gap-4">
-        <button type="button" onClick={() => navigate(-1)} className="rounded-lg border border-zinc-200 bg-white p-2 text-zinc-500 hover:text-zinc-800">
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">{device.hostname}</h1>
-          <p className="mt-1 text-sm text-zinc-500">{device.assetId} • {device.deviceType || 'Device'}{computeAsset ? ` • ${device.osName || 'Unknown OS'}` : ''}</p>
-        </div>
-      </div>
+      {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-900 shadow-sm">Auditor access is read-only. Operational actions are hidden, but device context, OpenSCAP findings, ClamScan findings, and related alert details remain visible for verification.</div> : null}
 
-      {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
-      {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{successMessage}</div> : null}
+      <DeviceDetailOverview
+        hostname={device.hostname}
+        assetId={device.assetId}
+        deviceType={device.deviceType}
+        osName={device.osName}
+        computeAsset={computeAsset}
+        canOperate={canOperate}
+        startingTerminal={startingTerminal}
+        canStartTerminal={canStartTerminal}
+        canOpenPatchConsole={canOpenPatchConsole}
+        onBack={() => navigate(-1)}
+        onStartTerminal={() => { void handleStartTerminal(); }}
+        onOpenSaltConsole={handleOpenMainSaltConsole}
+        error={error}
+        successMessage={successMessage}
+        overviewCards={overviewCards}
+        detailSections={detailSections}
+        activeSection={activeSection}
+        onSelectSection={handleSelectSection}
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: 'Status', value: device.status, icon: MonitorSmartphone },
-          ...(computeAsset
-            ? [
-                { label: 'Patch Status', value: device.patchStatus.replaceAll('_', ' '), icon: Package },
-                { label: 'Alert Status', value: device.alertStatus, icon: ShieldCheck },
-                { label: 'Compliance', value: `${device.complianceScore}%`, icon: Activity },
-              ]
-            : [
-                { label: 'Asset Type', value: device.deviceType || 'Accessory', icon: Package },
-                { label: 'Assigned To', value: device.user?.fullName || 'Unassigned', icon: ShieldCheck },
-                { label: 'Warranty', value: formatDate(device.warrantyExpiresAt), icon: Activity },
-              ]),
-        ].map((card) => (
-          <div key={card.label} className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">{card.label}</span>
-              <card.icon className="h-4 w-4 text-brand-600" />
-            </div>
-            <div className="text-xl font-bold text-zinc-900">{card.value}</div>
+      <div className="space-y-6">
+        <div id={activeSection} className="rounded-[28px] border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fbfdff_100%)] p-6 shadow-sm">
+          <div className="flex flex-col gap-2 border-b border-zinc-100 pb-4">
+            <div className="inline-flex w-fit items-center rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Device Details</div>
+            <h2 className="text-2xl font-black tracking-tight text-zinc-950">{activeSectionLabel}</h2>
+            <p className="text-sm text-zinc-500">Use the options above to review this asset one section at a time.</p>
           </div>
-        ))}
-      </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-bold text-zinc-900">{computeAsset ? 'GLPI-style Asset Overview' : 'Asset Overview'}</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                <div className="mb-2 flex items-center text-xs font-bold uppercase tracking-wider text-zinc-500">
-                  <Cpu className="mr-2 h-4 w-4" /> {computeAsset ? 'Hardware' : 'Inventory'}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2 text-sm text-zinc-700">
-                  {hardwareDetails.map((detail) => (
-                    <div key={detail.label}>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">{detail.label}</div>
-                      <div className="mt-1 font-medium text-zinc-900">{detail.value}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="mt-5">
+            {activeSection === 'hardware' ? <DetailSectionCard title={computeAsset ? 'Hardware' : 'Inventory'} icon={<Cpu className="mr-2 h-4 w-4" />} items={hardwareDetails} /> : null}
 
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                <div className="mb-2 flex items-center text-xs font-bold uppercase tracking-wider text-zinc-500">
-                  <HardDrive className="mr-2 h-4 w-4" /> {computeAsset ? 'Operating System' : 'Location & Assignment'}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-2 text-sm text-zinc-700">
-                  {computeAsset ? operatingSystemDetails.map((detail) => (
-                    <div key={detail.label}>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">{detail.label}</div>
-                      <div className="mt-1 font-medium text-zinc-900">{detail.value}</div>
-                    </div>
-                  )) : [
-                    { label: 'Category', value: device.deviceType || 'Accessory' },
+            {activeSection === 'operating-system' ? <DetailSectionCard title={computeAsset ? 'Operating System' : 'Location & Assignment'} icon={<HardDrive className="mr-2 h-4 w-4" />} items={computeAsset ? operatingSystemDetails : [
+              { label: 'Category', value: device.deviceType || 'Accessory' },
+              { label: 'Assigned To', value: device.user?.fullName || 'Unassigned' },
+              { label: 'Department', value: device.department?.name || 'Unassigned' },
+              { label: 'Location', value: device.branch?.name || 'Unassigned' },
+            ]} /> : null}
+
+            {activeSection === 'assignment' ? (
+              isAuditor ? (
+                <DetailSectionCard
+                  title="Assignment"
+                  layout="stack"
+                  items={[
                     { label: 'Assigned To', value: device.user?.fullName || 'Unassigned' },
+                    { label: 'Employee ID', value: device.user?.employeeCode || '-' },
+                    { label: 'Email', value: device.user?.email || '-' },
                     { label: 'Department', value: device.department?.name || 'Unassigned' },
                     { label: 'Location', value: device.branch?.name || 'Unassigned' },
-                  ].map((detail) => (
-                    <div key={detail.label}>
-                      <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">{detail.label}</div>
-                      <div className="mt-1 font-medium text-zinc-900">{detail.value}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                  ]}
+                  footer={enrollmentRequest ? <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-600">Enrollment request linked: {enrollmentRequest.title}</div> : null}
+                />
+              ) : (
+                <DeviceAssignmentPanel assignedUser={device.user} deviceStatus={device.status} department={device.department} canOperate={canOperate} isAssigned={isAssigned} assetActionLoading={assetActionLoading} pendingAssetActionKind={pendingAssetAction?.kind} enrollmentRequest={enrollmentRequest} enrollmentDetails={enrollmentDetails} suggestedAssignmentUser={suggestedAssignmentUser} assignmentUsersLoading={assignmentUsersLoading} assignmentSearchQuery={assignmentSearchQuery} assignableUsers={assignableUsers} selectedAssignmentUserId={selectedAssignmentUserId} assigningDevice={assigningDevice} onUnassignAsset={() => setPendingAssetAction({ kind: 'unassign' })} onDeleteAsset={() => setPendingAssetAction({ kind: 'delete' })} onAssignmentSearchQueryChange={setAssignmentSearchQuery} onSelectedAssignmentUserIdChange={setSelectedAssignmentUserId} onAssignDevice={() => { void handleAssignDevice(); }} />
+              )
+            ) : null}
 
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Assignment</div>
-                <div className="space-y-2 text-sm text-zinc-700">
-                  <div>Employee: {device.user?.fullName || 'Unassigned'}</div>
-                  <div>Employee ID: {device.user?.employeeCode || '-'}</div>
-                  <div>Email: {device.user?.email || '-'}</div>
-                  <div>Department: {device.department?.name || 'Unassigned'}</div>
-                </div>
-                {canOperate ? (
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {isAssigned ? (
+            {activeSection === 'lifecycle' ? (
+              <>
+                <DetailSectionCard title="Lifecycle" layout="stack" items={[
+                  { label: 'Warranty', value: formatDate(device.warrantyExpiresAt) },
+                  { label: 'Cost', value: formatLifecycleCurrency(device.cost) },
+                  { label: 'Item Code', value: device.assetId || '-' },
+                  { label: 'Asset Category', value: computeAsset ? 'Compute Asset' : 'Inventory Asset' },
+                  { label: 'Type of Asset', value: device.deviceType || 'Device' },
+                  { label: 'Supplier', value: device.manufacturer || 'Not recorded' },
+                ]} />
+                {canOperate && lifecycleForm ? (
+                  lifecycleEditorOpen ? (
+                    <DeviceLifecycleEditor
+                      form={lifecycleForm}
+                      saving={savingLifecycle}
+                      readOnly={lifecycleReadOnly}
+                      onFieldChange={handleLifecycleFieldChange}
+                      onSubmit={() => { void handleLifecycleSave(); }}
+                      onCancel={handleLifecycleCancel}
+                    />
+                  ) : (
+                    <div className="mt-4">
+                      {lifecycleReadOnly ? (
+                        <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">
+                          This asset is retired. Lifecycle details are read-only until the asset returns to an active lifecycle state.
+                        </div>
+                      ) : null}
                       <button
                         type="button"
-                        onClick={() => setPendingAssetAction({ kind: 'unassign' })}
-                        disabled={assetActionLoading}
-                        className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+                        onClick={() => setLifecycleEditorOpen(true)}
+                        disabled={lifecycleReadOnly}
+                        className="inline-flex items-center rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50"
                       >
-                        {assetActionLoading && pendingAssetAction?.kind === 'unassign' ? 'Working...' : 'Remove From User'}
+                        <Pencil className="mr-2 h-4 w-4" />
+                        Edit Lifecycle Details
                       </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setPendingAssetAction({ kind: 'delete' })}
-                      disabled={assetActionLoading}
-                      className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
-                    >
-                      {assetActionLoading && pendingAssetAction?.kind === 'delete' ? 'Working...' : 'Delete Asset'}
-                    </button>
-                  </div>
+                    </div>
+                  )
                 ) : null}
-              </div>
+              </>
+            ) : null}
 
-              {canOperate && !isAssigned ? <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-amber-700">Assign Imported System</div>
-                <div className="space-y-3 text-sm text-zinc-700">
-                  {enrollmentRequest ? (
-                    <div className="rounded-lg border border-amber-100 bg-white px-3 py-3">
-                      <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Enrollment signal</div>
-                      <div className="mt-2">Requester: <span className="font-semibold text-zinc-900">{enrollmentDetails['requester name'] || 'Unknown'}</span></div>
-                      <div>Email: <span className="font-semibold text-zinc-900">{enrollmentDetails['requester email'] || '-'}</span></div>
-                      <div>Employee ID: <span className="font-semibold text-zinc-900">{enrollmentDetails['employee id'] || '-'}</span></div>
-                    </div>
-                  ) : null}
+            {activeSection === 'enrollment' ? (
+              enrollmentRequest ? <DetailSectionCard title="Enrollment Review Audit" tone="brand" layout="stack" items={[
+                { label: 'Status', value: formatStatusLabel(enrollmentRequest.status) },
+                { label: 'Request', value: enrollmentRequest.title },
+                { label: 'Submitted Name', value: enrollmentDetails['requester name'] || enrollmentDetails['name'] || 'Unknown' },
+                { label: 'Submitted Email', value: enrollmentDetails['requester email'] || enrollmentDetails['email'] || '-' },
+                { label: 'Submitted Employee ID', value: enrollmentDetails['employee id'] || enrollmentDetails['employee code'] || '-' },
+                { label: 'Submitted Department', value: enrollmentDetails['department'] || '-' },
+                { label: 'Assigned Reviewer', value: enrollmentRequest.assignee?.fullName || 'Unassigned' },
+                { label: 'Last Updated', value: formatDate(enrollmentRequest.updatedAt) },
+                ...(latestEnrollmentComment ? [{ label: 'Last Review Entry', value: `${latestEnrollmentComment.author} • ${formatDate(latestEnrollmentComment.createdAt)}` }] : []),
+              ]} footer={latestEnrollmentComment ? <div className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm text-zinc-700">{latestEnrollmentComment.note}</div> : null} /> : <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">No enrollment review details are linked to this asset.</div>
+            ) : null}
 
-                  {suggestedAssignmentUser ? (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-3 text-emerald-800">
-                      Suggested user match: <span className="font-semibold">{suggestedAssignmentUser.fullName}</span> ({suggestedAssignmentUser.employeeCode || suggestedAssignmentUser.email})
-                    </div>
-                  ) : enrollmentRequest ? (
-                    <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-zinc-600">
-                      No exact user match was found from the enrollment details. Select the correct user manually.
-                    </div>
-                  ) : null}
+            {activeSection === 'network' && computeAsset ? <NetworkDetailsPanel summaryItems={networkSummaryItems} networkInterfaces={networkInterfaces} formatDetailValue={formatDetailValue} /> : null}
 
-                  {assignmentUsersLoading ? <div className="text-zinc-500">Loading users...</div> : null}
-                  <label className="block">
-                    <div className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Search User</div>
-                    <input
-                      value={assignmentSearchQuery}
-                      onChange={(event) => setAssignmentSearchQuery(event.target.value)}
-                      placeholder="Search by employee name, email, or employee ID"
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900"
-                    />
-                  </label>
+            {activeSection === 'volumes' && computeAsset ? <VolumesPanel totalStorage={formatDetailValue(device.storage)} volumes={device.volumes || []} encryptedVolumeCount={encryptedVolumeCount} diskLayout={device.diskLayout} formatDetailValue={formatDetailValue} /> : null}
 
-                  {!assignmentUsersLoading && assignableUsers.length ? (
-                    <label className="block">
-                      <div className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Assign To</div>
-                      <select
-                        value={selectedAssignmentUserId}
-                        onChange={(event) => setSelectedAssignmentUserId(event.target.value)}
-                        className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900"
-                      >
-                        {assignableUsers.map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.fullName} • {user.employeeCode || user.email}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  ) : null}
+            {activeSection === 'remote-id' && computeAsset ? <RemoteAccessPanel remoteIdentifierDetails={remoteIdentifierDetails} toolStatuses={remoteToolStatuses} toolStatusTone={toolStatusTone} /> : null}
 
-                  {!assignmentUsersLoading && !assignableUsers.length ? <div className="rounded-lg border border-zinc-200 bg-white px-3 py-3 text-zinc-600">{assignmentSearchQuery.trim() ? 'No matching users were found for this search.' : 'Search for a user to assign this system.'}</div> : null}
+            {activeSection === 'software' ? <SoftwareInventoryPanel computeAsset={computeAsset} installedApps={installedApps} highlightedInstalledApps={highlightedInstalledApps} softwareSourceLabel={softwareSourceLabel} /> : null}
 
-                  <button
-                    type="button"
-                    onClick={() => void handleAssignDevice()}
-                    disabled={assigningDevice || !selectedAssignmentUserId || assignmentUsersLoading}
-                    className="rounded-xl bg-amber-600 px-4 py-2 text-sm font-bold text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {assigningDevice ? 'Assigning...' : 'Assign Device'}
-                  </button>
-                </div>
-              </div> : null}
+            {activeSection === 'terminal' && computeAsset ? <TerminalAccessPanel canOperate={canOperate} canStartTerminal={canStartTerminal} startingTerminal={startingTerminal} terminalBlockedReason={terminalBlockedReason} sidebarLoading={sidebarLoading} terminalSessions={terminalSessions} onStartTerminal={() => { void handleStartTerminal(); }} formatDate={formatDate} /> : null}
 
-              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-500">Lifecycle</div>
-                <div className="space-y-2 text-sm text-zinc-700">
-                  {computeAsset ? <div>Patch Status: {device.patchStatus.replaceAll('_', ' ')}</div> : <div>Warranty: {formatDate(device.warrantyExpiresAt)}</div>}
-                  {computeAsset ? <div>Alert Status: {device.alertStatus}</div> : <div>Assigned To: {device.user?.fullName || 'Unassigned'}</div>}
-                  {computeAsset ? <div>Compliance Score: {device.complianceScore}%</div> : <div>Location: {device.branch?.name || 'Unassigned'}</div>}
-                  <div>Asset Type: {device.deviceType || 'Device'}</div>
-                </div>
-              </div>
+            {activeSection === 'updates-salt' && computeAsset ? <SaltUpdatesPanel saltTarget={device.saltMinionId || device.toolStatus?.salt?.identifier || 'Not linked'} selectedSaltAction={selectedSaltAction} customSaltInput={customSaltInput} runningPatch={runningPatch} canOperate={canOperate} canOpenPatchConsole={canOpenPatchConsole} patchActionButtonLabel={patchActionButtonLabel} patchBlockedReason={patchBlockedReason} sidebarLoading={sidebarLoading} patchJobs={patchJobs} onSelectedSaltActionChange={setSelectedSaltAction} onCustomSaltInputChange={setCustomSaltInput} onRunPatch={() => { void handleRunPatch(); }} formatDate={formatDate} /> : null}
 
-              {enrollmentRequest ? <div className="rounded-xl border border-brand-200 bg-brand-50/70 p-4">
-                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-brand-700">Enrollment Review Audit</div>
-                <div className="space-y-2 text-sm text-zinc-700">
-                  <div>Status: <span className="font-semibold text-zinc-900">{formatStatusLabel(enrollmentRequest.status)}</span></div>
-                  <div>Request: <span className="font-semibold text-zinc-900">{enrollmentRequest.title}</span></div>
-                  <div>Submitted Name: <span className="font-semibold text-zinc-900">{enrollmentDetails['requester name'] || enrollmentDetails['name'] || 'Unknown'}</span></div>
-                  <div>Submitted Email: <span className="font-semibold text-zinc-900">{enrollmentDetails['requester email'] || enrollmentDetails['email'] || '-'}</span></div>
-                  <div>Submitted Employee ID: <span className="font-semibold text-zinc-900">{enrollmentDetails['employee id'] || enrollmentDetails['employee code'] || '-'}</span></div>
-                  <div>Submitted Department: <span className="font-semibold text-zinc-900">{enrollmentDetails['department'] || '-'}</span></div>
-                  <div>Assigned Reviewer: <span className="font-semibold text-zinc-900">{enrollmentRequest.assignee?.fullName || 'Unassigned'}</span></div>
-                  <div>Last Updated: <span className="font-semibold text-zinc-900">{formatDate(enrollmentRequest.updatedAt)}</span></div>
-                  {latestEnrollmentComment ? <div>Last Review Entry: <span className="font-semibold text-zinc-900">{latestEnrollmentComment.author}</span> • {formatDate(latestEnrollmentComment.createdAt)}</div> : null}
-                  {latestEnrollmentComment ? <div className="rounded-lg border border-brand-100 bg-white px-3 py-2 text-sm text-zinc-700">{latestEnrollmentComment.note}</div> : null}
-                </div>
-              </div> : null}
-            </div>
-          </div>
+            {activeSection === 'security' && computeAsset ? <SecurityFindingsPanel title="Wazuh Findings" description="Latest file-integrity and compliance findings linked through the Wazuh agent for this asset." alerts={wazuhAlerts} loading={sidebarLoading} emptyMessage="No recent Wazuh findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
 
-          <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-            <div className="border-b border-zinc-100 px-6 py-4">
-              <h2 className="text-lg font-bold text-zinc-900">{computeAsset ? 'Installed Software' : 'Asset Notes'}</h2>
-            </div>
-            <div className="divide-y divide-zinc-100">
-              {computeAsset && installedApps.length ? installedApps.map((application) => (
-                <div key={application.id} className="px-6 py-4">
-                  <div className="font-semibold text-zinc-900">{application.name}</div>
-                  <div className="mt-1 text-sm text-zinc-500">{application.publisher || 'Unknown publisher'} • {application.version || 'Unknown version'}</div>
-                </div>
-              )) : <div className="px-6 py-10 text-center text-sm text-zinc-500">{computeAsset ? 'No installed software data is available for this asset.' : 'This asset is treated as non-compute inventory, so processor, operating system, and installed software details are not shown.'}</div>}
-            </div>
+            {activeSection === 'clamav' && computeAsset ? <SecurityFindingsPanel title="ClamScan Findings" description="Recent malware scan results reported by the endpoint agent for this asset." alerts={clamavAlerts} loading={sidebarLoading} emptyMessage="No recent ClamScan findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
+
+            {activeSection === 'openscap' && computeAsset ? <SecurityFindingsPanel title="OpenSCAP Findings" description="Recent hardening and compliance results reported from OpenSCAP scans for this asset." alerts={openscapAlerts} loading={sidebarLoading} emptyMessage="No recent OpenSCAP findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
+
+            {activeSection === 'other-alerts' && computeAsset ? <OtherAlertsPanel alerts={otherAlerts} loading={sidebarLoading} onSelectAlert={setSelectedAlert} alertSourceLabel={alertSourceLabel} severityBadgeClassName={severityBadgeClassName} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} formatDate={formatDate} /> : null}
           </div>
         </div>
-
-        <aside className="space-y-6">
-          {computeAsset ? <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center text-sm font-bold uppercase tracking-wider text-zinc-500">
-              <TerminalSquare className="mr-2 h-4 w-4 text-brand-600" /> Terminal
-            </div>
-            <p className="mt-2 text-sm text-zinc-500">Start a terminal session for this particular asset and review recent session history.</p>
-            {canOperate ? (
-              <button type="button" onClick={() => void handleStartTerminal()} disabled={startingTerminal || !canStartTerminal} className="mt-4 w-full rounded-xl bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60">
-                {startingTerminal ? 'Starting session...' : 'Start Terminal Session'}
-              </button>
-            ) : null}
-            {canOperate && terminalBlockedReason ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">{terminalBlockedReason}</div> : null}
-            <div className="mt-4 space-y-3">
-              {sidebarLoading ? <div className="text-sm text-zinc-500">Loading sessions...</div> : null}
-              {!sidebarLoading && terminalSessions.length === 0 ? <div className="rounded-xl bg-zinc-50 px-3 py-4 text-sm text-zinc-500">No terminal sessions recorded for this asset.</div> : null}
-              {terminalSessions.map((sessionEntry) => (
-                <div key={sessionEntry.id} className="rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-3">
-                  <div className="text-sm font-semibold text-zinc-900">{sessionEntry.status}</div>
-                  <div className="mt-1 text-xs text-zinc-500">{sessionEntry.requestedBy || 'Unknown user'} • {formatDate(sessionEntry.createdAt)}</div>
-                </div>
-              ))}
-            </div>
-          </div> : null}
-
-          {computeAsset ? <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center text-sm font-bold uppercase tracking-wider text-zinc-500">
-              <Play className="mr-2 h-4 w-4 text-brand-600" /> Patch Run
-            </div>
-            <p className="mt-2 text-sm text-zinc-500">Queue a patch run for this asset and review recent patch jobs.</p>
-            {canOperate ? (
-              <button type="button" onClick={() => void handleRunPatch()} disabled={runningPatch || !canRunPatch} className="mt-4 w-full rounded-xl bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60">
-                {runningPatch ? 'Queueing patch...' : 'Run Patch for This Asset'}
-              </button>
-            ) : null}
-            {canOperate && patchBlockedReason ? <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-800">{patchBlockedReason}</div> : null}
-            <div className="mt-4 space-y-3">
-              {sidebarLoading ? <div className="text-sm text-zinc-500">Loading patch jobs...</div> : null}
-              {patchJobs.map((job) => (
-                <div key={job.id} className="rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-3">
-                  <div className="text-sm font-semibold text-zinc-900">{job.jid}</div>
-                  <div className="mt-1 text-xs text-zinc-500">{job.scope} • {job.status} • {formatDate(job.createdAt)}</div>
-                </div>
-              ))}
-            </div>
-          </div> : null}
-
-          {computeAsset ? <SecurityFindingsPanel title="Wazuh Findings" description="Latest file-integrity and compliance findings linked through the Wazuh agent for this asset." alerts={wazuhAlerts} loading={sidebarLoading} emptyMessage="No recent Wazuh findings for this asset." onSelectAlert={setSelectedAlert} /> : null}
-
-          {computeAsset ? <SecurityFindingsPanel title="ClamAV Findings" description="Recent malware scan results reported by the endpoint agent for this asset." alerts={clamavAlerts} loading={sidebarLoading} emptyMessage="No recent ClamAV findings for this asset." onSelectAlert={setSelectedAlert} /> : null}
-
-          {computeAsset ? <SecurityFindingsPanel title="OpenSCAP Findings" description="Recent hardening and compliance results reported from OpenSCAP scans for this asset." alerts={openscapAlerts} loading={sidebarLoading} emptyMessage="No recent OpenSCAP findings for this asset." onSelectAlert={setSelectedAlert} /> : null}
-
-          {computeAsset ? <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center text-sm font-bold uppercase tracking-wider text-zinc-500">
-                <ShieldCheck className="mr-2 h-4 w-4 text-brand-600" /> Other Alerts
-              </div>
-              <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-bold text-zinc-700">{otherAlerts.length} recent</span>
-            </div>
-            <p className="mt-2 text-sm text-zinc-500">Operational and lifecycle alerts for this asset, excluding the dedicated Wazuh, ClamAV, and OpenSCAP findings shown above.</p>
-            <div className="mt-4 space-y-3">
-              {sidebarLoading ? <div className="text-sm text-zinc-500">Loading alerts...</div> : null}
-              {!sidebarLoading && otherAlerts.length === 0 ? <div className="rounded-xl bg-zinc-50 px-3 py-4 text-sm text-zinc-500">No additional operational alerts for this asset.</div> : null}
-              {otherAlerts.map((alert) => (
-                <button key={alert.id} type="button" onClick={() => setSelectedAlert(alert)} className="block w-full rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-3 text-left transition hover:border-zinc-200 hover:shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="text-sm font-semibold text-zinc-900">{alert.title}</div>
-                      <div className="mt-1 text-xs uppercase tracking-wider text-zinc-500">{alert.source} • {alert.severity}</div>
-                    </div>
-                    <span className={`rounded-full px-2 py-1 text-[11px] font-bold ${alert.resolved ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {alert.resolved ? 'resolved' : 'open'}
-                    </span>
-                  </div>
-                  <div className="mt-2 text-sm text-zinc-600">{alert.detail}</div>
-                  <div className="mt-2 text-xs text-zinc-500">{formatDate(alert.createdAt)}</div>
-                  <div className="mt-2 text-xs font-medium text-zinc-400">Click for full details</div>
-                </button>
-              ))}
-            </div>
-          </div> : null}
-        </aside>
       </div>
 
-      {selectedAlert ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 p-4" onClick={() => setSelectedAlert(null)}>
-          <div ref={alertDialogRef} className="w-full max-w-3xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="device-alert-detail-title" aria-describedby="device-alert-detail-body" onClick={(event) => event.stopPropagation()}>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${severityBadgeClassName(selectedAlert.severity)}`}>{selectedAlert.severity || 'unknown'}</span>
-                  <span className="inline-flex rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold text-zinc-700">{alertSourceLabel(selectedAlert.source)}</span>
-                  {selectedAlert.resolved ? <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-700">Resolved</span> : <span className="inline-flex rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-700">Open</span>}
-                </div>
-                <h2 id="device-alert-detail-title" className="mt-3 text-xl font-bold text-zinc-900">{selectedAlert.title}</h2>
-                <p id="device-alert-detail-body" className="mt-2 whitespace-pre-line text-sm text-zinc-600">{selectedAlert.detail || 'No detail provided.'}</p>
-              </div>
-              <button ref={alertCloseButtonRef} type="button" onClick={() => setSelectedAlert(null)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50">Close</button>
-            </div>
+      <EmbeddedConsoleModal
+        consoleState={embeddedConsole}
+        titleId="embedded-console-title"
+        closeButtonRef={embeddedConsoleCloseButtonRef}
+        onClose={() => setEmbeddedConsole(null)}
+      />
 
-            <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">System Name</div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">{device.hostname || '-'}</div>
-              </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Asset ID</div>
-                <div className="mt-2 break-all text-sm font-semibold text-zinc-900">{device.assetId || '-'}</div>
-              </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Source</div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">{alertSourceLabel(selectedAlert.source)}</div>
-              </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Assigned User</div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">{device.user?.fullName || '-'}</div>
-              </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Email</div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">{device.user?.email || '-'}</div>
-              </div>
-              <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Department</div>
-                <div className="mt-2 text-sm font-semibold text-zinc-900">{device.department?.name || '-'}</div>
-              </div>
-            </div>
+      <PatchRunReportModal
+        report={patchReport}
+        onClose={() => setPatchReport(null)}
+      />
 
-            <div className="mt-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-              <div className="grid gap-3 md:grid-cols-2">
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Created</div>
-                  <div className="mt-2 text-sm font-semibold text-zinc-900">{formatDate(selectedAlert.createdAt)}</div>
-                </div>
-                <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Current Status</div>
-                  <div className="mt-2 text-sm font-semibold text-zinc-900">{selectedAlert.resolved ? 'Resolved' : 'Open'}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <DeviceAlertDetailModal
+        selectedAlert={selectedAlert}
+        hostname={device.hostname}
+        assetId={device.assetId}
+        assignedUserName={device.user?.fullName}
+        assignedUserEmail={device.user?.email}
+        departmentName={device.department?.name}
+        alertDialogRef={alertDialogRef}
+        alertCloseButtonRef={alertCloseButtonRef}
+        onClose={() => setSelectedAlert(null)}
+        severityBadgeClassName={severityBadgeClassName}
+        alertSourceLabel={alertSourceLabel}
+        alertStatusBadgeClassName={alertStatusBadgeClassName}
+        alertStatusLabel={alertStatusLabel}
+        formatDate={formatDate}
+      />
 
       <ConfirmDialog
         open={Boolean(pendingAssetAction)}
