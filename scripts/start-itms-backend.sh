@@ -4,8 +4,42 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_DIR="$REPO_ROOT/backend"
 COMPOSE_FILE="$BACKEND_DIR/docker-compose.yml"
+BACKEND_ENV_FILE="${BACKEND_ENV_FILE:-$BACKEND_DIR/.env}"
+BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$BACKEND_DIR/.env.secrets}"
 HEALTH_URL="${HEALTH_URL:-http://localhost:3001/api/health}"
 BACKEND_PORT="${BACKEND_PORT:-3001}"
+
+prefer_ssh_terminal_identity() {
+  local ssh_home
+  local rsa_key
+  local rsa_cert
+  local known_hosts_path
+
+  ssh_home="${HOME}/.ssh"
+  rsa_key="${ssh_home}/id_rsa"
+  rsa_cert="${ssh_home}/id_rsa-cert.pub"
+  known_hosts_path="${ssh_home}/known_hosts"
+
+  if [[ -f "$rsa_key" ]]; then
+    export SSH_TERMINAL_PRIVATE_KEY_PATH="$rsa_key"
+  fi
+
+  if [[ -f "$rsa_cert" ]]; then
+    export SSH_TERMINAL_CERTIFICATE_PATH="$rsa_cert"
+  fi
+
+  if [[ -f "$known_hosts_path" && -z "${SSH_TERMINAL_KNOWN_HOSTS_PATH:-}" ]]; then
+    export SSH_TERMINAL_KNOWN_HOSTS_PATH="$known_hosts_path"
+  fi
+}
+
+log_ssh_terminal_identity() {
+  if [[ -z "${SSH_TERMINAL_USERNAME:-}" ]]; then
+    return
+  fi
+
+  echo "SSH terminal identity: usernames=${SSH_TERMINAL_USERNAME} key=${SSH_TERMINAL_PRIVATE_KEY_PATH:-unset} cert=${SSH_TERMINAL_CERTIFICATE_PATH:-unset} known_hosts=${SSH_TERMINAL_KNOWN_HOSTS_PATH:-unset}"
+}
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -18,6 +52,13 @@ require_command curl
 require_command docker
 require_command ss
 require_command ps
+
+if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
+  # shellcheck disable=SC1090
+  source "$REPO_ROOT/scripts/load-itms-backend-env.sh"
+fi
+prefer_ssh_terminal_identity
+log_ssh_terminal_identity
 
 latest_backend_source_epoch() {
   {
