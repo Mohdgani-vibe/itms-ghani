@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"itms/backend/internal/chatbridge"
 	"itms/backend/internal/platform/authn"
 	"itms/backend/internal/platform/httpx"
 	"itms/backend/internal/platform/middleware"
@@ -1991,6 +1993,17 @@ func (server *apiServer) createChatChannel(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	server.ensureChatChannelMattermostLink(c.Request.Context(), channelID, strings.TrimSpace(input.Name), strings.TrimSpace(input.Kind))
+	if initialMessageID != "" {
+		server.mirrorChatMessageToMattermost(c.Request.Context(), chatbridge.OutboundMessageInput{
+			ChatChannelID: channelID,
+			ChannelName:   strings.TrimSpace(input.Name),
+			ChannelKind:   strings.TrimSpace(input.Kind),
+			ChatMessageID: initialMessageID,
+			AuthorName:    claims.Name,
+			Body:          input.InitialMessage,
+		})
+	}
 	auditDetail := gin.H{
 		"name":           strings.TrimSpace(input.Name),
 		"kind":           strings.TrimSpace(input.Kind),
@@ -2786,6 +2799,14 @@ func (server *apiServer) chatWebsocket(c *gin.Context) {
 			CreatedAt:  createdAt.Format(time.RFC3339Nano),
 		}
 		server.chat.publish(channelID, envelope)
+			server.mirrorChatMessageToMattermost(c.Request.Context(), chatbridge.OutboundMessageInput{
+				ChatChannelID: channelID,
+				ChannelName:   channelName,
+				ChannelKind:   channelKind,
+				ChatMessageID: messageID,
+				AuthorName:    claims.Name,
+				Body:          body,
+			})
 	}
 }
 
@@ -2847,7 +2868,11 @@ func (server *apiServer) createOperationsChannel(createdBy string) error {
 			return err
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	server.ensureChatChannelMattermostLink(context.Background(), channelID, "IT Operations", "operations")
+	return nil
 }
 
 func (server *apiServer) createSupportChannelForEmployee(claims *authn.Claims) error {
@@ -2894,4 +2919,26 @@ func (server *apiServer) userIsChatMember(_ any, channelID string, userID string
 	var exists bool
 	err := server.db.QueryRow(`SELECT EXISTS(SELECT 1 FROM chat_members WHERE channel_id = $1::uuid AND user_id = $2::uuid)`, channelID, userID).Scan(&exists)
 	return exists, err
+}
+
+func (server *apiServer) ensureChatChannelMattermostLink(ctx context.Context, channelID string, channelName string, channelKind string) {
+	if server.chatBridge == nil || !server.chatBridge.Enabled() {
+		return
+	}
+	if _, err := server.chatBridge.EnsureChannelLink(ctx, chatbridge.EnsureChannelLinkInput{
+		ChatChannelID: strings.TrimSpace(channelID),
+		ChannelName:   strings.TrimSpace(channelName),
+		ChannelKind:   strings.TrimSpace(channelKind),
+	}); err != nil {
+		log.Printf("mattermost chat channel link skipped for %s: %v", strings.TrimSpace(channelID), err)
+	}
+}
+
+func (server *apiServer) mirrorChatMessageToMattermost(ctx context.Context, input chatbridge.OutboundMessageInput) {
+	if server.chatBridge == nil || !server.chatBridge.Enabled() {
+		return
+	}
+	if err := server.chatBridge.MirrorITMSMessage(ctx, input); err != nil {
+		log.Printf("mattermost chat mirror skipped for message %s: %v", strings.TrimSpace(input.ChatMessageID), err)
+	}
 }

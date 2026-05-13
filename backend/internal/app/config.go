@@ -55,6 +55,13 @@ type Config struct {
 	WazuhAPIPassword                 string
 	WazuhAPICAFile                   string
 	WazuhAPIInsecureSkipVerify       bool
+	MattermostEnabled                bool
+	MattermostBaseURL                string
+	MattermostToken                  string
+	MattermostTeam                   string
+	MattermostAllowedChannelKinds    string
+	MattermostSyncDirection          string
+	MattermostCreateChannels         bool
 	GoogleClientID                   string
 	GoogleClientSecret               string
 	GoogleRedirectURL                string
@@ -112,6 +119,13 @@ func LoadConfig() (Config, error) {
 		WazuhAPIPassword:                 os.Getenv("WAZUH_API_PASSWORD"),
 		WazuhAPICAFile:                   strings.TrimSpace(getEnv("WAZUH_API_CA_FILE", "")),
 		WazuhAPIInsecureSkipVerify:       strings.EqualFold(getEnv("WAZUH_API_INSECURE_SKIP_VERIFY", "false"), "true"),
+		MattermostEnabled:                strings.EqualFold(getEnv("MATTERMOST_ENABLED", "false"), "true"),
+		MattermostBaseURL:                strings.TrimRight(strings.TrimSpace(getEnv("MATTERMOST_BASE_URL", "")), "/"),
+		MattermostToken:                  strings.TrimSpace(os.Getenv("MATTERMOST_TOKEN")),
+		MattermostTeam:                   strings.TrimSpace(getEnv("MATTERMOST_TEAM", "")),
+		MattermostAllowedChannelKinds:    strings.TrimSpace(getEnv("MATTERMOST_ALLOWED_CHANNEL_KINDS", "operations")),
+		MattermostSyncDirection:          strings.TrimSpace(getEnv("MATTERMOST_SYNC_DIRECTION", "outbound")),
+		MattermostCreateChannels:         strings.EqualFold(getEnv("MATTERMOST_CREATE_CHANNELS", "false"), "true"),
 		GoogleClientID:                   os.Getenv("GOOGLE_CLIENT_ID"),
 		GoogleClientSecret:               os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:                getEnv("GOOGLE_REDIRECT_URL", "http://localhost:3001/api/auth/google/callback"),
@@ -160,6 +174,14 @@ func (config Config) SecurityWarnings() []string {
 	} else if strings.TrimSpace(config.WazuhAPIBaseURL) != "" && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.WazuhAPIBaseURL)), "https://") && strings.TrimSpace(config.WazuhAPICAFile) == "" {
 		warnings = append(warnings, "WAZUH_API_CA_FILE is not set; self-signed internal Wazuh deployments may fail TLS verification unless the CA is trusted by the system")
 	}
+	if config.MattermostEnabled {
+		if strings.TrimSpace(config.MattermostBaseURL) == "" || strings.TrimSpace(config.MattermostToken) == "" || strings.TrimSpace(config.MattermostTeam) == "" {
+			warnings = append(warnings, "MATTERMOST_ENABLED is true but MATTERMOST_BASE_URL, MATTERMOST_TOKEN, or MATTERMOST_TEAM is missing; Mattermost chat mirroring will stay disabled")
+		}
+		if config.isExternalURL(config.MattermostBaseURL) && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.MattermostBaseURL)), "http://") {
+			warnings = append(warnings, "MATTERMOST_BASE_URL is using http:// on a non-local host; use HTTPS in production")
+		}
+	}
 	if config.looksLikeDefaultDatabaseURL() {
 		warnings = append(warnings, "DATABASE_URL appears to use default postgres credentials or sslmode=disable; review database transport security")
 	}
@@ -192,6 +214,9 @@ func (config Config) SecurityErrors() []string {
 	}
 	if config.WazuhAPIInsecureSkipVerify {
 		errors = append(errors, "WAZUH_API_INSECURE_SKIP_VERIFY must be false when ITMS_ENFORCE_SECURITY=true")
+	}
+	if config.MattermostEnabled && config.isExternalURL(config.MattermostBaseURL) && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.MattermostBaseURL)), "http://") {
+		errors = append(errors, "MATTERMOST_BASE_URL must use HTTPS for non-local deployments when MATTERMOST_ENABLED=true")
 	}
 	return errors
 }

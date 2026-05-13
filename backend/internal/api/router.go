@@ -25,12 +25,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"itms/backend/internal/app"
+	"itms/backend/internal/chatbridge"
 	"itms/backend/internal/integrations/saltstack"
 	"itms/backend/internal/integrations/wazuh"
 	"itms/backend/internal/inventorysync"
 	"itms/backend/internal/platform/authn"
 	"itms/backend/internal/platform/httpx"
 	"itms/backend/internal/platform/middleware"
+	"itms/backend/pkg/mattermost"
 )
 
 var hostnamePattern = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -215,6 +217,8 @@ type apiServer struct {
 	googleSSO     *authn.GoogleSSO
 	salt          *saltstack.Client
 	wazuh         *wazuh.Client
+	mattermost    *mattermost.Client
+	chatBridge    *chatbridge.Service
 	chat          *chatHub
 	announcements *announcementHub
 	sync          *inventorysync.Service
@@ -319,6 +323,26 @@ func parsePaginationRequest(c *gin.Context, defaultPageSize int) (page int, page
 	return page, pageSize, enabled
 }
 
+func parseCommaSeparatedValues(raw string) []string {
+	items := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r' || r == '\t'
+	})
+	values := make([]string, 0, len(items))
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		value := strings.TrimSpace(item)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		values = append(values, value)
+	}
+	return values
+}
+
 func paginationBounds(total int, page int, pageSize int) (start int, end int) {
 	if total <= 0 {
 		return 0, 0
@@ -342,11 +366,13 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 		googleSSO:     authn.NewGoogleSSO(config.GoogleClientID, config.GoogleClientSecret, config.GoogleRedirectURL, config.GoogleHostedDomain),
 		salt:          saltstack.NewClient(config.SaltAPIBaseURL, config.SaltAPIToken, config.SaltAPIUsername, config.SaltAPIPassword, config.SaltAPIEAuth, config.SaltTargetType),
 		wazuh:         wazuh.NewClient(config.WazuhAPIBaseURL, config.WazuhAPIUsername, config.WazuhAPIPassword, config.WazuhAPICAFile, config.WazuhAPIInsecureSkipVerify),
+		mattermost:    mattermost.NewClient(config.MattermostBaseURL, config.MattermostToken),
 		chat:          newChatHub(),
 		announcements: newAnnouncementHub(),
 		sync:          syncService,
 		authLimiter:   newAuthAttemptLimiter(15*time.Minute, 10, 15*time.Minute),
 	}
+	server.chatBridge = chatbridge.NewService(db, server.mattermost, config)
 
 	router := gin.New()
 	router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(config.FrontendOrigin), middleware.Audit(db))
@@ -391,6 +417,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/users/import-template-minimal", server.exportUserImportMinimalTemplate)
 			protected.POST("/users/import", server.importUsersCSV)
 			protected.GET("/integrations/install-config", server.getInstallConfig)
+			protected.GET("/integrations/mattermost/status", server.getMattermostStatus)
 			protected.GET("/settings/workflow", server.getWorkflowSettings)
 			protected.PUT("/settings/workflow", server.updateWorkflowSettings)
 			protected.POST("/users", server.createUser)
@@ -2116,6 +2143,55 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 		"wazuhApiConfigured":   server.wazuh != nil && server.wazuh.Enabled(),
 		"portalInstallReady":   portalInstallReady,
 	})
+}
+
+func (server *apiServer) getMattermostStatus(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+
+	baseURL := strings.TrimSpace(server.config.MattermostBaseURL)
+	teamName := strings.TrimSpace(server.config.MattermostTeam)
+	syncDirection := strings.TrimSpace(server.config.MattermostSyncDirection)
+	if syncDirection == "" {
+		syncDirection = "outbound"
+	}
+	configured := server.config.MattermostEnabled && baseURL != "" && strings.TrimSpace(server.config.MattermostToken) != "" && teamName != ""
+	status := gin.H{
+		"enabled":             server.config.MattermostEnabled,
+		"configured":          configured,
+		"clientReady":         server.mattermost != nil && server.mattermost.Enabled(),
+		"bridgeReady":         server.chatBridge != nil && server.chatBridge.Enabled(),
+		"baseUrl":             baseURL,
+		"team":                teamName,
+		"allowedChannelKinds": parseCommaSeparatedValues(server.config.MattermostAllowedChannelKinds),
+		"syncDirection":       syncDirection,
+		"createChannels":      server.config.MattermostCreateChannels,
+		"teamResolved":        false,
+	}
+
+	if !configured || server.mattermost == nil || !server.mattermost.Enabled() {
+		httpx.JSON(c, http.StatusOK, status)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+	defer cancel()
+
+	team, err := server.mattermost.ResolveTeam(ctx, teamName)
+	if err != nil {
+		status["lastError"] = err.Error()
+		httpx.JSON(c, http.StatusOK, status)
+		return
+	}
+
+	status["teamResolved"] = true
+	status["resolvedTeam"] = gin.H{
+		"id":          team.ID,
+		"name":        team.Name,
+		"displayName": team.DisplayName,
+	}
+	httpx.JSON(c, http.StatusOK, status)
 }
 
 func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, error) {
