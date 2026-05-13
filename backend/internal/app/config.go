@@ -44,6 +44,14 @@ type Config struct {
 	SaltAPIPassword                  string
 	SaltAPIEAuth                     string
 	SaltTargetType                   string
+	SSHTerminalUsername              string
+	SSHTerminalPrivateKeyPath        string
+	SSHTerminalPrivateKey            string
+	SSHTerminalCertificatePath       string
+	SSHTerminalKnownHostsPath        string
+	SSHTerminalHostOverrides         string
+	SSHTerminalStrictHostKey         bool
+	SSHTerminalPort                  int
 	SaltAgentInstallState            string
 	SaltAgentInstallUbuntuState      string
 	SaltAgentInstallWindowsState     string
@@ -80,6 +88,14 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("parse INVENTORY_SYNC_INTERVAL: %w", err)
 	}
+	sshTerminalPort := 22
+	if value := strings.TrimSpace(getEnv("SSH_TERMINAL_PORT", "22")); value != "" {
+		parsed, parseErr := strconv.Atoi(value)
+		if parseErr != nil || parsed <= 0 || parsed > 65535 {
+			return Config{}, fmt.Errorf("parse SSH_TERMINAL_PORT: invalid port %q", value)
+		}
+		sshTerminalPort = parsed
+	}
 
 	return Config{
 		Address:                          getEnv("BACKEND_ADDR", ":3001"),
@@ -108,6 +124,14 @@ func LoadConfig() (Config, error) {
 		SaltAPIPassword:                  os.Getenv("SALT_API_PASSWORD"),
 		SaltAPIEAuth:                     getEnv("SALT_API_EAUTH", "pam"),
 		SaltTargetType:                   getEnv("SALT_TARGET_TYPE", "glob"),
+		SSHTerminalUsername:              strings.TrimSpace(getEnv("SSH_TERMINAL_USERNAME", "")),
+		SSHTerminalPrivateKeyPath:        strings.TrimSpace(getEnv("SSH_TERMINAL_PRIVATE_KEY_PATH", "")),
+		SSHTerminalPrivateKey:            os.Getenv("SSH_TERMINAL_PRIVATE_KEY"),
+		SSHTerminalCertificatePath:       strings.TrimSpace(getEnv("SSH_TERMINAL_CERTIFICATE_PATH", "")),
+		SSHTerminalKnownHostsPath:        strings.TrimSpace(getEnv("SSH_TERMINAL_KNOWN_HOSTS_PATH", "")),
+		SSHTerminalHostOverrides:         strings.TrimSpace(getEnv("SSH_TERMINAL_HOST_OVERRIDES", "")),
+		SSHTerminalStrictHostKey:         strings.EqualFold(getEnv("SSH_TERMINAL_STRICT_HOST_KEY", "true"), "true"),
+		SSHTerminalPort:                  sshTerminalPort,
 		SaltAgentInstallState:            getEnv("SALT_AGENT_INSTALL_STATE", "itms_agent.install"),
 		SaltAgentInstallUbuntuState:      getEnv("SALT_AGENT_INSTALL_UBUNTU_STATE", "itms_agent.ubuntu"),
 		SaltAgentInstallWindowsState:     getEnv("SALT_AGENT_INSTALL_WINDOWS_STATE", "itms_agent.windows"),
@@ -162,6 +186,18 @@ func (config Config) SecurityWarnings() []string {
 	}
 	if config.InventorySyncEnabled && strings.TrimSpace(config.InventoryIngestToken) == "" {
 		warnings = append(warnings, "INVENTORY_SYNC_ENABLED is true but INVENTORY_INGEST_TOKEN is empty; ingest endpoint cannot be safely exposed")
+	}
+	if strings.TrimSpace(config.SSHTerminalUsername) != "" && strings.TrimSpace(config.SSHTerminalPrivateKeyPath) == "" && strings.TrimSpace(config.SSHTerminalPrivateKey) == "" {
+		warnings = append(warnings, "SSH_TERMINAL_USERNAME is set but no signing key is configured; SSH terminal sessions will be unavailable")
+	}
+	if (strings.TrimSpace(config.SSHTerminalPrivateKeyPath) != "" || strings.TrimSpace(config.SSHTerminalPrivateKey) != "") && strings.TrimSpace(config.SSHTerminalUsername) == "" {
+		warnings = append(warnings, "SSH terminal signing key is configured but SSH_TERMINAL_USERNAME is empty; SSH terminal sessions will be unavailable")
+	}
+	if strings.TrimSpace(config.SSHTerminalCertificatePath) != "" && strings.TrimSpace(config.SSHTerminalPrivateKeyPath) == "" && strings.TrimSpace(config.SSHTerminalPrivateKey) == "" {
+		warnings = append(warnings, "SSH_TERMINAL_CERTIFICATE_PATH is set but no signing key is configured; certificate-based SSH terminal sessions will be unavailable")
+	}
+	if strings.TrimSpace(config.SSHTerminalUsername) != "" && (strings.TrimSpace(config.SSHTerminalPrivateKeyPath) != "" || strings.TrimSpace(config.SSHTerminalPrivateKey) != "") && !config.SSHTerminalStrictHostKey {
+		warnings = append(warnings, "SSH_TERMINAL_STRICT_HOST_KEY is disabled; SSH terminal sessions will skip host key verification")
 	}
 	if config.isExternalURL(config.PublicServerURL) && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.PublicServerURL)), "http://") {
 		warnings = append(warnings, "PUBLIC_SERVER_URL is using http:// on a non-local host; use HTTPS in production")

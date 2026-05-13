@@ -378,6 +378,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 	router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(config.FrontendOrigin), middleware.Audit(db))
 	router.GET("/ws/chat", server.chatWebsocket)
 	router.GET("/ws/announcements", server.announcementWebsocket)
+	router.GET("/ws/ssh/assets/:id", server.assetSSHWebsocket)
 	router.GET("/installers/install-itms-agent.ps1", server.downloadInstallerScript("install-itms-agent.ps1", "text/plain; charset=utf-8"))
 	router.GET("/installers/install-itms-agent.sh", server.downloadInstallerScript("install-itms-agent.sh", "text/plain; charset=utf-8"))
 	router.GET("/installers/push-system-inventory.ps1", server.downloadInstallerScript("push-system-inventory.ps1", "text/plain; charset=utf-8"))
@@ -2133,6 +2134,17 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 	}
 
 	portalInstallReady := strings.TrimSpace(serverURL) != "" && strings.TrimSpace(server.config.InventoryIngestToken) != ""
+	sshConfigured := strings.TrimSpace(server.config.SSHTerminalUsername) != "" &&
+		(strings.TrimSpace(server.config.SSHTerminalPrivateKeyPath) != "" || strings.TrimSpace(server.config.SSHTerminalPrivateKey) != "") &&
+		(!server.config.SSHTerminalStrictHostKey || strings.TrimSpace(server.config.SSHTerminalKnownHostsPath) != "")
+	sshAuthMode := "not-configured"
+	if sshConfigured {
+		if strings.TrimSpace(server.config.SSHTerminalCertificatePath) != "" {
+			sshAuthMode = "certificate"
+		} else {
+			sshAuthMode = "key"
+		}
+	}
 
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"publicServerUrl":      serverURL,
@@ -2140,6 +2152,8 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 		"saltMasterHost":       saltMasterHost,
 		"wazuhManagerHost":     wazuhManagerHost,
 		"saltApiConfigured":    saltAvailable,
+		"sshConfigured":        sshConfigured,
+		"sshAuthMode":          sshAuthMode,
 		"wazuhApiConfigured":   server.wazuh != nil && server.wazuh.Enabled(),
 		"portalInstallReady":   portalInstallReady,
 	})

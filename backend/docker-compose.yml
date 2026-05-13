@@ -30,12 +30,17 @@ services:
         condition: service_healthy
     env_file:
       - .env
+      - .env.secrets
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-itms}?sslmode=disable
       MIGRATION_DIR: /app/db/postgres_migrations
       BACKEND_ADDR: :3001
     ports:
       - "3001:3001"
+    volumes:
+      - ${SSH_TERMINAL_PRIVATE_KEY_PATH:-/dev/null}:${SSH_TERMINAL_PRIVATE_KEY_PATH:-/dev/null}:ro
+      - ${SSH_TERMINAL_CERTIFICATE_PATH:-/dev/null}:${SSH_TERMINAL_CERTIFICATE_PATH:-/dev/null}:ro
+      - ${SSH_TERMINAL_KNOWN_HOSTS_PATH:-/dev/null}:${SSH_TERMINAL_KNOWN_HOSTS_PATH:-/dev/null}:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3001/api/health >/dev/null || exit 1"]
       interval: 10s
