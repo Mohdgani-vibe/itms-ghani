@@ -1,16 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Filter, HardDrive, RefreshCw, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../lib/api';
+import { getStoredSession } from '../lib/session';
 import Pagination from '../components/Pagination';
 
 const DEVICES_PAGE_SIZE = 50;
+type DeviceAssignmentFilter = 'all' | 'assigned' | 'unassigned';
 
 interface PaginatedResponse<T> {
   items: T[];
   total: number;
   page: number;
   pageSize: number;
+}
+
+export async function loadUnassignedDeviceCount() {
+  const params = new URLSearchParams({
+    paginate: '1',
+    page: '1',
+    page_size: '1',
+    assigned: 'unassigned',
+  });
+  const deviceData = await apiRequest<PaginatedResponse<DeviceRecord>>(`/api/devices?${params.toString()}`);
+  return deviceData.total;
 }
 
 interface SyncStatus {
@@ -30,7 +43,7 @@ interface SyncStatus {
   };
 }
 
-async function loadInventoryData(page: number, searchQuery: string) {
+export async function loadInventoryData(page: number, searchQuery: string, assignmentFilter: DeviceAssignmentFilter, includeSyncStatus: boolean) {
   const params = new URLSearchParams({
     paginate: '1',
     page: String(page),
@@ -39,12 +52,17 @@ async function loadInventoryData(page: number, searchQuery: string) {
   if (searchQuery.trim()) {
     params.set('search', searchQuery.trim());
   }
+  if (assignmentFilter !== 'all') {
+    params.set('assigned', assignmentFilter);
+  }
   const deviceData = await apiRequest<PaginatedResponse<DeviceRecord>>(`/api/devices?${params.toString()}`);
   let statusData: SyncStatus | null = null;
-  try {
-    statusData = await apiRequest<SyncStatus>('/api/inventory-sync/status');
-  } catch {
-    statusData = null;
+  if (includeSyncStatus) {
+    try {
+      statusData = await apiRequest<SyncStatus>('/api/inventory-sync/status');
+    } catch {
+      statusData = null;
+    }
   }
   return { deviceData, statusData };
 }
@@ -58,6 +76,8 @@ interface DeviceRecord {
   gpu?: string | null;
   macAddress?: string | null;
   lastSeenAt?: string | null;
+  cost?: string | null;
+  warrantyUntil?: string | null;
   patchStatus: string;
   alertStatus: string;
   status: string;
@@ -66,7 +86,7 @@ interface DeviceRecord {
   department?: { name?: string } | null;
 }
 
-function formatDateTime(value?: string | null) {
+export function formatDateTime(value?: string | null) {
   if (!value) {
     return '-';
   }
@@ -77,16 +97,40 @@ function formatDateTime(value?: string | null) {
   return parsed.toLocaleString();
 }
 
+export function formatCurrency(value?: string | null) {
+  if (!value) {
+    return 'Cost not tracked';
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  }).format(parsed);
+}
+
 export default function Devices() {
+  const session = getStoredSession();
+  const role = (session?.user.role || '').toLowerCase();
+  const canManageInventory = role === 'super_admin' || role === 'it_team';
+  const isAuditor = role === 'auditor';
   const [devices, setDevices] = useState<DeviceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [assignmentFilter, setAssignmentFilter] = useState<DeviceAssignmentFilter>('unassigned');
+  const [unassignedDeviceCount, setUnassignedDeviceCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalDevices, setTotalDevices] = useState(0);
   const [error, setError] = useState('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [runningServerSync, setRunningServerSync] = useState(false);
   const [showAdvancedColumns, setShowAdvancedColumns] = useState(false);
+  const previousSearchQueryRef = useRef(searchQuery);
   const navigate = useNavigate();
   const location = useLocation();
   const basePath = location.pathname.split('/devices')[0];
@@ -98,11 +142,15 @@ export default function Devices() {
       try {
         setLoading(true);
         setError('');
-        const { deviceData, statusData } = await loadInventoryData(currentPage, searchQuery);
+        const [{ deviceData, statusData }, unassignedCount] = await Promise.all([
+          loadInventoryData(currentPage, searchQuery, assignmentFilter, canManageInventory),
+          loadUnassignedDeviceCount(),
+        ]);
         if (!cancelled) {
           setDevices(deviceData.items);
           setTotalDevices(deviceData.total);
           setSyncStatus(statusData);
+          setUnassignedDeviceCount(unassignedCount);
         }
       } catch (requestError) {
         if (!cancelled) {
@@ -115,26 +163,37 @@ export default function Devices() {
       }
     };
 
+    const searchChanged = previousSearchQueryRef.current !== searchQuery;
+
+    if (searchChanged && currentPage !== 1) {
+      return;
+    }
+
+    previousSearchQueryRef.current = searchQuery;
     void loadDevices();
 
     return () => {
       cancelled = true;
     };
-  }, [currentPage, searchQuery]);
+  }, [assignmentFilter, canManageInventory, currentPage, searchQuery]);
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+    setCurrentPage((page) => (page === 1 ? page : 1));
+  }, [assignmentFilter, searchQuery]);
 
   const handleRunBackendSync = async () => {
     try {
       setRunningServerSync(true);
       setError('');
       await apiRequest('/api/inventory-sync/run', { method: 'POST' });
-      const { deviceData, statusData } = await loadInventoryData(currentPage, searchQuery);
+      const [{ deviceData, statusData }, unassignedCount] = await Promise.all([
+        loadInventoryData(currentPage, searchQuery, assignmentFilter, canManageInventory),
+        loadUnassignedDeviceCount(),
+      ]);
       setDevices(deviceData.items);
       setTotalDevices(deviceData.total);
       setSyncStatus(statusData);
+      setUnassignedDeviceCount(unassignedCount);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Failed to run backend inventory sync');
     } finally {
@@ -144,24 +203,48 @@ export default function Devices() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
+      {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">Auditor access is read-only. You can review device inventory, OpenSCAP findings, and ClamScan alerts here, but inventory sync and endpoint actions stay restricted to IT operations.</div> : null}
+
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
           <HardDrive className="mr-3 h-6 w-6 text-brand-600" />
           Asset Inventory
-        </h1>
-        <div className="flex space-x-3">
-          <button
-            type="button"
-            onClick={() => setShowAdvancedColumns((current) => !current)}
-            className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50"
-          >
-            {showAdvancedColumns ? 'Hide More Columns' : 'Show More Columns'}
-          </button>
-          <button className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
-            <Filter className="mr-2 h-4 w-4" />
-            Filters
-          </button>
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">Review all systems, or switch to only unassigned systems that still need an owner.</p>
         </div>
+        {!isAuditor ? (
+          <div className="flex space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedColumns((current) => !current)}
+              className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50"
+            >
+              {showAdvancedColumns ? 'Hide More Columns' : 'Show More Columns'}
+            </button>
+            <button type="button" className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
+              <Filter className="mr-2 h-4 w-4" />
+              {assignmentFilter === 'all' ? 'All Systems' : assignmentFilter === 'assigned' ? 'Assigned Systems' : `Unassigned Systems${unassignedDeviceCount > 0 ? ` (${unassignedDeviceCount})` : ''}`}
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {([
+          { id: 'unassigned', label: 'Unassigned Systems' },
+          { id: 'assigned', label: 'Assigned Systems' },
+          { id: 'all', label: 'All Systems' },
+        ] as const).map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => setAssignmentFilter(option.id)}
+            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${assignmentFilter === option.id ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700'}`}
+          >
+            {option.id === 'unassigned' ? `${option.label} (${unassignedDeviceCount})` : option.label}
+          </button>
+        ))}
       </div>
 
       {syncStatus?.enabled ? (
@@ -229,6 +312,9 @@ export default function Devices() {
               placeholder="Search by hostname, Asset ID or user..."
             />
           </div>
+          <div className="text-sm font-medium text-slate-500">
+            {assignmentFilter === 'all' ? 'Showing all systems' : assignmentFilter === 'assigned' ? 'Showing assigned systems only' : 'Showing unassigned systems only'}
+          </div>
         </div>
         {error ? <div className="px-6 py-4 text-sm text-rose-700 bg-rose-50 border-b border-rose-100">{error}</div> : null}
         
@@ -259,6 +345,7 @@ export default function Devices() {
                         <div className="ml-0">
                           <div className="text-sm font-semibold text-brand-700 hover:text-brand-900 cursor-pointer">{device.hostname}</div>
                           <div className="text-xs text-slate-500 mt-0.5">{device.deviceType} • {device.osName} • {device.assetId}</div>
+                          {showAdvancedColumns ? <div className="text-xs text-slate-500 mt-0.5">{formatCurrency(device.cost)} • Warranty {formatDateTime(device.warrantyUntil)}</div> : null}
                         </div>
                       </div>
                     </td>
@@ -303,7 +390,7 @@ export default function Devices() {
                         onClick={() => navigate(`${basePath}/devices/${device.id}`)}
                         className="text-slate-400 hover:text-slate-600 font-semibold"
                       >
-                       Details
+                        {isAuditor ? 'Review' : 'Details'}
                       </button>
                     </td>
                   </tr>
