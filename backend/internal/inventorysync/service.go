@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	maxFetchedInventoryBytes = 8 << 20
+	maxFetchedInventoryBytes  = 8 << 20
 	maxFetchedInventoryAssets = 5000
 )
 
@@ -113,32 +113,64 @@ type sourceAsset struct {
 	WazuhAgentID      string           `json:"wazuh_agent_id"`
 	Notes             string           `json:"notes"`
 	ComputeDetails    *computeDetails  `json:"compute_details"`
+	Network           *networkDetails  `json:"network"`
 	InstalledSoftware []softwareRecord `json:"installed_software"`
 	SecurityReports   []SecurityReport `json:"security_reports"`
 }
 
 type computeDetails struct {
-	Processor      string `json:"processor"`
-	RAM            string `json:"ram"`
-	Storage        string `json:"storage"`
-	GPU            string `json:"gpu"`
-	Display        string `json:"display"`
-	BIOSVersion    string `json:"bios_version"`
-	MACAddress     string `json:"mac_address"`
-	OSName         string `json:"os_name"`
-	OSVersion      string `json:"os_version"`
-	Kernel         string `json:"kernel"`
-	Architecture   string `json:"architecture"`
-	OSBuild        string `json:"os_build"`
-	LastBoot       string `json:"last_boot"`
-	LastSeen       string `json:"last_seen"`
-	PendingUpdates int    `json:"pending_updates"`
+	Processor            string         `json:"processor"`
+	RAM                  string         `json:"ram"`
+	Storage              string         `json:"storage"`
+	GPU                  string         `json:"gpu"`
+	Display              string         `json:"display"`
+	BIOSVersion          string         `json:"bios_version"`
+	MACAddress           string         `json:"mac_address"`
+	OSName               string         `json:"os_name"`
+	OSVersion            string         `json:"os_version"`
+	Kernel               string         `json:"kernel"`
+	Architecture         string         `json:"architecture"`
+	OSBuild              string         `json:"os_build"`
+	LastBoot             string         `json:"last_boot"`
+	LastSeen             string         `json:"last_seen"`
+	LoggedInUsers        []string       `json:"logged_in_users"`
+	PendingUpdates       int            `json:"pending_updates"`
+	PendingUpdateDetails []string       `json:"pending_update_details"`
+	AnyDeskID            string         `json:"anydesk_id"`
+	RustDeskID           string         `json:"rustdesk_id"`
+	DiskLayout           string         `json:"disk_layout"`
+	Volumes              []volumeRecord `json:"volumes"`
+}
+
+type networkDetails struct {
+	WiredIP        string         `json:"wired_ip"`
+	WirelessIP     string         `json:"wireless_ip"`
+	NetbirdIP      string         `json:"netbird_ip"`
+	DNS            string         `json:"dns"`
+	Gateway        string         `json:"gateway"`
+	InterfaceStats map[string]any `json:"interface_stats"`
 }
 
 type softwareRecord struct {
 	Name        string `json:"name"`
 	Version     string `json:"version"`
 	InstallDate string `json:"install_date"`
+	Source      string `json:"source"`
+}
+
+type volumeRecord struct {
+	Name        string `json:"name"`
+	Path        string `json:"path"`
+	Size        string `json:"size"`
+	FileSystem  string `json:"filesystem"`
+	DeviceType  string `json:"device_type"`
+	MountPoint  string `json:"mountpoint"`
+	Available   string `json:"available"`
+	UsedPercent string `json:"used_percent"`
+	UUID        string `json:"uuid"`
+	Parent      string `json:"parent"`
+	Encrypted   bool   `json:"encrypted"`
+	Encryption  string `json:"encryption"`
 }
 
 func NewService(db *sql.DB, config Config) *Service {
@@ -407,6 +439,9 @@ func (service *Service) syncAssets(ctx context.Context, assets []sourceAsset) (i
 			if err := service.upsertComputeDetails(ctx, tx, assetID, asset.ComputeDetails); err != nil {
 				return upserted, fmt.Errorf("upsert compute details %s: %w", asset.AssetTag, err)
 			}
+		}
+		if err := service.upsertNetworkDetails(ctx, tx, assetID, asset.Network); err != nil {
+			return upserted, fmt.Errorf("upsert network details %s: %w", asset.AssetTag, err)
 		}
 
 		if err := service.replaceSoftwareInventory(ctx, tx, assetID, asset.InstalledSoftware); err != nil {
@@ -768,6 +803,9 @@ func (service *Service) upsertAsset(ctx context.Context, tx *sql.Tx, asset sourc
 	hostname := strings.ToLower(strings.TrimSpace(asset.Hostname))
 	sourceFingerprint := normalizeFingerprint(asset.SourceFingerprint)
 	saltMinionID := strings.TrimSpace(asset.SaltMinionID)
+	if asset.IsCompute {
+		saltMinionID = coalesceString(saltMinionID, hostname)
+	}
 	serialNumber := strings.TrimSpace(asset.SerialNumber)
 	manufacturer := strings.TrimSpace(asset.Manufacturer)
 	model := strings.TrimSpace(asset.Model)
@@ -800,9 +838,9 @@ func (service *Service) upsertAsset(ctx context.Context, tx *sql.Tx, asset sourc
 				manufacturer = NULLIF($8, ''),
 				model = NULLIF($9, ''),
 				entity_id = $10::uuid,
-				assigned_to = NULLIF($11, '')::uuid,
-				dept_id = NULLIF($12, '')::uuid,
-				location_id = NULLIF($13, '')::uuid,
+				assigned_to = COALESCE(NULLIF($11, '')::uuid, assigned_to),
+				dept_id = COALESCE(NULLIF($12, '')::uuid, dept_id),
+				location_id = COALESCE(NULLIF($13, '')::uuid, location_id),
 				purchase_date = NULLIF($14, '')::date,
 				warranty_until = NULLIF($15, '')::date,
 				status = $16,
@@ -858,11 +896,27 @@ func (service *Service) upsertComputeDetails(ctx context.Context, tx *sql.Tx, as
 	if details == nil {
 		details = &computeDetails{}
 	}
-	_, err := tx.ExecContext(ctx, `
+	volumesRaw, err := json.Marshal(details.Volumes)
+	if err != nil {
+		return err
+	}
+	loggedInUsersRaw, err := json.Marshal(details.LoggedInUsers)
+	if err != nil {
+		return err
+	}
+	pendingUpdateDetails := details.PendingUpdateDetails
+	if pendingUpdateDetails == nil {
+		pendingUpdateDetails = []string{}
+	}
+	pendingUpdateDetailsRaw, err := json.Marshal(pendingUpdateDetails)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
 		INSERT INTO asset_compute_details (
-			asset_id, processor, ram, storage, gpu, display, bios_version, mac_address, os_name, os_version, kernel, architecture, os_build, last_boot, last_seen, pending_updates, updated_at
+			asset_id, processor, ram, storage, gpu, display, bios_version, mac_address, os_name, os_version, kernel, architecture, os_build, last_boot, last_seen, logged_in_users_json, pending_updates, pending_update_details_json, anydesk_id, rustdesk_id, disk_layout, volumes_json, updated_at
 		) VALUES (
-			$1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''), NULLIF($13, ''), NULLIF($14, '')::timestamptz, NULLIF($15, '')::timestamptz, $16, NOW()
+			$1::uuid, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''), NULLIF($13, ''), NULLIF($14, '')::timestamptz, NULLIF($15, '')::timestamptz, $16::jsonb, $17, $18::jsonb, NULLIF($19, ''), NULLIF($20, ''), NULLIF($21, ''), $22::jsonb, NOW()
 		)
 		ON CONFLICT (asset_id) DO UPDATE SET
 			processor = COALESCE(EXCLUDED.processor, asset_compute_details.processor),
@@ -879,9 +933,54 @@ func (service *Service) upsertComputeDetails(ctx context.Context, tx *sql.Tx, as
 			os_build = COALESCE(EXCLUDED.os_build, asset_compute_details.os_build),
 			last_boot = COALESCE(EXCLUDED.last_boot, asset_compute_details.last_boot),
 			last_seen = COALESCE(EXCLUDED.last_seen, asset_compute_details.last_seen),
+			logged_in_users_json = CASE
+				WHEN EXCLUDED.logged_in_users_json = '[]'::jsonb THEN asset_compute_details.logged_in_users_json
+				ELSE EXCLUDED.logged_in_users_json
+			END,
 			pending_updates = EXCLUDED.pending_updates,
+			pending_update_details_json = CASE
+				WHEN EXCLUDED.pending_update_details_json = '[]'::jsonb THEN asset_compute_details.pending_update_details_json
+				ELSE EXCLUDED.pending_update_details_json
+			END,
+			anydesk_id = COALESCE(EXCLUDED.anydesk_id, asset_compute_details.anydesk_id),
+			rustdesk_id = COALESCE(EXCLUDED.rustdesk_id, asset_compute_details.rustdesk_id),
+			disk_layout = COALESCE(EXCLUDED.disk_layout, asset_compute_details.disk_layout),
+			volumes_json = CASE
+				WHEN EXCLUDED.volumes_json = '[]'::jsonb THEN asset_compute_details.volumes_json
+				ELSE EXCLUDED.volumes_json
+			END,
 			updated_at = NOW()
-	`, assetID, strings.TrimSpace(details.Processor), strings.TrimSpace(details.RAM), strings.TrimSpace(details.Storage), strings.TrimSpace(details.GPU), strings.TrimSpace(details.Display), strings.TrimSpace(details.BIOSVersion), strings.TrimSpace(details.MACAddress), strings.TrimSpace(details.OSName), strings.TrimSpace(details.OSVersion), strings.TrimSpace(details.Kernel), strings.TrimSpace(details.Architecture), strings.TrimSpace(details.OSBuild), strings.TrimSpace(details.LastBoot), strings.TrimSpace(details.LastSeen), details.PendingUpdates)
+	`, assetID, strings.TrimSpace(details.Processor), strings.TrimSpace(details.RAM), strings.TrimSpace(details.Storage), strings.TrimSpace(details.GPU), strings.TrimSpace(details.Display), strings.TrimSpace(details.BIOSVersion), strings.TrimSpace(details.MACAddress), strings.TrimSpace(details.OSName), strings.TrimSpace(details.OSVersion), strings.TrimSpace(details.Kernel), strings.TrimSpace(details.Architecture), strings.TrimSpace(details.OSBuild), strings.TrimSpace(details.LastBoot), strings.TrimSpace(details.LastSeen), string(loggedInUsersRaw), details.PendingUpdates, string(pendingUpdateDetailsRaw), strings.TrimSpace(details.AnyDeskID), strings.TrimSpace(details.RustDeskID), strings.TrimSpace(details.DiskLayout), string(volumesRaw))
+	return err
+}
+
+func (service *Service) upsertNetworkDetails(ctx context.Context, tx *sql.Tx, assetID string, details *networkDetails) error {
+	if details == nil {
+		details = &networkDetails{}
+	}
+	interfaceStats := details.InterfaceStats
+	if interfaceStats == nil {
+		interfaceStats = map[string]any{}
+	}
+	statsRaw, err := json.Marshal(interfaceStats)
+	if err != nil {
+		return err
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO asset_network_snapshots (
+			asset_id, wired_ip, wireless_ip, netbird_ip, dns, gateway, interface_stats, updated_at
+		) VALUES (
+			$1::uuid, NULLIF($2, '')::inet, NULLIF($3, '')::inet, NULLIF($4, '')::inet, NULLIF($5, ''), NULLIF($6, '')::inet, $7::jsonb, NOW()
+		)
+		ON CONFLICT (asset_id) DO UPDATE SET
+			wired_ip = EXCLUDED.wired_ip,
+			wireless_ip = EXCLUDED.wireless_ip,
+			netbird_ip = EXCLUDED.netbird_ip,
+			dns = EXCLUDED.dns,
+			gateway = EXCLUDED.gateway,
+			interface_stats = EXCLUDED.interface_stats,
+			updated_at = NOW()
+	`, assetID, strings.TrimSpace(details.WiredIP), strings.TrimSpace(details.WirelessIP), strings.TrimSpace(details.NetbirdIP), strings.TrimSpace(details.DNS), strings.TrimSpace(details.Gateway), string(statsRaw))
 	return err
 }
 
@@ -894,13 +993,22 @@ func (service *Service) replaceSoftwareInventory(ctx context.Context, tx *sql.Tx
 			continue
 		}
 		if _, err := tx.ExecContext(ctx, `
-			INSERT INTO asset_software_inventory (asset_id, name, version, install_date)
-			VALUES ($1::uuid, $2, NULLIF($3, ''), NULLIF($4, '')::date)
-		`, assetID, strings.TrimSpace(application.Name), strings.TrimSpace(application.Version), strings.TrimSpace(application.InstallDate)); err != nil {
+			INSERT INTO asset_software_inventory (asset_id, name, version, install_date, source)
+			VALUES ($1::uuid, $2, NULLIF($3, ''), NULLIF($4, '')::date, NULLIF($5, ''))
+		`, assetID, strings.TrimSpace(application.Name), strings.TrimSpace(application.Version), strings.TrimSpace(application.InstallDate), normalizeSoftwareSource(application.Source)); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func normalizeSoftwareSource(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "dpkg", "snapd", "flatpak":
+		return strings.ToLower(strings.TrimSpace(value))
+	default:
+		return strings.TrimSpace(value)
+	}
 }
 
 func (service *Service) setNextRun(nextRunAt time.Time) {
