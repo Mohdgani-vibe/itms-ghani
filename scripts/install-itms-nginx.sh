@@ -8,14 +8,27 @@ TEMPLATE_PATH="$REPO_ROOT/deploy/nginx/itms.conf"
 INSTALLER_SOURCE_DIR="$REPO_ROOT/scripts"
 
 SITE_NAME="${SITE_NAME:-itms}"
-SERVER_NAME="${SERVER_NAME:-${1:-YOUR_SERVER_IP}}"
+SERVER_NAME="${SERVER_NAME:-}"
 BACKEND_UPSTREAM="${BACKEND_UPSTREAM:-127.0.0.1:3001}"
 WWW_ROOT="${WWW_ROOT:-/var/www/itms}"
 INSTALLERS_ROOT="${INSTALLERS_ROOT:-$WWW_ROOT/installers}"
 AVAILABLE_PATH="/etc/nginx/sites-available/${SITE_NAME}"
 ENABLED_PATH="/etc/nginx/sites-enabled/${SITE_NAME}"
 BUILD_USER="${SUDO_USER:-${USER:-}}"
-BUILD_GROUP="$(id -gn "$BUILD_USER")"
+BUILD_GROUP=""
+DRY_RUN=0
+
+usage() {
+	cat <<'EOF'
+Usage:
+	install-itms-nginx.sh [server-name] [--dry-run]
+	install-itms-nginx.sh [--dry-run] [server-name]
+
+Options:
+	--dry-run   Print the actions that would be taken without changing the host
+	--help      Show this message
+EOF
+}
 
 require_command() {
 	if ! command -v "$1" >/dev/null 2>&1; then
@@ -25,6 +38,13 @@ require_command() {
 }
 
 run_privileged() {
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf '[dry-run]'
+		printf ' %q' "$@"
+		printf '\n'
+		return 0
+	fi
+
 	if [[ "$EUID" -eq 0 ]]; then
 		"$@"
 	else
@@ -38,6 +58,17 @@ run_as_build_user() {
 		exit 1
 	fi
 
+	if [[ "$DRY_RUN" -eq 1 ]]; then
+		printf '[dry-run]'
+		if [[ "$EUID" -eq 0 && -n "${SUDO_USER:-}" ]]; then
+			printf ' %q' runuser -u "$BUILD_USER" -- "$@"
+		else
+			printf ' %q' "$@"
+		fi
+		printf '\n'
+		return 0
+	fi
+
 	if [[ "$EUID" -eq 0 && -n "${SUDO_USER:-}" ]]; then
 		runuser -u "$BUILD_USER" -- "$@"
 	else
@@ -45,15 +76,73 @@ run_as_build_user() {
 	fi
 }
 
+resolve_build_identity() {
+	if [[ -z "$BUILD_USER" ]]; then
+		echo "Unable to determine the non-root user for the frontend build." >&2
+		exit 1
+	fi
+
+	BUILD_GROUP="$(id -gn "$BUILD_USER")"
+}
+
 escape_sed_replacement() {
 	printf '%s' "$1" | sed 's/[\\&|]/\\&/g'
+}
+
+parse_args() {
+	local positional=()
+
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			--dry-run)
+				DRY_RUN=1
+				shift
+				;;
+			--help|-h)
+				usage
+				exit 0
+				;;
+			--*)
+				echo "Unknown argument: $1" >&2
+				usage >&2
+				exit 1
+				;;
+			*)
+				positional+=("$1")
+				shift
+				;;
+		esac
+		done
+
+	if [[ ${#positional[@]} -gt 1 ]]; then
+		echo "Expected at most one positional server name." >&2
+		usage >&2
+		exit 1
+	fi
+
+	if [[ ${#positional[@]} -eq 1 && -z "${SERVER_NAME:-}" ]]; then
+		SERVER_NAME="${positional[0]}"
+	fi
+
+	if [[ -z "$SERVER_NAME" ]]; then
+		SERVER_NAME="YOUR_SERVER_IP"
+	fi
 }
 
 require_command npm
 require_command node
 require_command sed
+require_command mktemp
+require_command id
 if [[ "$EUID" -eq 0 && -n "${SUDO_USER:-}" ]]; then
 	require_command runuser
+fi
+
+resolve_build_identity
+parse_args "$@"
+
+if [[ "$DRY_RUN" -eq 1 ]]; then
+	echo "Running install-itms-nginx.sh in dry-run mode. No files or services will be changed."
 fi
 
 ensure_frontend_dependencies() {
@@ -67,11 +156,19 @@ ensure_frontend_dependencies() {
 	cd "$REPO_ROOT"
 }
 
+missing_packages=()
 if ! command -v nginx >/dev/null 2>&1; then
+	missing_packages+=(nginx)
+fi
+if ! command -v rsync >/dev/null 2>&1; then
+	missing_packages+=(rsync)
+fi
+
+if [[ ${#missing_packages[@]} -gt 0 ]]; then
 	require_command apt-get
-	echo "Installing nginx..."
+	echo "Installing required system packages: ${missing_packages[*]}"
 	run_privileged apt-get update
-	run_privileged apt-get install -y nginx
+	run_privileged apt-get install -y "${missing_packages[@]}"
 fi
 
 echo "Building frontend assets..."
@@ -105,6 +202,7 @@ www_root_escaped="$(escape_sed_replacement "$WWW_ROOT")"
 backend_upstream_escaped="$(escape_sed_replacement "$BACKEND_UPSTREAM")"
 
 tmp_config="$(mktemp)"
+trap 'rm -f "$tmp_config"' EXIT
 sed \
 	-e "s|__SERVER_NAME__|$server_name_escaped|g" \
 	-e "s|__WWW_ROOT__|$www_root_escaped|g" \
@@ -115,7 +213,6 @@ echo "Installing nginx site config for $SERVER_NAME..."
 	run_privileged cp "$tmp_config" "$AVAILABLE_PATH"
 	run_privileged ln -sfn "$AVAILABLE_PATH" "$ENABLED_PATH"
 	run_privileged rm -f /etc/nginx/sites-enabled/default
-	rm -f "$tmp_config"
 
 echo "Validating nginx configuration..."
 	run_privileged nginx -t

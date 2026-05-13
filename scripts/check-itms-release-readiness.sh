@@ -59,6 +59,15 @@ main() {
   log_step 'Checking server integration readiness'
   ./scripts/check-itms-server-integrations.sh
 
+  log_step 'Checking integration API secrets'
+  ./scripts/rotate-itms-api-secrets.sh --check-only
+
+  log_step 'Running Linux installer smoke test'
+  ./scripts/smoke-test-itms-installer.sh
+
+  log_step 'Running nginx frontend deploy dry-run'
+  ./scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
+
   if [[ "$RUN_LIVE_INTEGRATIONS" -eq 1 ]]; then
     log_step 'Running live integration verification'
     if [[ -n "$LIVE_WAZUH_AGENT_ID" ]]; then
