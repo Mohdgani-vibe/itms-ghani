@@ -44,6 +44,23 @@ declare global {
 
 let googleScriptPromise: Promise<void> | null = null;
 
+export function normalizeAuthErrorMessage(message: string) {
+  const normalized = message.trim().toLowerCase();
+  if (
+    normalized === 'authentication failed'
+    || normalized === 'wrong password'
+    || normalized === 'unregistered email'
+    || normalized === 'user is inactive'
+    || normalized === 'only @zerodha.com email addresses are allowed'
+    || normalized === 'invalid google token'
+    || normalized === 'google token email mismatch'
+    || normalized === 'non-zerodha domain is not allowed'
+  ) {
+    return 'Sign-in failed. Check your email or employee ID and password, or contact IT if you need access help.';
+  }
+  return message;
+}
+
 function loadGoogleScript() {
   if (googleScriptPromise) {
     return googleScriptPromise;
@@ -164,7 +181,7 @@ export default function Login() {
               });
               handleSuccessfulLogin(response);
             } catch (requestError) {
-              setError(requestError instanceof Error ? requestError.message : 'Google Sign-In failed');
+				setError(requestError instanceof Error ? normalizeAuthErrorMessage(requestError.message) : 'Google Sign-In failed');
             } finally {
               setGoogleLoading(false);
             }
@@ -211,7 +228,7 @@ export default function Login() {
       });
       handleSuccessfulLogin(response);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'Login failed');
+		setError(requestError instanceof Error ? normalizeAuthErrorMessage(requestError.message) : 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -368,7 +385,7 @@ export default function Login() {
                   {loading ? 'Signing in...' : 'Sign in'}
                 </button>
                 <p className="mt-3 text-xs text-slate-500 text-center">
-                  Local DB auth: use the default admin email configured in backend/.env, or sign in with a valid employee email or employee ID.
+				  Sign in with your Zerodha employee email or employee ID. If access fails, contact IT or a super admin for a reset or account review.
                 </p>
               </div>
             </form>
