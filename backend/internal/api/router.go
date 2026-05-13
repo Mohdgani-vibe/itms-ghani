@@ -503,8 +503,11 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/chat/channels/:id/messages", server.listChatMessages)
 			protected.GET("/patch/dashboard", server.patchDashboardCompat)
 			protected.GET("/patch/devices", server.patchDevicesCompat)
-			protected.GET("/patch/jobs", server.patchJobsCompat)
-			protected.POST("/patch/run", server.patchRunCompat)
+					protected.GET("/patch/jobs", server.patchJobsCompat)
+					protected.GET("/patch/reports", server.listPatchRunReports)
+					protected.GET("/patch/reports/:id", server.getPatchRunReport)
+					protected.POST("/patch/reports", server.createPatchRunReport)
+					protected.POST("/patch/run", server.patchRunCompat)
 			protected.GET("/terminal/session", server.listTerminalSessionsCompat)
 			protected.POST("/terminal/session", server.createTerminalSessionCompat)
 			protected.GET("/terminal/targets/:minionId", server.getTerminalTarget)
@@ -2725,6 +2728,250 @@ func (server *apiServer) patchRunCompat(c *gin.Context) {
 	}
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "patch_run", TargetType: "asset", TargetID: asset.ID, Detail: result})
 	httpx.JSON(c, http.StatusOK, result)
+}
+
+type patchRunReportRowInput struct {
+	DeviceID       string                           `json:"deviceId"`
+	Hostname       string                           `json:"hostname"`
+	Department     string                           `json:"department"`
+	Status         string                           `json:"status"`
+	PatchStatus    string                           `json:"patchStatus"`
+	Target         string                           `json:"target"`
+	Action         string                           `json:"action"`
+	Message        string                           `json:"message"`
+	UpdatedItems   []string                         `json:"updatedItems"`
+	PackageChanges []patchRunReportPackageChangeInput `json:"packageChanges"`
+}
+
+type patchRunReportPackageChangeInput struct {
+	Name        string `json:"name"`
+	FromVersion string `json:"fromVersion"`
+	ToVersion   string `json:"toVersion"`
+}
+
+type patchRunReportInput struct {
+	ID           string                   `json:"id,omitempty"`
+	ScopeLabel   string                   `json:"scopeLabel"`
+	RequestedAt  string                   `json:"requestedAt"`
+	CompletedAt  string                   `json:"completedAt"`
+	SuccessCount int                      `json:"successCount"`
+	FailedCount  int                      `json:"failedCount"`
+	Rows         []patchRunReportRowInput `json:"rows"`
+}
+
+func (server *apiServer) createPatchRunReport(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	var input patchRunReportInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid patch report payload")
+		return
+	}
+	input.ScopeLabel = strings.TrimSpace(input.ScopeLabel)
+	if input.ScopeLabel == "" || len(input.Rows) == 0 {
+		httpx.Error(c, http.StatusBadRequest, "patch report requires a scope and at least one row")
+		return
+	}
+	requestedAt, err := time.Parse(time.RFC3339, strings.TrimSpace(input.RequestedAt))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid patch report requestedAt")
+		return
+	}
+	completedAt, err := time.Parse(time.RFC3339, strings.TrimSpace(input.CompletedAt))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid patch report completedAt")
+		return
+	}
+
+	entitySet := make(map[string]struct{})
+	successCount := 0
+	for index := range input.Rows {
+		row := &input.Rows[index]
+		row.DeviceID = strings.TrimSpace(row.DeviceID)
+		if row.DeviceID == "" {
+			httpx.Error(c, http.StatusBadRequest, "patch report rows require device IDs")
+			return
+		}
+		asset, err := server.fetchAsset(row.DeviceID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				httpx.Error(c, http.StatusBadRequest, "patch report contains an unknown asset")
+				return
+			}
+			httpx.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !server.entityAllowedByID(c, asset.EntityID) {
+			httpx.Error(c, http.StatusForbidden, "forbidden")
+			return
+		}
+		entitySet[asset.EntityID] = struct{}{}
+		if strings.EqualFold(strings.TrimSpace(row.Status), "success") {
+			successCount++
+		}
+	}
+
+	entityIDs := make([]string, 0, len(entitySet))
+	for entityID := range entitySet {
+		entityIDs = append(entityIDs, entityID)
+	}
+	sort.Strings(entityIDs)
+	input.SuccessCount = successCount
+	input.FailedCount = len(input.Rows) - successCount
+	payload, _ := json.Marshal(input)
+	entityPayload, _ := json.Marshal(entityIDs)
+	actorID := ""
+	if claims := middleware.CurrentClaims(c); claims != nil {
+		actorID = claims.UserID
+	}
+
+	var id string
+	err = server.db.QueryRow(`
+		INSERT INTO patch_run_reports (
+			actor_id,
+			scope_label,
+			requested_at,
+			completed_at,
+			success_count,
+			failed_count,
+			row_count,
+			entity_ids,
+			report
+		) VALUES (
+			NULLIF($1, '')::uuid,
+			$2,
+			$3,
+			$4,
+			$5,
+			$6,
+			$7,
+			$8::jsonb,
+			$9::jsonb
+		)
+		RETURNING id::text
+	`, actorID, input.ScopeLabel, requestedAt, completedAt, input.SuccessCount, input.FailedCount, len(input.Rows), string(entityPayload), string(payload)).Scan(&id)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	input.ID = id
+	httpx.JSON(c, http.StatusCreated, input)
+}
+
+func (server *apiServer) listPatchRunReports(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	rows, err := server.db.Query(`
+		SELECT r.id::text, r.scope_label, r.requested_at, r.completed_at, r.success_count, r.failed_count, r.row_count, r.entity_ids, r.report, COALESCE(u.full_name, '')
+		FROM patch_run_reports r
+		LEFT JOIN users u ON u.id = r.actor_id
+		ORDER BY r.created_at DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+	items := make([]gin.H, 0)
+	for rows.Next() {
+		var id, scopeLabel, requestedBy string
+		var entityIDsRaw, reportRaw []byte
+		var requestedAt, completedAt time.Time
+		var successCount, failedCount, rowCount int
+		if err := rows.Scan(&id, &scopeLabel, &requestedAt, &completedAt, &successCount, &failedCount, &rowCount, &entityIDsRaw, &reportRaw, &requestedBy); err != nil {
+			httpx.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if !server.patchRunReportAllowed(c, entityIDsRaw) {
+			continue
+		}
+		departments := extractPatchRunReportDepartments(reportRaw)
+		items = append(items, gin.H{
+			"id":           id,
+			"scopeLabel":   scopeLabel,
+			"requestedAt":  requestedAt,
+			"completedAt":  completedAt,
+			"successCount": successCount,
+			"failedCount":  failedCount,
+			"rowCount":     rowCount,
+			"departments":  departments,
+			"requestedBy":  emptyToNil(requestedBy),
+		})
+	}
+	httpx.JSON(c, http.StatusOK, items)
+}
+
+func (server *apiServer) getPatchRunReport(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	var reportRaw []byte
+	var entityIDsRaw []byte
+	err := server.db.QueryRow(`SELECT report, entity_ids FROM patch_run_reports WHERE id = $1::uuid`, c.Param("id")).Scan(&reportRaw, &entityIDsRaw)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "patch report not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !server.patchRunReportAllowed(c, entityIDsRaw) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
+	var report map[string]any
+	if err := json.Unmarshal(reportRaw, &report); err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	report["id"] = c.Param("id")
+	httpx.JSON(c, http.StatusOK, report)
+}
+
+func (server *apiServer) patchRunReportAllowed(c *gin.Context, entityIDsRaw []byte) bool {
+	var entityIDs []string
+	if err := json.Unmarshal(entityIDsRaw, &entityIDs); err != nil {
+		return false
+	}
+	if len(entityIDs) == 0 {
+		return false
+	}
+	for _, entityID := range entityIDs {
+		if !server.entityAllowedByID(c, entityID) {
+			return false
+		}
+	}
+	return true
+}
+
+func extractPatchRunReportDepartments(reportRaw []byte) []string {
+	var report struct {
+		Rows []struct {
+			Department string `json:"department"`
+		} `json:"rows"`
+	}
+	if err := json.Unmarshal(reportRaw, &report); err != nil {
+		return []string{}
+	}
+	seen := make(map[string]struct{})
+	departments := make([]string, 0)
+	for _, row := range report.Rows {
+		department := strings.TrimSpace(row.Department)
+		if department == "" {
+			department = "Unassigned"
+		}
+		if _, exists := seen[department]; exists {
+			continue
+		}
+		seen[department] = struct{}{}
+		departments = append(departments, department)
+	}
+	sort.Strings(departments)
+	return departments
 }
 
 func (server *apiServer) listTerminalSessionsCompat(c *gin.Context) {
