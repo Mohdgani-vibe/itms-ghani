@@ -11,6 +11,9 @@ describe('AlertsStatusStrip', () => {
         alertsError="Failed to load alerts"
         hasAlertsData={false}
         totalAlertsLabel="42 alerts visible across configured sources"
+        liveLabel="Refreshing live telemetry"
+        lastUpdatedLabel="2 min ago"
+        notificationCount={3}
         onRefresh={() => {}}
       />,
     );

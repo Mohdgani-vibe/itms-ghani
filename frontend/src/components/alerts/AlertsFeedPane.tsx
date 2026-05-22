@@ -47,8 +47,8 @@ export function AlertsFeedPane({
   renderAlertAsset,
 }: AlertsFeedPaneProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-sky-100 bg-white/95 shadow-sm lg:max-h-[calc(100vh-15rem)] lg:min-h-[42rem] lg:overflow-hidden">
-      <div className="border-b border-sky-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f5fbff_100%)] px-5 py-4">
+    <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white/95 shadow-sm lg:max-h-[calc(100vh-15rem)] lg:min-h-[42rem] lg:overflow-hidden">
+      <div className="border-b border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f4fdf7_100%)] px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-sm font-bold text-zinc-900">Alert Feed</div>
@@ -62,8 +62,8 @@ export function AlertsFeedPane({
       </div>
 
       <div className="space-y-3 p-4 md:p-5 lg:max-h-[calc(100vh-24rem)] lg:overflow-y-auto">
-        {loading ? <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-6 text-sm text-zinc-500 shadow-sm">Loading alerts...</div> : null}
-        {!loading && alerts.length === 0 ? <div className="rounded-xl border border-sky-100 bg-sky-50/50 p-6 text-sm text-zinc-500 shadow-sm">No alerts found.</div> : null}
+        {loading ? <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6 text-sm text-zinc-500 shadow-sm">Loading alerts...</div> : null}
+        {!loading && alerts.length === 0 ? <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6 text-sm text-zinc-500 shadow-sm">No alerts found.</div> : null}
         {alerts.map((alert) => {
           const isActive = selectedAlertId === alert.id;
           const clamavFacts = parseClamAVAlertFacts(alert);
@@ -72,7 +72,7 @@ export function AlertsFeedPane({
             <article
               key={alert.id}
               onClick={() => onSelectAlert(alert, alerts)}
-              className={`cursor-pointer rounded-2xl border px-4 py-4 shadow-sm transition ${isActive ? 'border-sky-300 bg-sky-50/80 shadow-md ring-1 ring-sky-100' : 'border-sky-100 bg-white hover:border-sky-200 hover:bg-sky-50/40 hover:shadow-md'}`}
+              className={`cursor-pointer rounded-2xl border px-4 py-4 shadow-sm transition ${isActive ? 'border-emerald-300 bg-emerald-50/80 shadow-md ring-1 ring-emerald-100' : 'border-emerald-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md'}`}
             >
               <div className="flex items-start gap-3">
                 <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${renderSeverityDotClassName(alert)}`} />

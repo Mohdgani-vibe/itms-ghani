@@ -183,7 +183,7 @@ export function renderSeverityClassName(alert: AlertsListRecord) {
     return 'bg-amber-100 text-amber-700';
   }
   if (severity === 'info' || severity === 'low') {
-    return 'bg-sky-100 text-sky-700';
+    return 'bg-emerald-100 text-emerald-700';
   }
   return 'bg-zinc-100 text-zinc-700';
 }
@@ -264,7 +264,7 @@ export function renderSourceLabel(value: string) {
 export function renderSourceBadgeClassName(value: string) {
   const source = value.toLowerCase();
   if (source === 'wazuh') {
-    return 'bg-sky-100 text-sky-700 border-sky-200';
+    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
   }
   if (source === 'openscap') {
     return 'bg-violet-100 text-violet-700 border-violet-200';

@@ -162,9 +162,12 @@ describe('Alerts', () => {
 
     renderToStaticMarkup(<Alerts />);
 
-    expect(alertsPageMocks.alertsRecentTableMock).toHaveBeenCalledWith(expect.objectContaining({
+    expect(alertsPageMocks.alertsRecentTableMock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
       alerts: recentAlerts,
-      onSelectAlert: expect.any(Function),
+      renderSystemName: expect.any(Function),
+      renderSeverityClassName: expect.any(Function),
+      renderSourceLabel: expect.any(Function),
+      formatDateTime: expect.any(Function),
     }));
   });
 });

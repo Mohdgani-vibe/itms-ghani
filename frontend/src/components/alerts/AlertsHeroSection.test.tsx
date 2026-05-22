@@ -10,8 +10,10 @@ describe('AlertsHeroSection', () => {
         feedLabel="Security Operations"
         totalAlerts={42}
         openCount={12}
+        criticalCount={5}
         acknowledgedCount={8}
         resolvedCount={22}
+        systemsAffectedCount={16}
         sourceCountMap={new Map<string, number>([
           ['wazuh', 7],
           ['openscap', 5],
@@ -50,11 +52,31 @@ describe('AlertsHeroSection', () => {
           },
         ]}
         sourceFilter="all"
+        sourceOptions={[
+          { value: 'wazuh', label: 'Wazuh' },
+          { value: 'openscap', label: 'OpenSCAP' },
+          { value: 'clamav', label: 'ClamAV' },
+        ]}
+        severityFilter="all"
+        departmentFilter="all"
+        departmentOptions={['IT Operations']}
+        timeRangeFilter="24h"
+        searchQuery=""
+        lastUpdatedLabel="5 min ago"
+        liveStatusLabel="Live telemetry online"
+        notificationCount={4}
+        darkMode={false}
         onSelectSourceFilter={() => {}}
+        onSelectSeverityFilter={() => {}}
+        onSelectDepartmentFilter={() => {}}
+        onSelectTimeRangeFilter={() => {}}
+        onSearchQueryChange={() => {}}
+        onToggleDarkMode={() => {}}
         renderSourceIcon={() => null}
       />,
     );
 
+    expect(markup).toContain('Security Operations Center');
     expect(markup).toContain('Wazuh Alerts');
     expect(markup).toContain('Hardening / OpenSCAP Alerts');
     expect(markup).toContain('ClamScan Alerts');

@@ -136,6 +136,34 @@ const sparseDashboard = {
 } as AlertsDashboardResponse;
 
 describe('AlertsSourceWorkspacePanel', () => {
+  it('renders dashboard view with latest system summary cards', () => {
+    const markup = renderToStaticMarkup(
+      <AlertsSourceWorkspacePanel
+        source="clamav"
+        sourceLabel="ClamScan"
+        alerts={baseAlerts}
+        dashboard={sparseDashboard}
+        loading={false}
+        error=""
+        activeView="dashboard"
+        selectedDepartment="IT Operations"
+        selectedSystemKey="asset-1"
+        onActiveViewChange={() => {}}
+        onSelectDepartment={() => {}}
+        onSelectSystemKey={() => {}}
+        onSelectAlert={() => {}}
+        renderSourceIcon={() => null}
+        formatRelativeTime={() => 'just now'}
+      />,
+    );
+
+    expect(markup).toContain('ClamScan operations');
+    expect(markup).toContain('Systems Scanned');
+    expect(markup).toContain('Latest systems');
+    expect(markup).toContain('host-1');
+    expect(markup).toContain('just now');
+  });
+
   it('renders department view without crashing on sparse dashboard rows', () => {
     const markup = renderToStaticMarkup(
       <AlertsSourceWorkspacePanel

@@ -51,7 +51,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 	const severityTotal = severitySummary.reduce((sum, item) => sum + item.value, 0) || 1;
 	const responseSummary = [
 		{ label: 'Open', value: openCount, tone: 'border-rose-200 bg-rose-50 text-rose-700' },
-		{ label: 'Acknowledged', value: acknowledgedCount, tone: 'border-sky-200 bg-sky-50 text-sky-700' },
+		{ label: 'Acknowledged', value: acknowledgedCount, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
 		{ label: 'Resolved', value: resolvedCount, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
 	];
 	const latestFindings = alerts.slice(0, 3);

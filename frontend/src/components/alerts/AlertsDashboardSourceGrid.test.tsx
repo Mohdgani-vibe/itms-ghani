@@ -12,13 +12,18 @@ describe('AlertsDashboardSourceGrid', () => {
             source: 'wazuh',
             label: 'Wazuh',
             description: 'Endpoint monitoring summary.',
-            accentClassName: 'bg-sky-50 text-sky-700',
+            accentClassName: 'bg-emerald-50 text-emerald-700',
             icon: <span>W</span>,
             scannedCount: 12,
             issueCount: 4,
             issueLabel: 'Findings',
             alertCount: 7,
+            systemsAffected: 3,
+            healthStatus: 'Critical',
+            healthTone: 'critical',
+            riskScore: 72,
             lastScanLabel: '5/8/2026, 8:00:00 AM',
+            sparklineValues: [2, 4, 3, 7],
           },
           {
             source: 'clamav',
@@ -30,11 +35,18 @@ describe('AlertsDashboardSourceGrid', () => {
             issueCount: 1,
             issueLabel: 'Threats',
             alertCount: 3,
+            systemsAffected: 1,
+            healthStatus: 'Healthy',
+            healthTone: 'healthy',
+            riskScore: 16,
             lastScanLabel: 'Unknown time',
+            sparklineValues: [0, 1, 1, 0],
           },
         ]}
         formatNumber={(value) => String(value ?? 0)}
         onOpenSource={() => {}}
+        onOpenConsole={() => {}}
+        onInvestigate={() => {}}
       />,
     );
 
@@ -46,7 +58,9 @@ describe('AlertsDashboardSourceGrid', () => {
     expect(markup).toContain('>4<');
     expect(markup).toContain('>7<');
     expect(markup).toContain('Threats');
-    expect(markup).toContain('Last scan: 5/8/2026, 8:00:00 AM');
-    expect(markup).toContain('Last scan: Unknown time');
+    expect(markup).toContain('Last scan 5/8/2026, 8:00:00 AM');
+    expect(markup).toContain('Risk 72');
+    expect(markup).toContain('Open Console');
+    expect(markup).toContain('Investigate');
   });
 });

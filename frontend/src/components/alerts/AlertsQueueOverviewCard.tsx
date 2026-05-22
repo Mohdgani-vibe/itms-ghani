@@ -18,7 +18,7 @@ export function AlertsQueueOverviewCard({
         <button
           type="button"
           onClick={onBackToDashboard}
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-bold text-sky-700 transition hover:bg-sky-50"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-100 bg-white px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
         >
           Back to Dashboard
         </button>
@@ -33,7 +33,7 @@ export function AlertsQueueOverviewCard({
           <select
             value={severityFilter}
             onChange={(event) => onSeverityFilterChange(event.target.value)}
-            className="w-full rounded-xl border border-sky-100 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm"
+            className="w-full rounded-xl border border-emerald-100 bg-white px-4 py-3 text-sm text-zinc-900 shadow-sm"
           >
             {severityOptions.map((option) => (
               <option key={option} value={option}>
