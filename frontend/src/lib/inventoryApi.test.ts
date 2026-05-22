@@ -15,6 +15,7 @@ import {
   deleteInventorySupplier,
   downloadInventoryModuleTemplate,
   exportInventoryModuleCsv,
+  fetchInventoryEntities,
   fetchInventoryModuleAssets,
   fetchInventoryModuleAudit,
   importInventoryModuleCsv,
@@ -30,7 +31,10 @@ describe('inventoryApi', () => {
   });
 
   it('builds inventory module asset and audit query strings from provided params only', async () => {
-    apiRequestMock.mockResolvedValueOnce({ items: [] }).mockResolvedValueOnce({ items: [] });
+    apiRequestMock
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValueOnce({ items: [] })
+      .mockResolvedValueOnce([]);
 
     await fetchInventoryModuleAssets({
       search: 'laptop',
@@ -41,12 +45,14 @@ describe('inventoryApi', () => {
       page: 3,
     });
     await fetchInventoryModuleAudit();
+    await fetchInventoryEntities();
 
     expect(apiRequestMock).toHaveBeenNthCalledWith(
       1,
       '/api/inventory/module/assets?search=laptop&main_item_id=main-1&branch_id=branch-1&asset_type=critical&page=3',
     );
-    expect(apiRequestMock).toHaveBeenNthCalledWith(2, '/api/inventory/module/audit?scope=inventory');
+    expect(apiRequestMock).toHaveBeenNthCalledWith(2, '/api/audit?module=inventory');
+    expect(apiRequestMock).toHaveBeenNthCalledWith(3, '/api/entities');
   });
 
   it('delegates create, update, delete, and stock operation payloads through apiRequest', async () => {

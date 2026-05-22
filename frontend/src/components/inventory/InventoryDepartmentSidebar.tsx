@@ -11,7 +11,7 @@ export default function InventoryDepartmentSidebar({ departments, selected, onSe
       <ul className="space-y-1">
         <li>
           <button
-            className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${selected === 'all' ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-transparent bg-white text-zinc-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700'}`}
+            className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${selected === 'all' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-transparent bg-white text-zinc-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'}`}
             onClick={() => onSelect('all')}
           >
             All ({departments.reduce((a, d) => a + d.count, 0)})
@@ -20,7 +20,7 @@ export default function InventoryDepartmentSidebar({ departments, selected, onSe
         {departments.map(d => (
           <li key={d.name}>
             <button
-              className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${selected === d.name ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-transparent bg-white text-zinc-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700'}`}
+              className={`w-full rounded-xl border px-3 py-2 text-left text-sm font-semibold transition ${selected === d.name ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-transparent bg-white text-zinc-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'}`}
               onClick={() => onSelect(d.name)}
             >
               {d.name} ({d.count})

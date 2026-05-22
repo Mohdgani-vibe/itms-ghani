@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 import { useMemo, useState, type ChangeEvent, type FormEvent } from 'react';
 import type {
 	InventoryEntityOption,
@@ -26,7 +28,7 @@ interface Props {
 const STATUS_OPTIONS = ['inventory', 'allocated', 'returned', 'retired'];
 const ASSET_TYPE_OPTIONS: Array<InventoryModuleAssetInput['assetType']> = ['critical', 'non_critical'];
 const inventoryLabelClassName = 'mb-2 block text-xs font-bold uppercase tracking-wider text-zinc-900';
-const inventoryInputClassName = 'w-full rounded-xl border border-sky-100 bg-white px-3 py-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-sky-300 focus:ring-4 focus:ring-sky-100';
+const inventoryInputClassName = 'w-full rounded-xl border border-emerald-100 bg-white px-3 py-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100';
 const inventoryMutedTextClassName = 'mt-2 text-xs text-zinc-600';
 
 export default function InventoryItemForm({ initial = {}, onSave, onCreateMainItem, onCreateSubItem, onCancel, saving, branches, items, subItems, suppliers, entities, defaultCompanyName = '' }: Props) {
@@ -174,12 +176,12 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 	}
 
 	return (
-		<form onSubmit={handleSubmit} className="space-y-5 rounded-[28px] border border-sky-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f7fbff_100%)] p-5 shadow-sm shadow-sky-100/60">
+		<form onSubmit={handleSubmit} className="space-y-5 rounded-[28px] border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f4fbf6_100%)] p-5 shadow-sm shadow-emerald-100/60">
 			<div className="grid gap-4 md:grid-cols-2">
 				<div>
 					<div className="mb-2 flex items-center justify-between gap-3">
 						<label className="block text-xs font-bold uppercase tracking-wider text-zinc-900">Main Item</label>
-						<button type="button" onClick={() => { setShowMainItemCreator((current) => !current); setTaxonomyError(''); }} className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">+ Add New</button>
+						<button type="button" onClick={() => { setShowMainItemCreator((current) => !current); setTaxonomyError(''); }} className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${actionButtonStyles.add}`}>+ Add New</button>
 					</div>
 					<select value={mainItemId} onChange={(event) => handleMainItemChange(event.target.value)} className={inventoryInputClassName} required>
 						<option value="">Select main item</option>
@@ -188,11 +190,11 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 						))}
 					</select>
 					{showMainItemCreator ? (
-						<div className="mt-3 space-y-2 rounded-xl border border-sky-100 bg-sky-50/70 p-3">
+						<div className="mt-3 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
 							<input value={newMainItemName} onChange={(event) => setNewMainItemName(event.target.value)} placeholder="New main item name" className={inventoryInputClassName} />
 							<div className="flex gap-2">
-								<button type="button" onClick={handleCreateMainItem} disabled={creatingTaxonomy} className="rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">{creatingTaxonomy ? 'Adding...' : 'Add Main Item'}</button>
-								<button type="button" onClick={() => setShowMainItemCreator(false)} className="rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm font-semibold text-sky-700">Cancel</button>
+								<button type="button" onClick={handleCreateMainItem} disabled={creatingTaxonomy} className={`rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}>{creatingTaxonomy ? 'Adding...' : 'Add Main Item'}</button>
+								<button type="button" onClick={() => setShowMainItemCreator(false)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">Cancel</button>
 							</div>
 						</div>
 					) : null}
@@ -200,9 +202,9 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 				<div>
 					<div className="mb-2 flex items-center justify-between gap-3">
 						<label className="block text-xs font-bold uppercase tracking-wider text-zinc-900">Sub Item / Asset Name</label>
-						<button type="button" onClick={() => { setShowSubItemCreator((current) => !current); setTaxonomyError(''); }} className="rounded-lg border border-sky-200 bg-white px-2.5 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-50">+ Add New</button>
+						<button type="button" onClick={() => { setShowSubItemCreator((current) => !current); setTaxonomyError(''); }} className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition ${actionButtonStyles.add}`}>+ Add New</button>
 					</div>
-					<select name="subItemId" value={form.subItemId} onChange={handleChange} className={`${inventoryInputClassName} disabled:cursor-not-allowed disabled:bg-sky-50`} required disabled={!mainItemId}>
+					<select name="subItemId" value={form.subItemId} onChange={handleChange} className={`${inventoryInputClassName} disabled:cursor-not-allowed disabled:bg-emerald-50`} required disabled={!mainItemId}>
 						<option value="">Select sub item</option>
 						{availableSubItems.map((subItem) => (
 							<option key={subItem.id} value={subItem.id}>{subItem.name}</option>
@@ -210,19 +212,19 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 					</select>
 					{!mainItemId ? <div className={inventoryMutedTextClassName}>Select a main item to load matching sub items.</div> : null}
 					{showSubItemCreator ? (
-						<div className="mt-3 space-y-2 rounded-xl border border-sky-100 bg-sky-50/70 p-3">
+						<div className="mt-3 space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
 							<input value={newSubItemName} onChange={(event) => setNewSubItemName(event.target.value)} placeholder="New sub item name" className={inventoryInputClassName} />
 							<div className="text-xs text-zinc-600">The item code is auto-generated when you add a sub item from here.</div>
 							<div className="flex gap-2">
-								<button type="button" onClick={handleCreateSubItem} disabled={creatingTaxonomy} className="rounded-lg bg-sky-500 px-3 py-2 text-sm font-semibold text-white hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-60">{creatingTaxonomy ? 'Adding...' : 'Add Sub Item'}</button>
-								<button type="button" onClick={() => setShowSubItemCreator(false)} className="rounded-lg border border-sky-100 bg-white px-3 py-2 text-sm font-semibold text-sky-700">Cancel</button>
+								<button type="button" onClick={handleCreateSubItem} disabled={creatingTaxonomy} className={`rounded-lg px-3 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}>{creatingTaxonomy ? 'Adding...' : 'Add Sub Item'}</button>
+								<button type="button" onClick={() => setShowSubItemCreator(false)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm font-semibold text-zinc-700">Cancel</button>
 							</div>
 						</div>
 					) : null}
 				</div>
 				<div>
 					<label className={inventoryLabelClassName}>Item Code</label>
-					<input value={subItems.find((subItem) => subItem.id === form.subItemId)?.itemCode || ''} className="w-full rounded-xl border border-sky-100 bg-sky-50/80 px-3 py-3 text-sm font-medium text-zinc-900" readOnly placeholder="Auto from sub item" />
+					<input value={subItems.find((subItem) => subItem.id === form.subItemId)?.itemCode || ''} className="w-full rounded-xl border border-emerald-100 bg-emerald-50/80 px-3 py-3 text-sm font-medium text-zinc-900" readOnly placeholder="Auto from sub item" />
 				</div>
 				<div>
 					<label className={inventoryLabelClassName}>Entity Company</label>
@@ -301,11 +303,11 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 				<div className="mb-2 flex items-center justify-between">
 					<label className="block text-xs font-bold uppercase tracking-wider text-zinc-900">Branch Stock</label>
 					<div className="flex items-center gap-3">
-						<div className="rounded-full border border-sky-100 bg-white px-3 py-1 text-xs font-semibold text-zinc-900">Total Qty: {totalQuantity}</div>
-						<button type="button" onClick={addBranchStock} className="text-sm font-semibold text-sky-600 hover:text-sky-700">+ Add Branch Stock</button>
+						<div className="rounded-full border border-emerald-100 bg-white px-3 py-1 text-xs font-semibold text-zinc-900">Total Qty: {totalQuantity}</div>
+						<button type="button" onClick={addBranchStock} className="text-sm font-semibold text-emerald-700 hover:text-emerald-800">+ Add Branch Stock</button>
 					</div>
 				</div>
-				<div className="space-y-3 rounded-xl border border-sky-100 bg-sky-50/70 p-3">
+				<div className="space-y-3 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3">
 					{form.branchStocks.map((entry, index) => (
 						<div key={`${entry.branchId}-${index}`} className="grid gap-3 md:grid-cols-[1fr_140px_auto]">
 							<div>
@@ -321,7 +323,7 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 								<div className="mb-2 text-xs font-bold uppercase tracking-wider text-zinc-900">Quantity</div>
 								<input type="number" min="0" step="1" inputMode="numeric" value={entry.quantity} onChange={(event) => handleBranchStockChange(index, 'quantity', event.target.value)} className={inventoryInputClassName} placeholder="0" />
 							</div>
-							<button type="button" onClick={() => removeBranchStock(index)} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50">Remove</button>
+							<button type="button" onClick={() => removeBranchStock(index)} className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${actionButtonStyles.remove}`}>Remove</button>
 						</div>
 					))}
 				</div>
@@ -337,8 +339,8 @@ export default function InventoryItemForm({ initial = {}, onSave, onCreateMainIt
 				</div>
 			</div>
 			<div className="flex gap-2 pt-2">
-				<button type="submit" className="rounded-xl bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-600" disabled={saving}>{saving ? 'Saving...' : 'Save asset'}</button>
-				<button type="button" className="rounded-xl border border-sky-100 bg-white px-4 py-2 text-sm font-semibold text-sky-700" onClick={onCancel}>Cancel</button>
+				<button type="submit" className={`rounded-xl px-4 py-2 text-sm font-semibold transition ${actionButtonStyles.save}`} disabled={saving}>{saving ? 'Saving...' : 'Save asset'}</button>
+				<button type="button" className="rounded-xl border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700" onClick={onCancel}>Cancel</button>
 			</div>
 		</form>
 	);

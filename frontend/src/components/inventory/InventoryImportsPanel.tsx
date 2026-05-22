@@ -1,5 +1,7 @@
 import { ArrowLeftRight, Download, PackagePlus, TrendingUp, Upload } from 'lucide-react';
 
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 type CsvActionLoading = 'template' | 'export' | '';
 
 interface InventoryImportsPanelProps {
@@ -25,7 +27,7 @@ export default function InventoryImportsPanel({
 }: InventoryImportsPanelProps) {
   const actionsDisabled = csvActionLoading !== '' || importingInventory;
 
-  return <div className="rounded-2xl border border-sky-100 bg-white p-5 shadow-sm shadow-sky-100/60">
+  return <div className="rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f4fbf6_100%)] p-5 shadow-sm shadow-emerald-100/60">
     <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
       <div>
         <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Import / Export</div>
@@ -37,7 +39,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onDownloadTemplate}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <Download className="mr-2 h-4 w-4" />
           {csvActionLoading === 'template' ? 'Downloading...' : 'Download Template'}
@@ -46,7 +48,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onExportInventory}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <Download className="mr-2 h-4 w-4" />
           {csvActionLoading === 'export' ? 'Exporting...' : 'Export Inventory'}
@@ -55,7 +57,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onOpenImportPicker}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <Upload className="mr-2 h-4 w-4" />
           {importingInventory ? 'Importing...' : 'Import CSV'}
@@ -64,7 +66,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onAddInventory}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <PackagePlus className="mr-2 h-4 w-4" />
           Add Item
@@ -73,7 +75,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onOpenStockUpdate}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <TrendingUp className="mr-2 h-4 w-4" />
           Update Stock
@@ -82,7 +84,7 @@ export default function InventoryImportsPanel({
           type="button"
           onClick={onOpenStockTransfer}
           disabled={actionsDisabled}
-          className="inline-flex items-center rounded-lg border border-sky-200 bg-white px-4 py-2 text-sm font-semibold text-sky-700 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className={`inline-flex items-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
         >
           <ArrowLeftRight className="mr-2 h-4 w-4" />
           Transfer Stock

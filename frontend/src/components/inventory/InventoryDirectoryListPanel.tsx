@@ -16,7 +16,7 @@ export default function InventoryDirectoryListPanel({ items, loading, error, onS
       {items.map(item => (
         <div
           key={item.id}
-          className="bg-white rounded shadow p-4 cursor-pointer hover:bg-blue-50"
+          className="cursor-pointer rounded border border-emerald-100 bg-white p-4 shadow transition hover:bg-emerald-50"
           onClick={() => onSelect(item)}
         >
           <div className="font-bold">{item.name}</div>

@@ -769,7 +769,7 @@ export default function InventoryPage() {
       {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
       {successMessage ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{successMessage}</div> : null}
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-zinc-200 bg-white p-2 shadow-sm">
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-emerald-100 bg-white p-2 shadow-sm shadow-emerald-100/50">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
@@ -777,7 +777,7 @@ export default function InventoryPage() {
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+              className={`inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition ${activeTab === tab.key ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
             >
               <Icon className="mr-2 h-4 w-4" />
               {tab.label}
@@ -792,12 +792,21 @@ export default function InventoryPage() {
             <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
               <div className="text-xs font-bold uppercase tracking-wide text-zinc-500">Branch stock</div>
               <div className="mt-4 space-y-2">
-                <button type="button" onClick={() => setBranchFilter('all')} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-sm text-sky-700 transition hover:bg-sky-50">
+                <button
+                  type="button"
+                  onClick={() => setBranchFilter('all')}
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition ${branchFilter === 'all' ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
+                >
                   <span>All branches</span>
                   <span>{totalBranchStock}</span>
                 </button>
                 {branchSummary.map((branch) => (
-                  <button key={branch.id} type="button" onClick={() => setBranchFilter(branch.id)} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-sm text-sky-700 transition hover:bg-sky-50">
+                  <button
+                    key={branch.id}
+                    type="button"
+                    onClick={() => setBranchFilter(branch.id)}
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm transition ${branchFilter === branch.id ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
+                  >
                     <span>{branch.name}</span>
                     <span>{branch.count}</span>
                   </button>

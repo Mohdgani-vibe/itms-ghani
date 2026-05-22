@@ -211,11 +211,11 @@ export function deleteInventoryBranch(id: string) {
 }
 
 export function fetchInventoryEntities() {
-  return apiRequest<InventoryEntityOption[]>('/api/inventory/entities');
+  return apiRequest<InventoryEntityOption[]>('/api/entities');
 }
 
 export function fetchInventoryModuleAudit(scope = 'inventory') {
-  return apiRequest<InventoryModuleAuditListResponse>(withQuery('/api/inventory/module/audit', { scope }));
+  return apiRequest<InventoryModuleAuditListResponse>(withQuery('/api/audit', { module: scope }));
 }
 
 export function downloadInventoryModuleTemplate() {
