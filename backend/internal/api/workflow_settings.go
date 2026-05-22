@@ -177,7 +177,7 @@ func normalizePatchDepartmentRings(routes []patchDepartmentRing) []patchDepartme
 	for _, route := range routes {
 		match := normalizePatchDepartmentName(route.Match)
 		ring := normalizePatchRing(route.Ring)
-		if match == "" || ring == "" {
+		if match == "" || ring == "" || ring == "standard" {
 			continue
 		}
 		if _, ok := seen[match]; ok {

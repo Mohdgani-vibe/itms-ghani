@@ -102,6 +102,220 @@ const (
 
 var userImportCSVHeaders = []string{"Username", "Email id", "Employee id", "department", "password", "role", "entity_code", "location", "is_active"}
 
+// Inventory item CSV headers
+var inventoryItemCSVHeaders = []string{"Item Code", "Category", "Name", "Asset Tag", "Serial Number", "Specs", "Branch ID", "Assigned User ID", "Warranty Expires At", "Cost", "Status"}
+
+// --- Inventory Item CSV Import/Export ---
+func (server *apiServer) exportInventoryItemsCSV(c *gin.Context) {
+   if !server.requireRoles(c, "super_admin", "it_team") {
+	   return
+   }
+   // Search/filter support for asset_tag and cost
+   search := c.Query("search")
+   var rows *sql.Rows
+   var err error
+	if search != "" {
+		like := "%" + search + "%"
+		rows, err = server.db.Query(`SELECT item_code, category, name, COALESCE(asset_tag, ''), COALESCE(serial_number, ''), COALESCE(specs, ''), COALESCE(branch_id::text, ''), COALESCE(assigned_user_id::text, ''), COALESCE(warranty_expires_at::text, ''), COALESCE(cost::text, ''), status FROM stock_items WHERE item_code ILIKE $1 OR category ILIKE $1 OR COALESCE(asset_tag, '') ILIKE $1 OR name ILIKE $1 OR COALESCE(serial_number, '') ILIKE $1 OR COALESCE(specs, '') ILIKE $1 OR COALESCE(cost::text, '') ILIKE $1 ORDER BY item_code`, like)
+	} else {
+		rows, err = server.db.Query(`SELECT item_code, category, name, COALESCE(asset_tag, ''), COALESCE(serial_number, ''), COALESCE(specs, ''), COALESCE(branch_id::text, ''), COALESCE(assigned_user_id::text, ''), COALESCE(warranty_expires_at::text, ''), COALESCE(cost::text, ''), status FROM stock_items ORDER BY item_code`)
+	}
+   if err != nil {
+	   httpx.Error(c, http.StatusInternalServerError, err.Error())
+	   return
+   }
+   defer rows.Close()
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=inventory-items-export.csv")
+	writer := csv.NewWriter(c.Writer)
+	_ = writer.Write(inventoryItemCSVHeaders)
+	for rows.Next() {
+		var record [11]string
+		if err := rows.Scan(&record[0], &record[1], &record[2], &record[3], &record[4], &record[5], &record[6], &record[7], &record[8], &record[9], &record[10]); err != nil {
+		   httpx.Error(c, http.StatusInternalServerError, err.Error())
+		   return
+	   }
+	   _ = writer.Write(record[:])
+   }
+   if err := rows.Err(); err != nil {
+	   httpx.Error(c, http.StatusInternalServerError, err.Error())
+	   return
+   }
+   writer.Flush()
+}
+
+func (server *apiServer) exportInventoryItemImportTemplate(c *gin.Context) {
+   if !server.requireRoles(c, "super_admin", "it_team") {
+	   return
+   }
+	c.Header("Content-Type", "text/csv")
+	c.Header("Content-Disposition", "attachment; filename=inventory-items-import-template.csv")
+	writer := csv.NewWriter(c.Writer)
+	_ = writer.Write(inventoryItemCSVHeaders)
+	_ = writer.Write([]string{"ITEM001", "Laptop", "Laptop", "ASSET001", "SN123456", "i5/8GB/256GB", "BRANCH01", "", "2027-01-01", "50000", "inventory"})
+	writer.Flush()
+}
+
+func (server *apiServer) importInventoryItemsCSV(c *gin.Context) {
+   if !server.requireRoles(c, "super_admin", "it_team") {
+	   return
+   }
+   fileHeader, err := c.FormFile("file")
+   if err != nil {
+	   httpx.Error(c, http.StatusBadRequest, "csv file is required")
+	   return
+   }
+   file, err := fileHeader.Open()
+   if err != nil {
+	   httpx.Error(c, http.StatusBadRequest, "failed to open uploaded csv")
+	   return
+   }
+   defer file.Close()
+   reader := csv.NewReader(file)
+   reader.FieldsPerRecord = -1
+   records, err := reader.ReadAll()
+   if err != nil {
+	   httpx.Error(c, http.StatusBadRequest, "invalid csv file")
+	   return
+   }
+   if len(records) == 0 {
+	   httpx.Error(c, http.StatusBadRequest, "csv file is empty")
+	   return
+   }
+   headers := map[int]string{}
+   availableHeaders := map[string]int{}
+   for idx, header := range records[0] {
+	   normalized := normalizeCSVHeader(header)
+	   headers[idx] = normalized
+	   availableHeaders[normalized] = idx
+   }
+	required := []string{"item_code", "category", "name", "asset_tag", "serial_number", "branch_id"}
+   for _, req := range required {
+	   if _, ok := availableHeaders[req]; !ok {
+		   httpx.Error(c, http.StatusBadRequest, "csv must include "+req+" column")
+		   return
+	   }
+   }
+   seenAssetTags := map[string]struct{}{}
+   seenSerialNumbers := map[string]struct{}{}
+   rowErrors := make([]gin.H, 0)
+   createdCount := 0
+   updatedCount := 0
+   for rowIndex, record := range records[1:] {
+	   csvRowNumber := rowIndex + 2
+	   row := map[string]string{}
+	   empty := true
+	   for idx, value := range record {
+		   header, ok := headers[idx]
+		   if !ok || header == "" {
+			   continue
+		   }
+		   trimmed := strings.TrimSpace(value)
+		   if trimmed != "" {
+			   empty = false
+		   }
+		   row[header] = trimmed
+	   }
+	   if empty {
+		   continue
+	   }
+		itemCode := row["item_code"]
+		category := row["category"]
+	   name := row["name"]
+	   assetTag := row["asset_tag"]
+	   serialNumber := row["serial_number"]
+	   branchID := row["branch_id"]
+	   status := row["status"]
+	   specs := row["specs"]
+	   assignedUserID := row["assigned_user_id"]
+	   warrantyExpiresAt := row["warranty_expires_at"]
+	   cost := row["cost"]
+
+	   // Validation
+		if itemCode == "" {
+			rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "item_code is required"})
+			continue
+		}
+	   if category == "" {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "category is required"})
+		   continue
+	   }
+	   if name == "" {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "name is required"})
+		   continue
+	   }
+	   if assetTag == "" {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "asset_tag is required"})
+		   continue
+	   }
+	   if serialNumber == "" {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "serial_number is required"})
+		   continue
+	   }
+	   if branchID == "" {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "branch_id is required"})
+		   continue
+	   }
+	   // Uniqueness in file
+	   if _, exists := seenAssetTags[assetTag]; exists {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "duplicate asset_tag in file"})
+		   continue
+	   }
+	   seenAssetTags[assetTag] = struct{}{}
+	   if _, exists := seenSerialNumbers[serialNumber]; exists {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "duplicate serial_number in file"})
+		   continue
+	   }
+	   seenSerialNumbers[serialNumber] = struct{}{}
+	   // Warranty date format
+	   if warrantyExpiresAt != "" {
+		   validDate := false
+		   if _, err := time.Parse("2006-01-02", warrantyExpiresAt); err == nil {
+			   validDate = true
+		   } else if _, err := time.Parse("02/01/2006", warrantyExpiresAt); err == nil {
+			   validDate = true
+		   }
+		   if !validDate {
+			   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "invalid warranty_expires_at format (use DD/MM/YYYY or YYYY-MM-DD)"})
+			   continue
+		   }
+	   }
+	   // Cost numeric
+	   if cost != "" {
+		   if _, err := strconv.ParseFloat(cost, 64); err != nil {
+			   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "invalid cost format"})
+			   continue
+		   }
+	   }
+	   // Uniqueness in DB
+	var count int
+	err := server.db.QueryRow(`SELECT COUNT(*) FROM stock_items WHERE asset_tag = $1 OR serial_number = $2`, assetTag, serialNumber).Scan(&count)
+	   if err == nil && count > 0 {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": "asset_tag or serial_number already exists in database"})
+		   continue
+	   }
+	   // Upsert logic: try update, else insert
+	res, err := server.db.Exec(`UPDATE stock_items SET category = $2, name = $3, asset_tag = $4, serial_number = NULLIF($5, ''), specs = NULLIF($6, ''), branch_id = NULLIF($7, '')::uuid, assigned_user_id = NULLIF($8, '')::uuid, warranty_expires_at = NULLIF($9, '')::date, cost = NULLIF($10, '')::numeric(12,2), status = COALESCE(NULLIF($11, ''), status), updated_at = NOW() WHERE item_code = $1`, itemCode, category, name, assetTag, serialNumber, specs, branchID, assignedUserID, warrantyExpiresAt, cost, status)
+	   if err != nil {
+		   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": err.Error()})
+		   continue
+	   }
+	   affected, _ := res.RowsAffected()
+	   if affected == 0 {
+		   // Insert
+		_, err := server.db.Exec(`INSERT INTO stock_items (item_code, category, name, asset_tag, serial_number, specs, branch_id, assigned_user_id, warranty_expires_at, cost, status, created_at) VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, '')::uuid, NULLIF($8, '')::uuid, NULLIF($9, '')::date, NULLIF($10, '')::numeric(12,2), COALESCE(NULLIF($11, ''), 'inventory'), NOW())`, itemCode, category, name, assetTag, serialNumber, specs, branchID, assignedUserID, warrantyExpiresAt, cost, status)
+		   if err != nil {
+			   rowErrors = append(rowErrors, gin.H{"row": csvRowNumber, "message": err.Error()})
+			   continue
+		   }
+		   createdCount++
+	   } else {
+		   updatedCount++
+	   }
+   }
+	httpx.JSON(c, http.StatusOK, gin.H{"created": createdCount, "updated": updatedCount, "errors": rowErrors, "headers": inventoryItemCSVHeaders})
+}
+
 func terminalCommandPolicy(command string) error {
 	trimmed := strings.TrimSpace(command)
 	if trimmed == "" {
@@ -263,6 +477,7 @@ type compatDeviceRecord struct {
 	ComplianceScore int
 	SerialNumber    string
 	Model           string
+	Cost            string
 	WarrantyUntil   string
 	UserID          string
 	UserFullName    string
@@ -305,6 +520,14 @@ type authAttemptEntry struct {
 type assetScriptDefinition struct {
 	State       string
 	FollowUp    []string
+	Component   string
+	Integration string
+}
+
+type assetPatchDefinition struct {
+	Action      string
+	State       string
+	Command     string
 	Component   string
 	Integration string
 }
@@ -361,6 +584,53 @@ func auditModuleForTargetType(targetType string) string {
 	default:
 		return "all"
 	}
+}
+
+func auditSummaryForAction(action string, targetType string, detail any) string {
+	action = strings.TrimSpace(strings.ToLower(action))
+	targetType = strings.TrimSpace(strings.ToLower(targetType))
+
+	if targetType == "user" {
+		detailMap, _ := detail.(map[string]any)
+		switch action {
+		case "user_added":
+			return "User account created"
+		case "user_deactivated":
+			return "User account deactivated"
+		case "user_updated":
+			if detailMap != nil {
+				if passwordReset, ok := detailMap["password_reset"].(bool); ok && passwordReset {
+					return "User password reset"
+				}
+				if isActive, ok := detailMap["is_active"].(bool); ok {
+					if isActive {
+						return "User account reactivated"
+					}
+					return "User account status changed to inactive"
+				}
+				if roleName, ok := detailMap["role"].(string); ok && strings.TrimSpace(roleName) != "" {
+					return fmt.Sprintf("User access updated to %s", strings.ReplaceAll(strings.TrimSpace(roleName), "_", " "))
+				}
+				if entityID, ok := detailMap["entity_id"].(string); ok && strings.TrimSpace(entityID) != "" {
+					if deptID, deptOK := detailMap["dept_id"].(string); deptOK && strings.TrimSpace(deptID) != "" {
+						return "User profile and department updated"
+					}
+					if locationID, locationOK := detailMap["location_id"].(string); locationOK && strings.TrimSpace(locationID) != "" {
+						return "User profile and branch updated"
+					}
+				}
+			}
+			return "User profile updated"
+		case "profile_updated":
+			return "Own user profile updated"
+		case "user_import":
+			return "User CSV import completed"
+		case "user_imported":
+			return "User imported from CSV"
+		}
+	}
+
+	return fmt.Sprintf("%s %s", strings.ReplaceAll(action, "_", " "), strings.TrimSpace(targetType))
 }
 
 func parsePaginationRequest(c *gin.Context, defaultPageSize int) (page int, pageSize int, enabled bool) {
@@ -458,7 +728,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 		protected.Use(middleware.AuthRequired(server.auth))
 		{
 			protected.GET("/entities", server.listEntities)
-			protected.POST("/entities", server.createEntity)
+					   // protected.POST("/entities", server.createEntity)
 			protected.PATCH("/entities/:id", server.updateEntity)
 
 			protected.GET("/locations", server.listLocations)
@@ -473,9 +743,9 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/roles", server.listRoles)
 			protected.POST("/roles", server.createRole)
 			protected.PATCH("/roles/:id", server.updateRole)
-			protected.DELETE("/roles/:id", server.deleteRole)
+					   // protected.DELETE("/roles/:id", server.deleteRole)
 
-			protected.GET("/users", server.listUsers)
+				protected.GET("/users", server.listUsers)
 			protected.GET("/users/meta/options", server.userMetaOptions)
 			protected.GET("/users/export", server.exportUsersCSV)
 			protected.GET("/users/import-template", server.exportUserImportTemplate)
@@ -515,41 +785,46 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.POST("/gatepass/:id/complete", server.completeGatepass)
 			protected.POST("/gatepass/:id/receiver-upload", server.uploadReceiverSignedGatepass)
 			protected.GET("/gatepass/:id/receiver-upload", server.downloadReceiverSignedGatepass)
-			protected.GET("/inventory", server.listInventory)
-			protected.POST("/inventory", server.createInventoryItem)
-			protected.PATCH("/inventory/:id", server.updateInventoryItem)
-			protected.DELETE("/inventory/:id", server.deleteInventoryItem)
-			protected.POST("/inventory/:id/allocate", server.allocateInventoryItem)
-			protected.POST("/inventory/:id/return", server.returnInventoryItem)
-			protected.POST("/inventory/:id/retire", server.retireInventoryItem)
-			protected.GET("/inventory/module/options", server.inventoryModuleOptions)
-			protected.GET("/inventory/module/assets", server.inventoryModuleAssets)
-			protected.POST("/inventory/module/assets", server.createInventoryModuleAsset)
-			protected.PATCH("/inventory/module/assets/:id", server.updateInventoryModuleAsset)
-			protected.DELETE("/inventory/module/assets/:id", server.deleteInventoryModuleAsset)
-			protected.GET("/inventory/module/items", server.inventoryModuleItems)
-			protected.POST("/inventory/module/items", server.createInventoryModuleItem)
-			protected.PATCH("/inventory/module/items/:id", server.updateInventoryModuleItem)
-			protected.DELETE("/inventory/module/items/:id", server.deleteInventoryModuleItem)
-			protected.GET("/inventory/module/sub-items", server.inventoryModuleSubItems)
-			protected.POST("/inventory/module/sub-items", server.createInventoryModuleSubItem)
-			protected.PATCH("/inventory/module/sub-items/:id", server.updateInventoryModuleSubItem)
-			protected.DELETE("/inventory/module/sub-items/:id", server.deleteInventoryModuleSubItem)
-			protected.GET("/inventory/module/suppliers", server.inventoryModuleSuppliers)
-			protected.POST("/inventory/module/suppliers", server.createInventoryModuleSupplier)
-			protected.PATCH("/inventory/module/suppliers/:id", server.updateInventoryModuleSupplier)
-			protected.DELETE("/inventory/module/suppliers/:id", server.deleteInventoryModuleSupplier)
-			protected.GET("/inventory/module/branches", server.inventoryModuleBranches)
-			protected.POST("/inventory/module/branches", server.createInventoryModuleBranch)
-			protected.PATCH("/inventory/module/branches/:id", server.updateInventoryModuleBranch)
-			protected.DELETE("/inventory/module/branches/:id", server.deleteInventoryModuleBranch)
-			protected.POST("/inventory/module/stock", server.inventoryModuleStockOperation)
-			protected.GET("/inventory/module/export", server.exportInventoryModuleCSV)
-			protected.GET("/inventory/module/template", server.exportInventoryModuleTemplate)
-			protected.POST("/inventory/module/import", server.importInventoryModuleCSV)
-			protected.GET("/inventory/export", server.exportInventoryItemsCSV)
-			protected.GET("/inventory/import-template", server.exportInventoryItemImportTemplate)
-			protected.POST("/inventory/import", server.importInventoryItemsCSV)
+			   protected.GET("/inventory", server.listInventory)
+			   protected.POST("/inventory", server.createInventoryItem)
+			   protected.PATCH("/inventory/:id", server.updateInventoryItem)
+			   protected.DELETE("/inventory/:id", server.deleteInventoryItem)
+			   protected.POST("/inventory/:id/allocate", server.allocateInventoryItem)
+			   protected.POST("/inventory/:id/return", server.returnInventoryItem)
+			   protected.POST("/inventory/:id/retire", server.retireInventoryItem)
+			   protected.GET("/inventory/module/options", server.inventoryModuleOptions)
+			   protected.GET("/inventory/module/assets", server.inventoryModuleAssets)
+			   protected.POST("/inventory/module/assets", server.createInventoryModuleAsset)
+			   protected.PATCH("/inventory/module/assets/:id", server.updateInventoryModuleAsset)
+			   protected.DELETE("/inventory/module/assets/:id", server.deleteInventoryModuleAsset)
+			   protected.GET("/inventory/module/items", server.inventoryModuleItems)
+			   protected.POST("/inventory/module/items", server.createInventoryModuleItem)
+			   protected.GET("/items", server.inventoryModuleItems)
+			   protected.POST("/items", server.createInventoryModuleItem)
+			   protected.PATCH("/inventory/module/items/:id", server.updateInventoryModuleItem)
+			   protected.DELETE("/inventory/module/items/:id", server.deleteInventoryModuleItem)
+			   protected.GET("/inventory/module/sub-items", server.inventoryModuleSubItems)
+			   protected.POST("/inventory/module/sub-items", server.createInventoryModuleSubItem)
+			   protected.GET("/sub-items", server.inventoryModuleSubItems)
+			   protected.POST("/sub-items", server.createInventoryModuleSubItem)
+			   protected.PATCH("/inventory/module/sub-items/:id", server.updateInventoryModuleSubItem)
+			   protected.DELETE("/inventory/module/sub-items/:id", server.deleteInventoryModuleSubItem)
+			   protected.GET("/inventory/module/suppliers", server.inventoryModuleSuppliers)
+			   protected.POST("/inventory/module/suppliers", server.createInventoryModuleSupplier)
+			   protected.PATCH("/inventory/module/suppliers/:id", server.updateInventoryModuleSupplier)
+			   protected.DELETE("/inventory/module/suppliers/:id", server.deleteInventoryModuleSupplier)
+			   protected.GET("/inventory/module/branches", server.inventoryModuleBranches)
+			   protected.POST("/inventory/module/branches", server.createInventoryModuleBranch)
+			   protected.PATCH("/inventory/module/branches/:id", server.updateInventoryModuleBranch)
+			   protected.DELETE("/inventory/module/branches/:id", server.deleteInventoryModuleBranch)
+			   protected.POST("/inventory/module/stock", server.inventoryModuleStockOperation)
+			   protected.GET("/inventory/module/export", server.exportInventoryModuleCSV)
+			   protected.GET("/inventory/module/template", server.exportInventoryModuleTemplate)
+			   protected.POST("/inventory/module/import", server.importInventoryModuleCSV)
+			   // Inventory item CSV endpoints
+			   protected.GET("/inventory/export", server.exportInventoryItemsCSV)
+			   protected.GET("/inventory/import-template", server.exportInventoryItemImportTemplate)
+			   protected.POST("/inventory/import", server.importInventoryItemsCSV)
 			protected.GET("/me/requests", server.listMyRequests)
 			protected.POST("/me/requests", server.createMyRequest)
 			protected.GET("/me/requests/:id", server.getMyRequest)
@@ -569,11 +844,13 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/chat/channels/:id/messages", server.listChatMessages)
 			protected.GET("/patch/dashboard", server.patchDashboardCompat)
 			protected.GET("/patch/devices", server.patchDevicesCompat)
-					protected.GET("/patch/jobs", server.patchJobsCompat)
-					protected.GET("/patch/reports", server.listPatchRunReports)
-					protected.GET("/patch/reports/:id", server.getPatchRunReport)
-					protected.POST("/patch/reports", server.createPatchRunReport)
-					protected.POST("/patch/run", server.patchRunCompat)
+			protected.GET("/patch/jobs", server.patchJobsCompat)
+			protected.GET("/patch/reports", server.listPatchRunReports)
+			protected.GET("/patch/reports/:id", server.getPatchRunReport)
+			protected.POST("/patch/reports", server.createPatchRunReport)
+			protected.POST("/patch/run", server.patchRunCompat)
+			protected.GET("/ssh/assets/:id", server.getSSHTarget)
+			protected.POST("/ssh/session", server.createSSHSession)
 			protected.GET("/terminal/session", server.listTerminalSessionsCompat)
 			protected.POST("/terminal/session", server.createTerminalSessionCompat)
 			protected.GET("/terminal/targets/:minionId", server.getTerminalTarget)
@@ -651,6 +928,11 @@ func (server *apiServer) authProviders(c *gin.Context) {
 	})
 }
 
+func (server *apiServer) rejectAuthAttempt(c *gin.Context, limiterKey string) {
+	server.authLimiter.RegisterFailure(limiterKey)
+	httpx.Error(c, http.StatusUnauthorized, "authentication failed")
+}
+
 func (server *apiServer) login(c *gin.Context) {
 	var input struct {
 		Email    string `json:"email"`
@@ -667,29 +949,25 @@ func (server *apiServer) login(c *gin.Context) {
 		return
 	}
 	if !strings.HasSuffix(email, "@zerodha.com") {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusForbidden, "only @zerodha.com email addresses are allowed")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 
 	user, err := server.fetchUserByEmail(email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			server.authLimiter.RegisterFailure(limiterKey)
-			httpx.Error(c, http.StatusUnauthorized, "unregistered email")
+			server.rejectAuthAttempt(c, limiterKey)
 			return
 		}
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !userIsActive(user) {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusForbidden, "user is inactive")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 	if err := authn.CheckPassword(input.Password, user.PasswordHash); err != nil {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusUnauthorized, "wrong password")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 
@@ -714,16 +992,14 @@ func (server *apiServer) loginWithGoogleIDToken(c *gin.Context) {
 
 	claims, err := server.parseGoogleIDToken(input.IDToken)
 	if err != nil {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusUnauthorized, "invalid google token")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 
 	email := strings.ToLower(strings.TrimSpace(claims.Email))
 	requestedEmail := strings.ToLower(strings.TrimSpace(input.Email))
 	if requestedEmail != "" && requestedEmail != email {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusUnauthorized, "google token email mismatch")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 	limiterKey = authLimiterKey(c, email)
@@ -732,24 +1008,21 @@ func (server *apiServer) loginWithGoogleIDToken(c *gin.Context) {
 		return
 	}
 	if !strings.HasSuffix(email, "@zerodha.com") {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusForbidden, "non-zerodha domain is not allowed")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 
 	user, err := server.fetchUserByEmail(email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			server.authLimiter.RegisterFailure(limiterKey)
-			httpx.Error(c, http.StatusUnauthorized, "unregistered email")
+			server.rejectAuthAttempt(c, limiterKey)
 			return
 		}
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if !userIsActive(user) {
-		server.authLimiter.RegisterFailure(limiterKey)
-		httpx.Error(c, http.StatusForbidden, "user is inactive")
+		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
 
@@ -874,36 +1147,6 @@ func (server *apiServer) listEntities(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, result)
 }
 
-func (server *apiServer) createEntity(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin") {
-		return
-	}
-	var input struct {
-		ShortCode string `json:"short_code"`
-		FullName  string `json:"full_name"`
-		IsActive  *bool  `json:"is_active"`
-	}
-	if err := c.ShouldBindJSON(&input); err != nil {
-		httpx.Error(c, http.StatusBadRequest, "invalid entity payload")
-		return
-	}
-	active := true
-	if input.IsActive != nil {
-		active = *input.IsActive
-	}
-	var id string
-	err := server.db.QueryRow(`
-		INSERT INTO entities (short_code, full_name, is_active)
-		VALUES ($1, $2, $3)
-		RETURNING id
-	`, strings.ToUpper(strings.TrimSpace(input.ShortCode)), strings.TrimSpace(input.FullName), active).Scan(&id)
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "settings_changed", TargetType: "entity", TargetID: id, Detail: input})
-	httpx.Created(c, gin.H{"id": id})
-}
 
 func (server *apiServer) updateEntity(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin") {
@@ -1209,230 +1452,9 @@ func (server *apiServer) upsertRole(c *gin.Context, create bool) {
 	httpx.JSON(c, http.StatusOK, gin.H{"ok": true})
 }
 
-func (server *apiServer) deleteRole(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin") {
-		return
-	}
-	result, err := server.db.Exec(`DELETE FROM roles WHERE id = $1::uuid AND is_system = FALSE`, c.Param("id"))
-	if err != nil {
-		httpx.Error(c, http.StatusBadRequest, err.Error())
-		return
-	}
-	count, _ := result.RowsAffected()
-	if count == 0 {
-		httpx.Error(c, http.StatusBadRequest, "cannot delete system role")
-		return
-	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "role_changed", TargetType: "role", TargetID: c.Param("id"), Detail: gin.H{"deleted": true}})
-	httpx.JSON(c, http.StatusOK, gin.H{"ok": true})
-}
-
-func (server *apiServer) listUsers(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
-		return
-	}
-	page, pageSize, paginate := parsePaginationRequest(c, 50)
-	entityID := c.Query("entity")
-	deptID := c.Query("dept")
-	roleNames := c.QueryArray("role")
-	roleLookup := map[string]struct{}{}
-	normalizedRoles := make([]string, 0, len(roleNames))
-	for _, roleName := range roleNames {
-		roleName = strings.TrimSpace(roleName)
-		if roleName != "" {
-			roleLookup[roleName] = struct{}{}
-			normalizedRoles = append(normalizedRoles, roleName)
-		}
-	}
-	primaryRoleName := ""
-	if len(roleLookup) == 1 {
-		for _, roleName := range roleNames {
-			roleName = strings.TrimSpace(roleName)
-			if roleName != "" {
-				primaryRoleName = roleName
-				break
-			}
-		}
-	} else if len(roleLookup) == 0 {
-		primaryRoleName = c.Query("role")
-	}
-	excludeRole := strings.TrimSpace(c.Query("exclude_role"))
-	status := strings.ToLower(c.Query("status"))
-	search := strings.TrimSpace(c.Query("search"))
-	departmentLabel := strings.TrimSpace(c.Query("department_label"))
-	includeTestUsers := c.Query("include_test_users") == "1"
-	claims := middleware.CurrentClaims(c)
-	whereClauses := []string{"1 = 1"}
-	args := make([]any, 0, 12)
-	argIndex := 1
-
-	if claims == nil {
-		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	if claims.Role == "employee" {
-		whereClauses = append(whereClauses, fmt.Sprintf("u.id = $%d::uuid", argIndex))
-		args = append(args, claims.UserID)
-		argIndex++
-	} else if claims.Role != "super_admin" {
-		entityArg := argIndex
-		userArg := argIndex + 1
-		whereClauses = append(whereClauses, fmt.Sprintf("(u.entity_id = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = u.entity_id))", entityArg, userArg))
-		args = append(args, claims.EntityID, claims.UserID)
-		argIndex += 2
-	}
-	if entityID != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("u.entity_id = $%d::uuid", argIndex))
-		args = append(args, entityID)
-		argIndex++
-	}
-	if deptID != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("u.dept_id = $%d::uuid", argIndex))
-		args = append(args, deptID)
-		argIndex++
-	}
-	if primaryRoleName != "" && len(normalizedRoles) == 0 {
-		normalizedRoles = append(normalizedRoles, primaryRoleName)
-		roleLookup[primaryRoleName] = struct{}{}
-	}
-	if len(normalizedRoles) > 0 {
-		placeholders := make([]string, 0, len(normalizedRoles))
-		for _, roleName := range normalizedRoles {
-			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
-			args = append(args, roleName)
-			argIndex++
-		}
-		whereClauses = append(whereClauses, "r.name IN ("+strings.Join(placeholders, ", ")+")")
-	}
-	if excludeRole != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("r.name <> $%d", argIndex))
-		args = append(args, excludeRole)
-		argIndex++
-	}
-	if status != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("(CASE WHEN u.is_active THEN 'active' ELSE 'inactive' END) = $%d", argIndex))
-		args = append(args, status)
-		argIndex++
-	}
-	if !includeTestUsers {
-		whereClauses = append(whereClauses, "lower(u.full_name) NOT LIKE '%probe%' AND lower(u.full_name) NOT LIKE '%smoke%' AND lower(u.email) NOT LIKE '%probe%' AND lower(u.email) NOT LIKE '%smoke%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%probe%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%smoke%'")
-	}
-	if search != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("(lower(u.full_name) LIKE $%d OR lower(u.email) LIKE $%d OR lower(u.emp_id) LIKE $%d)", argIndex, argIndex, argIndex))
-		args = append(args, "%"+strings.ToLower(search)+"%")
-		argIndex++
-	}
-	departmentExpr := "COALESCE(NULLIF(d.name, ''), NULLIF(l.full_name, ''), 'Unassigned')"
-	if departmentLabel != "" && departmentLabel != "all" {
-		whereClauses = append(whereClauses, fmt.Sprintf(departmentExpr+" = $%d", argIndex))
-		args = append(args, departmentLabel)
-		argIndex++
-	}
-	whereSQL := strings.Join(whereClauses, " AND ")
-	baseFrom := `
-		FROM users u
-		JOIN entities e ON e.id = u.entity_id
-		JOIN roles r ON r.id = u.role_id
-		LEFT JOIN departments d ON d.id = u.dept_id
-		LEFT JOIN locations l ON l.id = u.location_id
-	`
-
-	queryArgs := append([]any{}, args...)
-	query := `
-		SELECT u.id, u.emp_id, u.full_name, u.email, u.entity_id::text, e.short_code, COALESCE(u.dept_id::text, ''), COALESCE(d.name, ''), COALESCE(u.location_id::text, ''),
-			COALESCE(l.full_name, ''), r.name, u.is_active,
-			(SELECT COUNT(*) FROM assets a WHERE a.assigned_to = u.id) AS asset_count
-	` + baseFrom + `
-		WHERE ` + whereSQL + `
-		ORDER BY u.full_name`
-	if paginate {
-		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
-		queryArgs = append(queryArgs, pageSize, (page-1)*pageSize)
-	}
-
-	rows, err := server.db.Query(query, queryArgs...)
-	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer rows.Close()
-	result := make([]gin.H, 0)
-	for rows.Next() {
-		var id, empID, fullName, email, entityRef, entityCode, deptRef, deptName, locationRef, locationName, role string
-		var active bool
-		var assetCount int
-		if err := rows.Scan(&id, &empID, &fullName, &email, &entityRef, &entityCode, &deptRef, &deptName, &locationRef, &locationName, &role, &active, &assetCount); err != nil {
-			httpx.Error(c, http.StatusInternalServerError, err.Error())
-			return
-		}
-		result = append(result, gin.H{
-			"id": id, "emp_id": empID, "full_name": fullName, "email": email, "entity_id": entityRef, "entity_code": entityCode,
-			"dept_id": emptyToNullString(deptRef), "department": deptName, "location_id": emptyToNullString(locationRef), "location": locationName,
-			"role": role, "status": map[bool]string{true: "active", false: "inactive"}[active], "asset_count": assetCount,
-		})
-	}
-	if !paginate {
-		httpx.JSON(c, http.StatusOK, result)
-		return
-	}
-
-	var total, assetTotal int
-	summaryRows, err := server.db.Query(`
-		SELECT department_name, user_count
-		FROM (
-			SELECT `+departmentExpr+` AS department_name, COUNT(*) AS user_count
-			`+baseFrom+`
-			WHERE `+whereSQL+`
-			GROUP BY `+departmentExpr+`
-		) department_counts
-		ORDER BY user_count DESC, department_name ASC
-	`, args...)
-	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	defer summaryRows.Close()
-	departmentSummary := make([]namedCount, 0)
-	for summaryRows.Next() {
-		var departmentName string
-		var count int
-		if err := summaryRows.Scan(&departmentName, &count); err != nil {
-			httpx.Error(c, http.StatusInternalServerError, err.Error())
-			return
-		}
-		departmentSummary = append(departmentSummary, namedCount{Name: departmentName, Count: count})
-		total += count
-	}
-	if err := summaryRows.Err(); err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	err = server.db.QueryRow(`
-		SELECT COALESCE(SUM(asset_count), 0)
-		FROM (
-			SELECT (SELECT COUNT(*) FROM assets a WHERE a.assigned_to = u.id) AS asset_count
-			`+baseFrom+`
-			WHERE `+whereSQL+`
-		) filtered_users
-	`, args...).Scan(&assetTotal)
-	if err != nil {
-		httpx.Error(c, http.StatusInternalServerError, err.Error())
-		return
-	}
-	httpx.JSON(c, http.StatusOK, gin.H{
-		"items":    result,
-		"total":    total,
-		"page":     page,
-		"pageSize": pageSize,
-		"summary": gin.H{
-			"departmentCounts": departmentSummary,
-			"assetTotal":       assetTotal,
-		},
-	})
-}
 
 func (server *apiServer) getUser(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	user, err := server.fetchUserByID(c.Param("id"))
@@ -1455,6 +1477,236 @@ func (server *apiServer) getUser(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"id": user.ID, "emp_id": user.EmpID, "full_name": user.FullName, "email": user.Email, "entity_id": user.EntityID, "dept_id": user.DeptID,
 		"location_id": user.LocationID, "role": user.Role, "status": map[bool]string{true: "active", false: "inactive"}[user.IsActive],
+	})
+}
+
+func (server *apiServer) listUsers(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
+		return
+	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	page, pageSize, paginate := parsePaginationRequest(c, 25)
+	entityID := strings.TrimSpace(c.Query("entity"))
+	deptID := strings.TrimSpace(c.Query("dept"))
+	locationID := strings.TrimSpace(c.Query("location"))
+	roleNames := c.QueryArray("role")
+	if len(roleNames) == 0 {
+		if roleName := strings.TrimSpace(c.Query("role")); roleName != "" {
+			roleNames = append(roleNames, roleName)
+		}
+	}
+	excludeRole := strings.TrimSpace(c.Query("exclude_role"))
+	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
+	search := strings.TrimSpace(strings.ToLower(c.Query("search")))
+	departmentLabel := strings.TrimSpace(c.Query("department_label"))
+	includeTestUsers := c.Query("include_test_users") == "1"
+
+	if entityID != "" && claims.Role != "super_admin" && !server.entityAllowedByID(c, entityID) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
+
+	whereClauses := []string{"1 = 1"}
+	args := make([]any, 0, 16)
+	argIndex := 1
+
+	if claims.Role == "employee" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.id = $%d::uuid", argIndex))
+		args = append(args, claims.UserID)
+		argIndex++
+	} else if claims.Role != "super_admin" {
+		entityArg := argIndex
+		userArg := argIndex + 1
+		whereClauses = append(whereClauses, fmt.Sprintf("(u.entity_id = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = u.entity_id))", entityArg, userArg))
+		args = append(args, claims.EntityID, claims.UserID)
+		argIndex += 2
+	}
+	if entityID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.entity_id = $%d::uuid", argIndex))
+		args = append(args, entityID)
+		argIndex++
+	}
+	if deptID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.dept_id = $%d::uuid", argIndex))
+		args = append(args, deptID)
+		argIndex++
+	}
+	if locationID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.location_id = $%d::uuid", argIndex))
+		args = append(args, locationID)
+		argIndex++
+	}
+	if len(roleNames) > 0 {
+		placeholders := make([]string, 0, len(roleNames))
+		for _, roleName := range roleNames {
+			trimmed := strings.TrimSpace(roleName)
+			if trimmed == "" {
+				continue
+			}
+			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
+			args = append(args, trimmed)
+			argIndex++
+		}
+		if len(placeholders) > 0 {
+			whereClauses = append(whereClauses, "r.name IN ("+strings.Join(placeholders, ", ")+")")
+		}
+	}
+	if excludeRole != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("r.name <> $%d", argIndex))
+		args = append(args, excludeRole)
+		argIndex++
+	}
+	if status != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("(CASE WHEN u.is_active THEN 'active' ELSE 'inactive' END) = $%d", argIndex))
+		args = append(args, status)
+		argIndex++
+	}
+	if !includeTestUsers {
+		whereClauses = append(whereClauses, "lower(u.full_name) NOT LIKE '%probe%' AND lower(u.full_name) NOT LIKE '%smoke%' AND lower(COALESCE(u.email, '')) NOT LIKE '%probe%' AND lower(COALESCE(u.email, '')) NOT LIKE '%smoke%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%probe%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%smoke%'")
+	}
+	if search != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("(lower(COALESCE(u.full_name, '')) LIKE $%d OR lower(COALESCE(u.email, '')) LIKE $%d OR lower(COALESCE(u.emp_id, '')) LIKE $%d)", argIndex, argIndex, argIndex))
+		args = append(args, "%"+search+"%")
+		argIndex++
+	}
+	departmentExpr := "COALESCE(NULLIF(d.name, ''), NULLIF(l.full_name, ''), 'Unassigned')"
+	if departmentLabel != "" && departmentLabel != "all" {
+		whereClauses = append(whereClauses, fmt.Sprintf(departmentExpr+" = $%d", argIndex))
+		args = append(args, departmentLabel)
+		argIndex++
+	}
+
+	fromClause := `
+		FROM users u
+		LEFT JOIN roles r ON r.id = u.role_id
+		LEFT JOIN departments d ON d.id = u.dept_id
+		LEFT JOIN locations l ON l.id = u.location_id
+		WHERE ` + strings.Join(whereClauses, " AND ")
+
+	query := `
+		SELECT u.id::text,
+		       COALESCE(u.full_name, ''),
+		       COALESCE(u.email, ''),
+		       COALESCE(u.emp_id, ''),
+		       CASE WHEN u.is_active THEN 'active' ELSE 'inactive' END,
+		       COALESCE(u.entity_id::text, ''),
+		       COALESCE(u.dept_id::text, ''),
+		       COALESCE(u.location_id::text, ''),
+		       COALESCE(r.name, ''),
+		       COALESCE(d.name, ''),
+		       COALESCE(l.full_name, ''),
+		       (
+		         (SELECT COUNT(*) FROM assets a WHERE a.assigned_to = u.id) +
+		         (SELECT COUNT(*) FROM stock_items s WHERE s.assigned_user_id = u.id)
+		       ) AS asset_count,
+		       COUNT(*) OVER()
+		` + fromClause + `
+		ORDER BY COALESCE(u.full_name, ''), COALESCE(u.email, ''), u.id`
+
+	queryArgs := append([]any{}, args...)
+	if paginate {
+		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
+		queryArgs = append(queryArgs, pageSize, (page-1)*pageSize)
+	}
+
+	rows, err := server.db.Query(query, queryArgs...)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	items := make([]gin.H, 0)
+	departmentCounts := map[string]int{}
+	total := 0
+	assetTotal := 0
+	for rows.Next() {
+		var id, fullName, email, empID, statusValue, entityRef, deptRef, locationRef, roleName, departmentName, locationName string
+		var assetCount, count int
+		if err := rows.Scan(&id, &fullName, &email, &empID, &statusValue, &entityRef, &deptRef, &locationRef, &roleName, &departmentName, &locationName, &assetCount, &count); err != nil {
+			httpx.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		total = count
+		label := strings.TrimSpace(departmentName)
+		if label == "" {
+			label = strings.TrimSpace(locationName)
+		}
+		if label == "" {
+			label = "Unassigned"
+		}
+		departmentCounts[label]++
+		assetTotal += assetCount
+		items = append(items, gin.H{
+			"id": id,
+			"full_name": fullName,
+			"email": email,
+			"emp_id": empID,
+			"status": statusValue,
+			"entity_id": emptyToNil(entityRef),
+			"dept_id": emptyToNil(deptRef),
+			"location_id": emptyToNil(locationRef),
+			"role": emptyToNil(roleName),
+			"department": emptyToNil(departmentName),
+			"location": emptyToNil(locationName),
+			"asset_count": assetCount,
+		})
+	}
+	if err := rows.Err(); err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !paginate {
+		total = len(items)
+	}
+
+	countRows, err := server.db.Query(`
+		SELECT department_label, COUNT(*)
+		FROM (
+			SELECT ` + departmentExpr + ` AS department_label
+			` + fromClause + `
+		) summary_users
+		GROUP BY department_label
+		ORDER BY COUNT(*) DESC, department_label ASC
+	`, args...)
+	if err == nil {
+		defer countRows.Close()
+		departmentCounts = map[string]int{}
+		for countRows.Next() {
+			var name string
+			var count int
+			if err := countRows.Scan(&name, &count); err != nil {
+				departmentCounts = map[string]int{}
+				break
+			}
+			departmentCounts[name] = count
+		}
+	}
+
+	summaryItems := make([]gin.H, 0, len(departmentCounts))
+	departmentNames := make([]string, 0, len(departmentCounts))
+	for name := range departmentCounts {
+		departmentNames = append(departmentNames, name)
+	}
+	sort.Strings(departmentNames)
+	for _, name := range departmentNames {
+		summaryItems = append(summaryItems, gin.H{"name": name, "count": departmentCounts[name]})
+	}
+
+	httpx.JSON(c, http.StatusOK, gin.H{
+		"items": items,
+		"total": total,
+		"page": page,
+		"pageSize": pageSize,
+		"summary": gin.H{
+			"departmentCounts": summaryItems,
+			"assetTotal": assetTotal,
+		},
 	})
 }
 
@@ -1605,6 +1857,19 @@ func (server *apiServer) upsertUser(c *gin.Context, create bool) {
 		httpx.Created(c, gin.H{"id": id})
 		return
 	}
+	passwordHash := ""
+	if strings.TrimSpace(input.InitialPassword) != "" {
+		if err := authn.ValidatePasswordStrength(input.InitialPassword); err != nil {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		hash, err := authn.HashPassword(input.InitialPassword)
+		if err != nil {
+			httpx.Error(c, http.StatusBadRequest, err.Error())
+			return
+		}
+		passwordHash = hash
+	}
 	_, err := server.db.Exec(`
 		UPDATE users u
 		SET emp_id = COALESCE(NULLIF($2, ''), emp_id),
@@ -1615,14 +1880,25 @@ func (server *apiServer) upsertUser(c *gin.Context, create bool) {
 			location_id = NULLIF($7, '')::uuid,
 			role_id = COALESCE((SELECT id FROM roles WHERE name = $8), role_id),
 			is_active = COALESCE($9, is_active),
+			password_hash = COALESCE(NULLIF($10, ''), password_hash),
 			updated_at = NOW()
 		WHERE u.id = $1::uuid
-	`, c.Param("id"), strings.TrimSpace(input.EmpID), strings.TrimSpace(input.FullName), effectiveEmail, effectiveEntityID, effectiveDeptID, effectiveLocationID, input.Role, input.IsActive)
+	`, c.Param("id"), strings.TrimSpace(input.EmpID), strings.TrimSpace(input.FullName), effectiveEmail, effectiveEntityID, effectiveDeptID, effectiveLocationID, input.Role, input.IsActive, passwordHash)
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "role_changed", TargetType: "user", TargetID: c.Param("id"), Detail: input})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "user_updated", TargetType: "user", TargetID: c.Param("id"), Detail: gin.H{
+		"full_name":      input.FullName,
+		"emp_id":         input.EmpID,
+		"email":          input.Email,
+		"entity_id":      input.EntityID,
+		"dept_id":        input.DeptID,
+		"location_id":    input.LocationID,
+		"role":           input.Role,
+		"is_active":      input.IsActive,
+		"password_reset": passwordHash != "",
+	}})
 	httpx.JSON(c, http.StatusOK, gin.H{"ok": true})
 }
 
@@ -1640,7 +1916,7 @@ func (server *apiServer) deactivateUser(c *gin.Context) {
 }
 
 func (server *apiServer) getUserAssets(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	user, err := server.fetchUserByID(c.Param("id"))
@@ -1654,6 +1930,10 @@ func (server *apiServer) getUserAssets(c *gin.Context) {
 	}
 	if isSyntheticTestIdentity(user.FullName, user.Email, user.EmpID) {
 		httpx.Error(c, http.StatusNotFound, "user not found")
+		return
+	}
+	if !server.userVisibleByEntity(c, user.EntityID, user.ID) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
 		return
 	}
 	claims := middleware.CurrentClaims(c)
@@ -1684,7 +1964,7 @@ func (server *apiServer) getMyAssets(c *gin.Context) {
 }
 
 func (server *apiServer) userMetaOptions(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	roles, err := server.simpleLookup(`SELECT id, name FROM roles ORDER BY name`)
@@ -1692,12 +1972,39 @@ func (server *apiServer) userMetaOptions(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	departments, err := server.simpleLookup(`SELECT id, name FROM departments ORDER BY name`)
+	claims := middleware.CurrentClaims(c)
+	departmentsQuery := `SELECT id, name FROM departments ORDER BY name`
+	departmentArgs := []any(nil)
+	branchesQuery := `SELECT id, full_name AS name FROM locations ORDER BY full_name`
+	branchArgs := []any(nil)
+	if claims != nil && claims.Role != "super_admin" {
+		departmentsQuery = `
+			SELECT d.id, d.name
+			FROM departments d
+			WHERE d.entity_id = $1::uuid
+			   OR EXISTS (
+			       SELECT 1 FROM user_entity_access uea
+			       WHERE uea.user_id = $2::uuid AND uea.entity_id = d.entity_id
+			   )
+			ORDER BY d.name`
+		departmentArgs = []any{claims.EntityID, claims.UserID}
+		branchesQuery = `
+			SELECT l.id, l.full_name AS name
+			FROM locations l
+			WHERE l.entity_id = $1::uuid
+			   OR EXISTS (
+			       SELECT 1 FROM user_entity_access uea
+			       WHERE uea.user_id = $2::uuid AND uea.entity_id = l.entity_id
+			   )
+			ORDER BY l.full_name`
+		branchArgs = []any{claims.EntityID, claims.UserID}
+	}
+	departments, err := server.simpleLookupArgs(departmentsQuery, departmentArgs...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	branches, err := server.simpleLookup(`SELECT id, full_name AS name FROM locations ORDER BY full_name`)
+	branches, err := server.simpleLookupArgs(branchesQuery, branchArgs...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -1734,6 +2041,94 @@ func (server *apiServer) exportUsersCSV(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin") {
 		return
 	}
+	entityID := c.Query("entity")
+	deptID := c.Query("dept")
+	locationID := c.Query("location")
+	roleNames := c.QueryArray("role")
+	roleLookup := map[string]struct{}{}
+	normalizedRoles := make([]string, 0, len(roleNames))
+	for _, roleName := range roleNames {
+		roleName = strings.TrimSpace(roleName)
+		if roleName != "" {
+			roleLookup[roleName] = struct{}{}
+			normalizedRoles = append(normalizedRoles, roleName)
+		}
+	}
+	primaryRoleName := ""
+	if len(roleLookup) == 1 {
+		for _, roleName := range roleNames {
+			roleName = strings.TrimSpace(roleName)
+			if roleName != "" {
+				primaryRoleName = roleName
+				break
+			}
+		}
+	} else if len(roleLookup) == 0 {
+		primaryRoleName = c.Query("role")
+	}
+	if primaryRoleName != "" && len(normalizedRoles) == 0 {
+		normalizedRoles = append(normalizedRoles, primaryRoleName)
+		roleLookup[primaryRoleName] = struct{}{}
+	}
+	excludeRole := strings.TrimSpace(c.Query("exclude_role"))
+	status := strings.ToLower(strings.TrimSpace(c.Query("status")))
+	search := strings.TrimSpace(c.Query("search"))
+	departmentLabel := strings.TrimSpace(c.Query("department_label"))
+	includeTestUsers := c.Query("include_test_users") == "1"
+
+	whereClauses := []string{"1 = 1"}
+	args := make([]any, 0, 12)
+	argIndex := 1
+
+	if entityID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.entity_id = $%d::uuid", argIndex))
+		args = append(args, entityID)
+		argIndex++
+	}
+	if deptID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.dept_id = $%d::uuid", argIndex))
+		args = append(args, deptID)
+		argIndex++
+	}
+	if locationID != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("u.location_id = $%d::uuid", argIndex))
+		args = append(args, locationID)
+		argIndex++
+	}
+	if len(normalizedRoles) > 0 {
+		placeholders := make([]string, 0, len(normalizedRoles))
+		for _, roleName := range normalizedRoles {
+			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
+			args = append(args, roleName)
+			argIndex++
+		}
+		whereClauses = append(whereClauses, "r.name IN ("+strings.Join(placeholders, ", ")+")")
+	}
+	if excludeRole != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("r.name <> $%d", argIndex))
+		args = append(args, excludeRole)
+		argIndex++
+	}
+	if status != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("(CASE WHEN u.is_active THEN 'active' ELSE 'inactive' END) = $%d", argIndex))
+		args = append(args, status)
+		argIndex++
+	}
+	if !includeTestUsers {
+		whereClauses = append(whereClauses, "lower(u.full_name) NOT LIKE '%probe%' AND lower(u.full_name) NOT LIKE '%smoke%' AND lower(u.email) NOT LIKE '%probe%' AND lower(u.email) NOT LIKE '%smoke%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%probe%' AND lower(COALESCE(u.emp_id, '')) NOT LIKE '%smoke%'")
+	}
+	if search != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("(lower(u.full_name) LIKE $%d OR lower(u.email) LIKE $%d OR lower(u.emp_id) LIKE $%d)", argIndex, argIndex, argIndex))
+		args = append(args, "%"+strings.ToLower(search)+"%")
+		argIndex++
+	}
+	departmentExpr := "COALESCE(NULLIF(d.name, ''), NULLIF(l.full_name, ''), 'Unassigned')"
+	if departmentLabel != "" && departmentLabel != "all" {
+		whereClauses = append(whereClauses, fmt.Sprintf(departmentExpr+" = $%d", argIndex))
+		args = append(args, departmentLabel)
+		argIndex++
+	}
+
 	rows, err := server.db.Query(`
 		SELECT u.full_name,
 		       u.email,
@@ -1749,8 +2144,9 @@ func (server *apiServer) exportUsersCSV(c *gin.Context) {
 		LEFT JOIN roles r ON r.id = u.role_id
 		LEFT JOIN entities e ON e.id = u.entity_id
 		LEFT JOIN locations l ON l.id = u.location_id
+		WHERE `+strings.Join(whereClauses, " AND ")+`
 		ORDER BY u.full_name
-	`)
+	`, args...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -2231,17 +2627,12 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 	}
 
 	portalInstallReady := strings.TrimSpace(serverURL) != "" && strings.TrimSpace(server.config.InventoryIngestToken) != ""
+	saltBootstrapReady := portalInstallReady && strings.TrimSpace(saltMasterHost) != ""
 	sshConfigured := strings.TrimSpace(server.config.SSHTerminalUsername) != "" &&
 		(strings.TrimSpace(server.config.SSHTerminalPrivateKeyPath) != "" || strings.TrimSpace(server.config.SSHTerminalPrivateKey) != "") &&
 		(!server.config.SSHTerminalStrictHostKey || strings.TrimSpace(server.config.SSHTerminalKnownHostsPath) != "")
-	sshAuthMode := "not-configured"
-	if sshConfigured {
-		if strings.TrimSpace(server.config.SSHTerminalCertificatePath) != "" {
-			sshAuthMode = "certificate"
-		} else {
-			sshAuthMode = "key"
-		}
-	}
+	linuxInstallerURL := strings.TrimRight(serverURL, "/") + "/installers/install-itms-agent.sh"
+	windowsInstallerURL := strings.TrimRight(serverURL, "/") + "/installers/install-itms-agent.ps1"
 
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"publicServerUrl":      serverURL,
@@ -2249,10 +2640,12 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 		"saltMasterHost":       saltMasterHost,
 		"wazuhManagerHost":     wazuhManagerHost,
 		"saltApiConfigured":    saltAvailable,
+		"saltBootstrapReady":   saltBootstrapReady,
 		"sshConfigured":        sshConfigured,
-		"sshAuthMode":          sshAuthMode,
 		"wazuhApiConfigured":   server.wazuh != nil && server.wazuh.Enabled(),
 		"portalInstallReady":   portalInstallReady,
+		"linuxInstallerUrl":    linuxInstallerURL,
+		"windowsInstallerUrl":  windowsInstallerURL,
 	})
 }
 
@@ -2307,8 +2700,10 @@ func (server *apiServer) getMattermostStatus(c *gin.Context) {
 
 func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, error) {
 	rows, err := server.db.Query(`
-		SELECT assets.id, asset_tag, assets.name, category, COALESCE(hostname, ''), COALESCE(serial_number, ''), COALESCE(model, ''), COALESCE(warranty_until::text, ''), status, is_compute,
+		SELECT assets.id, asset_tag, assets.name, category, COALESCE(hostname, ''), COALESCE(serial_number, ''), COALESCE(model, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''), status, is_compute,
 			COALESCE(cd.os_name, ''),
+			COALESCE(cd.rustdesk_id, ''),
+			COALESCE(cd.last_seen::text, ''),
 			COALESCE((
 				SELECT MAX(h.created_at)::text
 				FROM asset_history h
@@ -2319,6 +2714,7 @@ func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, er
 			EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = assets.id AND (lower(sw.name) LIKE '%salt-minion%' OR lower(sw.name) LIKE '%salt minion%' OR lower(sw.name) LIKE '%saltstack%')),
 			EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = assets.id AND lower(sw.name) LIKE '%wazuh%'),
 			EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = assets.id AND (lower(sw.name) LIKE '%openscap%' OR lower(sw.name) LIKE '%scap workbench%' OR lower(sw.name) LIKE '%scap security guide%')),
+			EXISTS(SELECT 1 FROM asset_alerts aa WHERE aa.asset_id = assets.id AND lower(aa.source) = 'openscap'),
 			EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = assets.id AND (lower(sw.name) LIKE '%clamav%' OR lower(sw.name) LIKE '%clamd%' OR lower(sw.name) LIKE '%freshclam%' OR lower(sw.name) LIKE '%clamwin%'))
 		FROM assets
 		LEFT JOIN asset_compute_details cd ON cd.asset_id = assets.id
@@ -2332,10 +2728,10 @@ func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, er
 	devices := make([]gin.H, 0)
 	items := make([]gin.H, 0)
 	for rows.Next() {
-		var id, assetTag, name, category, hostname, serial, model, warranty, status, osName, assignedAt, saltMinionID, wazuhAgentID string
-		var hasSaltSoftware, hasWazuhSoftware, hasOpenSCAPSoftware, hasClamAVSoftware bool
+		var id, assetTag, name, category, hostname, serial, model, cost, warranty, status, osName, rustdeskID, lastSeenAt, assignedAt, saltMinionID, wazuhAgentID string
+		var hasSaltSoftware, hasWazuhSoftware, hasOpenSCAPSoftware, hasOpenSCAPReport, hasClamAVSoftware bool
 		var compute bool
-		if err := rows.Scan(&id, &assetTag, &name, &category, &hostname, &serial, &model, &warranty, &status, &compute, &osName, &assignedAt, &saltMinionID, &wazuhAgentID, &hasSaltSoftware, &hasWazuhSoftware, &hasOpenSCAPSoftware, &hasClamAVSoftware); err != nil {
+		if err := rows.Scan(&id, &assetTag, &name, &category, &hostname, &serial, &model, &cost, &warranty, &status, &compute, &osName, &rustdeskID, &lastSeenAt, &assignedAt, &saltMinionID, &wazuhAgentID, &hasSaltSoftware, &hasWazuhSoftware, &hasOpenSCAPSoftware, &hasOpenSCAPReport, &hasClamAVSoftware); err != nil {
 			return nil, nil, err
 		}
 		entry := gin.H{
@@ -2348,14 +2744,18 @@ func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, er
 			"serialNumber":      emptyToNil(serial),
 			"model":             emptyToNil(model),
 			"specs":             emptyToNil(model),
+			"cost":              emptyToNil(cost),
 			"warranty_until":    emptyToNil(warranty),
 			"warrantyExpiresAt": emptyToNil(warranty),
+			"rustdeskId":        emptyToNil(rustdeskID),
+			"rustdesk_id":       emptyToNil(rustdeskID),
+			"lastSeenAt":        emptyToNil(lastSeenAt),
 			"assignedAt":        emptyToNil(assignedAt),
 			"status":            status,
 			"category":          category,
 			"osName":            emptyToNil(osName),
 			"os_name":           emptyToNil(osName),
-			"toolStatus":        buildToolStatus(saltMinionID, nil, wazuhAgentID, hasSaltSoftware, hasWazuhSoftware, hasOpenSCAPSoftware, hasClamAVSoftware),
+			"toolStatus":        buildToolStatus(saltMinionID, nil, wazuhAgentID, hasSaltSoftware, hasWazuhSoftware, hasOpenSCAPSoftware || hasOpenSCAPReport, hasClamAVSoftware),
 		}
 		if compute {
 			devices = append(devices, entry)
@@ -2370,7 +2770,7 @@ func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, er
 	}
 
 	stockRows, err := server.db.Query(`
-		SELECT id, item_code, name, COALESCE(serial_number, ''), COALESCE(specs, ''), COALESCE(warranty_expires_at::text, ''), status,
+		SELECT id, item_code, asset_tag, name, COALESCE(serial_number, ''), COALESCE(specs, ''), COALESCE(warranty_expires_at::text, ''), COALESCE(cost::text, ''), status,
 			COALESCE((
 				SELECT MAX(a.created_at)::text
 				FROM audit_log a
@@ -2387,23 +2787,26 @@ func (server *apiServer) loadAssignedAssets(userID string) ([]gin.H, []gin.H, er
 	}
 	defer stockRows.Close()
 	for stockRows.Next() {
-		var id, itemCode, name, serialNumber, specs, warranty, status, assignedAt string
-		if err := stockRows.Scan(&id, &itemCode, &name, &serialNumber, &specs, &warranty, &status, &assignedAt); err != nil {
+		var id, itemCode, assetTag, name, serialNumber, specs, warranty, cost, status, assignedAt string
+		if err := stockRows.Scan(&id, &itemCode, &assetTag, &name, &serialNumber, &specs, &warranty, &cost, &status, &assignedAt); err != nil {
 			return nil, nil, err
 		}
-		items = append(items, gin.H{
-			"id":                id,
-			"itemCode":          itemCode,
-			"item_code":         itemCode,
-			"name":              name,
-			"serialNumber":      emptyToNil(serialNumber),
-			"serial_number":     emptyToNil(serialNumber),
-			"specs":             emptyToNil(specs),
-			"warrantyExpiresAt": emptyToNil(warranty),
-			"warranty_until":    emptyToNil(warranty),
-			"assignedAt":        emptyToNil(assignedAt),
-			"status":            status,
-		})
+		   items = append(items, gin.H{
+			   "id":                id,
+			   "itemCode":          itemCode,
+			   "item_code":         itemCode,
+			   "assetTag":          emptyToNil(assetTag),
+			   "asset_tag":         emptyToNil(assetTag),
+			   "name":              name,
+			   "serialNumber":      emptyToNil(serialNumber),
+			   "serial_number":     emptyToNil(serialNumber),
+			   "specs":             emptyToNil(specs),
+			   "warrantyExpiresAt": emptyToNil(warranty),
+			   "warranty_until":    emptyToNil(warranty),
+			   "cost":              emptyToNil(cost),
+			   "assignedAt":        emptyToNil(assignedAt),
+			   "status":            status,
+		   })
 	}
 	return devices, items, stockRows.Err()
 }
@@ -2426,14 +2829,32 @@ func (server *apiServer) simpleLookup(query string) ([]gin.H, error) {
 	return result, rows.Err()
 }
 
+func (server *apiServer) simpleLookupArgs(query string, args ...any) ([]gin.H, error) {
+	rows, err := server.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make([]gin.H, 0)
+	for rows.Next() {
+		var id, name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return nil, err
+		}
+		result = append(result, gin.H{"id": id, "name": name})
+	}
+	return result, rows.Err()
+}
+
 func (server *apiServer) listAssets(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	query := `
 		SELECT a.id, a.asset_tag, a.name, COALESCE(a.hostname, ''), a.category, a.is_compute, COALESCE(a.serial_number, ''), COALESCE(a.model, ''),
 			a.entity_id, e.short_code, COALESCE(a.assigned_to::text, ''), COALESCE(u.full_name, ''), COALESCE(a.dept_id::text, ''), COALESCE(d.name, ''),
-			COALESCE(a.location_id::text, ''), COALESCE(l.full_name, ''), COALESCE(a.purchase_date::text, ''), COALESCE(a.warranty_until::text, ''), a.status,
+			COALESCE(a.location_id::text, ''), COALESCE(l.full_name, ''), COALESCE(a.purchase_date::text, ''), COALESCE(a.cost::text, ''), COALESCE(a.warranty_until::text, ''), a.status,
 			a.condition, COALESCE(a.glpi_id, 0), COALESCE(a.salt_minion_id, ''), COALESCE(a.wazuh_agent_id, ''), COALESCE(a.notes, '')
 		FROM assets a
 		JOIN entities e ON e.id = a.entity_id
@@ -2455,10 +2876,10 @@ func (server *apiServer) listAssets(c *gin.Context) {
 	defer rows.Close()
 	result := make([]gin.H, 0)
 	for rows.Next() {
-		var id, assetTag, name, hostname, category, serial, model, entityRef, entityCode, assignedTo, assignedName, deptRef, deptName, locationRef, locationName, purchaseDate, warrantyUntil, status, condition, saltMinionID, wazuhAgentID, notes string
+		var id, assetTag, name, hostname, category, serial, model, entityRef, entityCode, assignedTo, assignedName, deptRef, deptName, locationRef, locationName, purchaseDate, cost, warrantyUntil, status, condition, saltMinionID, wazuhAgentID, notes string
 		var compute bool
 		var glpiID int
-		if err := rows.Scan(&id, &assetTag, &name, &hostname, &category, &compute, &serial, &model, &entityRef, &entityCode, &assignedTo, &assignedName, &deptRef, &deptName, &locationRef, &locationName, &purchaseDate, &warrantyUntil, &status, &condition, &glpiID, &saltMinionID, &wazuhAgentID, &notes); err != nil {
+		if err := rows.Scan(&id, &assetTag, &name, &hostname, &category, &compute, &serial, &model, &entityRef, &entityCode, &assignedTo, &assignedName, &deptRef, &deptName, &locationRef, &locationName, &purchaseDate, &cost, &warrantyUntil, &status, &condition, &glpiID, &saltMinionID, &wazuhAgentID, &notes); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -2468,7 +2889,7 @@ func (server *apiServer) listAssets(c *gin.Context) {
 		if middleware.CurrentClaims(c).Role == "employee" && assignedTo != middleware.CurrentClaims(c).UserID {
 			continue
 		}
-		result = append(result, gin.H{"id": id, "asset_tag": assetTag, "name": name, "hostname": emptyToNil(hostname), "category": category, "is_compute": compute, "serial_number": emptyToNil(serial), "model": emptyToNil(model), "entity_id": entityRef, "entity_code": entityCode, "assigned_to": emptyToNil(assignedTo), "assigned_name": emptyToNil(assignedName), "dept_id": emptyToNil(deptRef), "department": emptyToNil(deptName), "location_id": emptyToNil(locationRef), "location": emptyToNil(locationName), "purchase_date": emptyToNil(purchaseDate), "warranty_until": emptyToNil(warrantyUntil), "status": status, "condition": condition, "glpi_id": zeroToNil(glpiID), "salt_minion_id": emptyToNil(saltMinionID), "wazuh_agent_id": emptyToNil(wazuhAgentID), "notes": emptyToNil(notes)})
+		result = append(result, gin.H{"id": id, "asset_tag": assetTag, "name": name, "hostname": emptyToNil(hostname), "category": category, "is_compute": compute, "serial_number": emptyToNil(serial), "model": emptyToNil(model), "entity_id": entityRef, "entity_code": entityCode, "assigned_to": emptyToNil(assignedTo), "assigned_name": emptyToNil(assignedName), "dept_id": emptyToNil(deptRef), "department": emptyToNil(deptName), "location_id": emptyToNil(locationRef), "location": emptyToNil(locationName), "purchase_date": emptyToNil(purchaseDate), "cost": emptyToNil(cost), "warranty_until": emptyToNil(warrantyUntil), "status": status, "condition": condition, "glpi_id": zeroToNil(glpiID), "salt_minion_id": emptyToNil(saltMinionID), "wazuh_agent_id": emptyToNil(wazuhAgentID), "notes": emptyToNil(notes)})
 	}
 	httpx.JSON(c, http.StatusOK, result)
 }
@@ -2548,7 +2969,7 @@ func (server *apiServer) queryCompatDevices(c *gin.Context, search string, assig
 	query := `
 		SELECT a.id, a.asset_tag, COALESCE(NULLIF(a.hostname, ''), a.asset_tag), a.category, COALESCE(cd.os_name, ''), COALESCE(cd.gpu, ''), COALESCE(cd.mac_address, ''), COALESCE(cd.last_seen::text, ''), a.status,
 			COALESCE(cd.pending_updates, 0), COALESCE(alerts.open_alerts, 0), COALESCE(a.serial_number, ''), COALESCE(a.model, ''),
-			COALESCE(a.warranty_until::text, ''), COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''), COALESCE(u.emp_id, ''),
+			COALESCE(a.cost::text, ''), COALESCE(a.warranty_until::text, ''), COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''), COALESCE(u.emp_id, ''),
 			COALESCE(d.name, ''), COALESCE(l.full_name, ''), COALESCE(a.assigned_to::text, ''), a.entity_id::text`
 	if paginate {
 		query += `, COUNT(*) OVER()`
@@ -2584,11 +3005,11 @@ func (server *apiServer) queryCompatDevices(c *gin.Context, search string, assig
 		var pendingUpdates, openAlerts int
 		var item compatDeviceRecord
 		if paginate {
-			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID, &total); err != nil {
+			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID, &total); err != nil {
 				return nil, 0, err
 			}
 		} else {
-			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID); err != nil {
+			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID); err != nil {
 				return nil, 0, err
 			}
 		}
@@ -2607,6 +3028,10 @@ func (server *apiServer) queryCompatDevices(c *gin.Context, search string, assig
 }
 
 func (server *apiServer) patchDevicesCompat(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+
 	devices, err := server.loadCompatDevices(c)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
@@ -2615,10 +3040,14 @@ func (server *apiServer) patchDevicesCompat(c *gin.Context) {
 	page, pageSize, paginate := parsePaginationRequest(c, 25)
 	search := strings.TrimSpace(strings.ToLower(c.Query("search")))
 	statusFilter := strings.TrimSpace(strings.ToLower(c.Query("status")))
+	departmentFilter := strings.TrimSpace(strings.ToLower(c.Query("department")))
 
 	filtered := make([]int, 0, len(devices))
 	for index, device := range devices {
 		if statusFilter != "" && strings.ToLower(strings.TrimSpace(device.PatchStatus)) != statusFilter {
+			continue
+		}
+		if departmentFilter != "" && departmentFilter != "all" && strings.ToLower(strings.TrimSpace(device.DepartmentName)) != departmentFilter {
 			continue
 		}
 		if search != "" {
@@ -2687,6 +3116,7 @@ func (server *apiServer) patchDevicesCompat(c *gin.Context) {
 			"patchStatus":     device.PatchStatus,
 			"complianceScore": device.ComplianceScore,
 			"osName":          emptyToNil(device.OSName),
+			"lastSeenAt":      emptyToNil(device.LastSeenAt),
 			"department":      mapName(device.DepartmentName),
 			"user":            mapUser(device.UserFullName, device.UserEmail, device.UserEmpID, device.UserID),
 		})
@@ -2706,6 +3136,10 @@ func (server *apiServer) patchDevicesCompat(c *gin.Context) {
 }
 
 func (server *apiServer) patchDashboardCompat(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+
 	devices, err := server.loadCompatDevices(c)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
@@ -2732,7 +3166,7 @@ func (server *apiServer) patchJobsCompat(c *gin.Context) {
 		return
 	}
 	rows, err := server.db.Query(`
-		SELECT h.id, COALESCE(a.hostname, a.asset_tag), h.created_at
+		SELECT h.id, COALESCE(a.hostname, a.asset_tag), h.detail, h.created_at
 		FROM asset_history h
 		JOIN assets a ON a.id = h.asset_id
 		WHERE h.action = 'patch_run'
@@ -2747,12 +3181,15 @@ func (server *apiServer) patchJobsCompat(c *gin.Context) {
 	items := make([]gin.H, 0)
 	for rows.Next() {
 		var id, scope string
+		var detailRaw []byte
 		var createdAt time.Time
-		if err := rows.Scan(&id, &scope, &createdAt); err != nil {
+		if err := rows.Scan(&id, &scope, &detailRaw, &createdAt); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
-		items = append(items, gin.H{"id": id, "jid": id, "status": "queued", "scope": scope, "createdAt": createdAt, "updatedAt": createdAt})
+		var detail map[string]any
+		_ = json.Unmarshal(detailRaw, &detail)
+		items = append(items, gin.H{"id": id, "jid": id, "status": patchRunStatus(detail), "scope": scope, "createdAt": createdAt, "updatedAt": createdAt})
 	}
 	httpx.JSON(c, http.StatusOK, items)
 }
@@ -2762,7 +3199,10 @@ func (server *apiServer) patchRunCompat(c *gin.Context) {
 		return
 	}
 	var input struct {
-		Scope string `json:"scope"`
+		Scope   string `json:"scope"`
+		Action  string `json:"action"`
+		State   string `json:"state"`
+		Command string `json:"command"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid patch payload")
@@ -2787,7 +3227,11 @@ func (server *apiServer) patchRunCompat(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	result, err := server.queuePatchRun(c, asset)
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "device not found for patch scope")
+		return
+	}
+	result, err := server.queuePatchRun(c, asset, input.Action, input.State, input.Command)
 	if err != nil {
 		httpx.Error(c, http.StatusBadGateway, err.Error())
 		return
@@ -2797,15 +3241,15 @@ func (server *apiServer) patchRunCompat(c *gin.Context) {
 }
 
 type patchRunReportRowInput struct {
-	DeviceID       string                           `json:"deviceId"`
-	Hostname       string                           `json:"hostname"`
-	Department     string                           `json:"department"`
-	Status         string                           `json:"status"`
-	PatchStatus    string                           `json:"patchStatus"`
-	Target         string                           `json:"target"`
-	Action         string                           `json:"action"`
-	Message        string                           `json:"message"`
-	UpdatedItems   []string                         `json:"updatedItems"`
+	DeviceID      string                       `json:"deviceId"`
+	Hostname      string                       `json:"hostname"`
+	Department    string                       `json:"department"`
+	Status        string                       `json:"status"`
+	PatchStatus   string                       `json:"patchStatus"`
+	Target        string                       `json:"target"`
+	Action        string                       `json:"action"`
+	Message       string                       `json:"message"`
+	UpdatedItems  []string                     `json:"updatedItems"`
 	PackageChanges []patchRunReportPackageChangeInput `json:"packageChanges"`
 }
 
@@ -3340,7 +3784,7 @@ func (server *apiServer) loadCompatDevices(c *gin.Context) ([]compatDeviceRecord
 	for rows.Next() {
 		var pendingUpdates, openAlerts int
 		var item compatDeviceRecord
-		if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID); err != nil {
+		if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID); err != nil {
 			return nil, err
 		}
 		if !server.entityAllowedByID(c, item.EntityID) {
@@ -3373,6 +3817,8 @@ func (server *apiServer) compatDeviceJSON(device compatDeviceRecord) gin.H {
 		"status":            device.Status,
 		"serialNumber":      emptyToNil(device.SerialNumber),
 		"model":             emptyToNil(device.Model),
+		"cost":              emptyToNil(device.Cost),
+		"warrantyUntil":     emptyToNil(device.WarrantyUntil),
 		"warrantyExpiresAt": emptyToNil(device.WarrantyUntil),
 		"user":              mapUser(device.UserFullName, device.UserEmail, device.UserEmpID, device.UserID),
 		"branch":            mapName(device.BranchName),
@@ -3788,7 +4234,7 @@ func mapUser(fullName string, email string, empID string, id string) gin.H {
 }
 
 func (server *apiServer) getAsset(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	asset, err := server.fetchAsset(c.Param("id"))
@@ -3812,14 +4258,14 @@ func (server *apiServer) getAsset(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"id": asset.ID, "asset_tag": asset.AssetTag, "name": asset.Name, "hostname": emptyToNil(asset.Hostname), "category": asset.Category, "is_compute": asset.IsCompute,
 		"serial_number": emptyToNil(asset.SerialNumber), "model": emptyToNil(asset.Model), "entity_id": asset.EntityID, "assigned_to": emptyToNil(asset.AssignedTo),
-		"dept_id": emptyToNil(asset.DeptID), "location_id": emptyToNil(asset.LocationID), "purchase_date": emptyToNil(asset.PurchaseDate), "warranty_until": emptyToNil(asset.WarrantyUntil),
+		"dept_id": emptyToNil(asset.DeptID), "location_id": emptyToNil(asset.LocationID), "purchase_date": emptyToNil(asset.PurchaseDate), "cost": emptyToNil(asset.Cost), "warranty_until": emptyToNil(asset.WarrantyUntil),
 		"status": asset.Status, "condition": asset.Condition, "glpi_id": zeroToNil(asset.GLPIID), "salt_minion_id": emptyToNil(asset.SaltMinionID), "wazuh_agent_id": emptyToNil(asset.WazuhAgentID),
 		"notes": emptyToNil(asset.Notes), "compute_details": details, "network": network, "installed_software": software,
 	})
 }
 
 func (server *apiServer) getDeviceCompat(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	asset, err := server.fetchAsset(c.Param("id"))
@@ -3840,7 +4286,7 @@ func (server *apiServer) getDeviceCompat(c *gin.Context) {
 		return
 	}
 
-	details, _, software, err := server.fetchAssetDetailBlocks(asset.ID)
+	details, network, software, err := server.fetchAssetDetailBlocks(asset.ID)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -3865,15 +4311,28 @@ func (server *apiServer) getDeviceCompat(c *gin.Context) {
 		httpx.Error(c, http.StatusBadGateway, err.Error())
 		return
 	}
+	hasOpenSCAPAlert := false
+	for _, alert := range alerts {
+		source, _ := alert["source"].(string)
+		if strings.EqualFold(source, "openscap") {
+			hasOpenSCAPAlert = true
+			break
+		}
+	}
 	installedApps := make([]gin.H, 0, len(software))
 	for _, application := range software {
-		installedApps = append(installedApps, gin.H{"id": application["id"], "name": application["name"], "version": application["version"], "publisher": nil})
+		installedApps = append(installedApps, gin.H{"id": application["id"], "name": application["name"], "version": application["version"], "installDate": application["install_date"], "source": application["source"]})
 	}
 	saltConnected := saltConnectionStatus(c.Request.Context(), server.salt, coalesceString(asset.SaltMinionID, asset.Hostname))
 
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"id":                asset.ID,
 		"assetId":           asset.AssetTag,
+		"cost":              emptyToNil(asset.Cost),
+		"glpiId":            zeroToNil(asset.GLPIID),
+		"saltMinionId":      emptyToNil(asset.SaltMinionID),
+		"salt_minion_id":    emptyToNil(asset.SaltMinionID),
+		"wazuhAgentId":      emptyToNil(asset.WazuhAgentID),
 		"hostname":          coalesceString(asset.Hostname, asset.AssetTag),
 		"serialNumber":      emptyToNil(asset.SerialNumber),
 		"manufacturer":      emptyToNil(asset.Manufacturer),
@@ -3893,6 +4352,11 @@ func (server *apiServer) getDeviceCompat(c *gin.Context) {
 		"osBuild":           details["os_build"],
 		"lastBootAt":        details["last_boot"],
 		"lastSeenAt":        details["last_seen"],
+		"loggedInUsers":     details["logged_in_users"],
+		"anydeskId":         details["anydesk_id"],
+		"rustdeskId":        details["rustdesk_id"],
+		"diskLayout":        details["disk_layout"],
+		"volumes":           details["volumes"],
 		"status":            asset.Status,
 		"patchStatus":       compatPatchStatus(pendingUpdates),
 		"alertStatus":       compatAlertStatus(len(alerts)),
@@ -3901,18 +4365,23 @@ func (server *apiServer) getDeviceCompat(c *gin.Context) {
 		"user":              mapUser(fullName, email, empID, asset.AssignedTo),
 		"department":        mapName(deptName),
 		"branch":            mapName(branchName),
+		"network":           network,
 		"installedApps":     installedApps,
-		"toolStatus":        buildToolStatus(asset.SaltMinionID, saltConnected, asset.WazuhAgentID, softwareContains(software, "salt-minion", "salt minion", "saltstack"), softwareContains(software, "wazuh"), softwareContains(software, "openscap", "scap workbench", "scap security guide"), softwareContains(software, "clamav", "clamd", "freshclam", "clamwin")),
+		"toolStatus":        buildToolStatus(asset.SaltMinionID, saltConnected, asset.WazuhAgentID, softwareContains(software, "salt-minion", "salt minion", "saltstack"), softwareContains(software, "wazuh"), softwareContains(software, "openscap", "scap workbench", "scap security guide") || hasOpenSCAPAlert, softwareContains(software, "clamav", "clamd", "freshclam", "clamwin")),
 	})
 }
 
 func (server *apiServer) getDeviceAlertsCompat(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	asset, err := server.fetchAsset(c.Param("id"))
 	if err != nil {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+	if !server.assetAllowed(c, asset.EntityID, asset.AssignedTo) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
 		return
 	}
 	alerts, err := server.collectAssetAlerts(c.Request.Context(), asset)
@@ -3956,6 +4425,7 @@ func (server *apiServer) upsertAsset(c *gin.Context, create bool) {
 		DeptID        string `json:"dept_id"`
 		LocationID    string `json:"location_id"`
 		PurchaseDate  string `json:"purchase_date"`
+		Cost          string `json:"cost"`
 		WarrantyUntil string `json:"warranty_until"`
 		Status        string `json:"status"`
 		Condition     string `json:"condition"`
@@ -3967,6 +4437,26 @@ func (server *apiServer) upsertAsset(c *gin.Context, create bool) {
 	if err := c.ShouldBindJSON(&input); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid asset payload")
 		return
+	}
+	if create {
+		if !server.entityAllowedByID(c, input.EntityID) {
+			httpx.Error(c, http.StatusForbidden, "forbidden")
+			return
+		}
+	} else {
+		existingAsset, err := server.fetchAsset(c.Param("id"))
+		if err != nil {
+			httpx.Error(c, http.StatusNotFound, "asset not found")
+			return
+		}
+		if !server.entityAllowedByID(c, existingAsset.EntityID) {
+			httpx.Error(c, http.StatusNotFound, "asset not found")
+			return
+		}
+		if strings.TrimSpace(input.EntityID) != "" && !server.entityAllowedByID(c, input.EntityID) {
+			httpx.Error(c, http.StatusForbidden, "forbidden")
+			return
+		}
 	}
 	if err := server.validateEntityLinks(input.EntityID, input.DeptID, input.LocationID); err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
@@ -3996,12 +4486,12 @@ func (server *apiServer) upsertAsset(c *gin.Context, create bool) {
 		err := server.db.QueryRow(`
 			INSERT INTO assets (
 				asset_tag, name, hostname, category, is_compute, serial_number, model, entity_id, assigned_to, dept_id, location_id,
-				purchase_date, warranty_until, status, condition, glpi_id, salt_minion_id, wazuh_agent_id, notes
+				purchase_date, cost, warranty_until, status, condition, glpi_id, salt_minion_id, wazuh_agent_id, notes
 			) VALUES (
 				$1, $2, NULLIF($3, ''), $4, $5, NULLIF($6, ''), NULLIF($7, ''), $8::uuid, NULLIF($9, '')::uuid, NULLIF($10, '')::uuid, NULLIF($11, '')::uuid,
-				NULLIF($12, '')::date, NULLIF($13, '')::date, COALESCE(NULLIF($14, ''), 'in_use'), COALESCE(NULLIF($15, ''), 'good'), NULLIF($16, 0), NULLIF($17, ''), NULLIF($18, ''), NULLIF($19, '')
+				NULLIF($12, '')::date, NULLIF($13, '')::numeric(12,2), NULLIF($14, '')::date, COALESCE(NULLIF($15, ''), 'in_use'), COALESCE(NULLIF($16, ''), 'good'), NULLIF($17, 0), NULLIF($18, ''), NULLIF($19, ''), NULLIF($20, '')
 			) RETURNING id
-		`, input.AssetTag, input.Name, hostname, strings.ToLower(input.Category), input.IsCompute, input.SerialNumber, input.Model, input.EntityID, input.AssignedTo, input.DeptID, input.LocationID, input.PurchaseDate, input.WarrantyUntil, strings.ToLower(input.Status), strings.ToLower(input.Condition), glpiID, coalesceString(input.SaltMinionID, hostname), input.WazuhAgentID, input.Notes).Scan(&id)
+		`, input.AssetTag, input.Name, hostname, strings.ToLower(input.Category), input.IsCompute, input.SerialNumber, input.Model, input.EntityID, input.AssignedTo, input.DeptID, input.LocationID, input.PurchaseDate, input.Cost, input.WarrantyUntil, strings.ToLower(input.Status), strings.ToLower(input.Condition), glpiID, coalesceString(input.SaltMinionID, hostname), input.WazuhAgentID, input.Notes).Scan(&id)
 		if err != nil {
 			httpx.Error(c, http.StatusBadRequest, err.Error())
 			return
@@ -4027,16 +4517,17 @@ func (server *apiServer) upsertAsset(c *gin.Context, create bool) {
 			dept_id = NULLIF($11, '')::uuid,
 			location_id = NULLIF($12, '')::uuid,
 			purchase_date = COALESCE(NULLIF($13, '')::date, purchase_date),
-			warranty_until = COALESCE(NULLIF($14, '')::date, warranty_until),
-			status = COALESCE(NULLIF($15, ''), status),
-			condition = COALESCE(NULLIF($16, ''), condition),
-			glpi_id = COALESCE(NULLIF($17, 0), glpi_id),
-			salt_minion_id = COALESCE(NULLIF($18, ''), salt_minion_id),
-			wazuh_agent_id = COALESCE(NULLIF($19, ''), wazuh_agent_id),
-			notes = COALESCE($20, notes),
+			cost = COALESCE(NULLIF($14, '')::numeric(12,2), cost),
+			warranty_until = COALESCE(NULLIF($15, '')::date, warranty_until),
+			status = COALESCE(NULLIF($16, ''), status),
+			condition = COALESCE(NULLIF($17, ''), condition),
+			glpi_id = COALESCE(NULLIF($18, 0), glpi_id),
+			salt_minion_id = COALESCE(NULLIF($19, ''), salt_minion_id),
+			wazuh_agent_id = COALESCE(NULLIF($20, ''), wazuh_agent_id),
+			notes = COALESCE($21, notes),
 			updated_at = NOW()
 		WHERE id = $1::uuid
-	`, c.Param("id"), input.AssetTag, input.Name, hostname, strings.ToLower(input.Category), input.IsCompute, input.SerialNumber, input.Model, input.EntityID, input.AssignedTo, input.DeptID, input.LocationID, input.PurchaseDate, input.WarrantyUntil, strings.ToLower(input.Status), strings.ToLower(input.Condition), derefInt(input.GLPIID), coalesceString(input.SaltMinionID, hostname), input.WazuhAgentID, input.Notes)
+	`, c.Param("id"), input.AssetTag, input.Name, hostname, strings.ToLower(input.Category), input.IsCompute, input.SerialNumber, input.Model, input.EntityID, input.AssignedTo, input.DeptID, input.LocationID, input.PurchaseDate, input.Cost, input.WarrantyUntil, strings.ToLower(input.Status), strings.ToLower(input.Condition), derefInt(input.GLPIID), coalesceString(input.SaltMinionID, hostname), input.WazuhAgentID, input.Notes)
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -4061,8 +4552,16 @@ func (server *apiServer) assignAsset(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
 	user, err := server.fetchUserByID(input.UserID)
 	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "user not found")
+		return
+	}
+	if !server.entityAllowedByID(c, user.EntityID) {
 		httpx.Error(c, http.StatusBadRequest, "user not found")
 		return
 	}
@@ -4088,7 +4587,16 @@ func (server *apiServer) unassignAsset(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
-	_, err := server.db.Exec(`UPDATE assets SET assigned_to = NULL, updated_at = NOW() WHERE id = $1::uuid`, c.Param("id"))
+	asset, err := server.fetchAsset(c.Param("id"))
+	if err != nil {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+	_, err = server.db.Exec(`UPDATE assets SET assigned_to = NULL, updated_at = NOW() WHERE id = $1::uuid`, c.Param("id"))
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -4109,6 +4617,10 @@ func (server *apiServer) deleteAsset(c *gin.Context) {
 			return
 		}
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
 	result, err := server.db.Exec(`DELETE FROM assets WHERE id = $1::uuid`, asset.ID)
@@ -4174,13 +4686,18 @@ func (server *apiServer) getAssetHistory(c *gin.Context) {
 		}
 		var detail any
 		_ = json.Unmarshal(detailRaw, &detail)
+		if action == "patch_run" {
+			if patchDetail, ok := detail.(map[string]any); ok {
+				patchDetail["status"] = patchRunStatus(patchDetail)
+			}
+		}
 		items = append(items, gin.H{"id": id, "actor": emptyToNil(actor), "action": action, "detail": detail, "created_at": createdAt})
 	}
 	httpx.JSON(c, http.StatusOK, items)
 }
 
 func (server *apiServer) getAssetAlerts(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee", "auditor") {
 		return
 	}
 	asset, err := server.fetchAsset(c.Param("id"))
@@ -4209,11 +4726,26 @@ func (server *apiServer) runAssetPatch(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
 	if !asset.IsCompute {
 		httpx.Error(c, http.StatusBadRequest, "patch run is only available for compute assets")
 		return
 	}
-	result, err := server.queuePatchRun(c, asset)
+	var input struct {
+		Action  string `json:"action"`
+		State   string `json:"state"`
+		Command string `json:"command"`
+	}
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&input); err != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid patch payload")
+			return
+		}
+	}
+	result, err := server.queuePatchRun(c, asset, input.Action, input.State, input.Command)
 	if err != nil {
 		httpx.Error(c, http.StatusBadGateway, err.Error())
 		return
@@ -4228,6 +4760,10 @@ func (server *apiServer) runAssetScript(c *gin.Context) {
 	}
 	asset, err := server.fetchAsset(c.Param("id"))
 	if err != nil {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
@@ -4286,6 +4822,26 @@ func (server *apiServer) runAssetScript(c *gin.Context) {
 }
 
 func (server *apiServer) resolveAssetScriptDefinition(asset dbAsset, script string) (assetScriptDefinition, bool) {
+	if script == "refresh-inventory" || script == "refresh_inventory" || script == "refresh_itms_inventory" {
+		platform := server.detectAssetPlatform(asset.ID)
+		refreshStates := optionalStates(strings.TrimSpace(server.config.SaltInventoryRefreshState))
+		switch platform {
+		case "windows":
+			refreshStates = optionalStates(strings.TrimSpace(server.config.SaltInventoryRefreshWindowsState), strings.TrimSpace(server.config.SaltInventoryRefreshState))
+		case "ubuntu":
+			refreshStates = optionalStates(strings.TrimSpace(server.config.SaltInventoryRefreshUbuntuState), strings.TrimSpace(server.config.SaltInventoryRefreshState))
+		}
+		if len(refreshStates) == 0 {
+			return assetScriptDefinition{}, false
+		}
+		return assetScriptDefinition{
+			State:       refreshStates[0],
+			FollowUp:    refreshStates[1:],
+			Component:   "inventory",
+			Integration: "saltstack",
+		}, true
+	}
+
 	if script == "install-agent" || script == "install_agent" || script == "install_itms_agent" {
 		platform := server.detectAssetPlatform(asset.ID)
 		installState := firstNonEmpty(strings.TrimSpace(server.config.SaltAgentInstallState), "itms_agent.install")
@@ -4307,6 +4863,87 @@ func (server *apiServer) resolveAssetScriptDefinition(asset dbAsset, script stri
 	}
 
 	return assetScriptDefinition{}, false
+}
+
+func (server *apiServer) resolveAssetPatchDefinition(asset dbAsset, action string, state string, command string) (assetPatchDefinition, error) {
+	normalizedAction := strings.TrimSpace(strings.ToLower(action))
+	if normalizedAction == "" {
+		normalizedAction = "system-update"
+	}
+
+	switch normalizedAction {
+	case "system-update", "system_update", "patch", "default":
+		return assetPatchDefinition{
+			Action:      "system-update",
+			State:       "patch.run",
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	case "chrome-update", "chrome_update":
+		platform := server.detectAssetPlatform(asset.ID)
+		if platform != "ubuntu" && platform != "windows" {
+			return assetPatchDefinition{}, fmt.Errorf("chrome update is currently supported for Ubuntu, Debian, or Windows assets only")
+		}
+		command := "apt-get update && apt-get install --only-upgrade -y google-chrome-stable"
+		if platform == "windows" {
+			command = `powershell -NoProfile -Command "$chromeUpdate = Join-Path ${env:ProgramFiles(x86)} 'Google\\Update\\GoogleUpdate.exe'; if (Test-Path $chromeUpdate) { & $chromeUpdate /ua /installsource scheduler } elseif (Get-Command winget -ErrorAction SilentlyContinue) { winget upgrade --id Google.Chrome --silent --accept-source-agreements --accept-package-agreements } else { throw 'Google Chrome updater not found' }"`
+		}
+		return assetPatchDefinition{
+			Action:      "chrome-update",
+			Command:     command,
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	case "check-salt-minion", "check_salt_minion":
+		command := "systemctl status --no-pager salt-minion"
+		if server.detectAssetPlatform(asset.ID) == "windows" {
+			command = `powershell -NoProfile -Command "Get-Service -Name salt-minion | Format-Table -Auto Name,Status,StartType"`
+		}
+		return assetPatchDefinition{
+			Action:      "check-salt-minion",
+			Command:     command,
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	case "restart-salt-minion", "restart_salt_minion":
+		command := "systemctl restart salt-minion && systemctl status --no-pager salt-minion"
+		if server.detectAssetPlatform(asset.ID) == "windows" {
+			command = `powershell -NoProfile -Command "Restart-Service -Name salt-minion -Force; Get-Service -Name salt-minion | Format-Table -Auto Name,Status,StartType"`
+		}
+		return assetPatchDefinition{
+			Action:      "restart-salt-minion",
+			Command:     command,
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	case "custom-command", "custom_command", "command":
+		trimmedCommand := strings.TrimSpace(command)
+		if trimmedCommand == "" {
+			return assetPatchDefinition{}, fmt.Errorf("command is required for the selected patch action")
+		}
+		return assetPatchDefinition{
+			Action:      "custom-command",
+			Command:     trimmedCommand,
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	case "custom-state", "custom_state", "state":
+		trimmedState := strings.TrimSpace(state)
+		if trimmedState == "" {
+			return assetPatchDefinition{}, fmt.Errorf("state is required for the selected patch action")
+		}
+		if !regexp.MustCompile(`^[a-zA-Z0-9._-]+$`).MatchString(trimmedState) {
+			return assetPatchDefinition{}, fmt.Errorf("invalid state name")
+		}
+		return assetPatchDefinition{
+			Action:      "custom-state",
+			State:       trimmedState,
+			Component:   "patch",
+			Integration: "saltstack",
+		}, nil
+	default:
+		return assetPatchDefinition{}, fmt.Errorf("unsupported patch action")
+	}
 }
 
 func (server *apiServer) detectAssetPlatform(assetID string) string {
@@ -4334,6 +4971,38 @@ func firstNonEmpty(values ...string) string {
 	return ""
 }
 
+func commandRunStatus(result map[string]any) string {
+	if result == nil {
+		return "queued"
+	}
+	if rawRetcode, ok := result["retcode"]; ok {
+		switch value := rawRetcode.(type) {
+		case float64:
+			if value == 0 {
+				return "completed"
+			}
+			return "failed"
+		case int:
+			if value == 0 {
+				return "completed"
+			}
+			return "failed"
+		case int64:
+			if value == 0 {
+				return "completed"
+			}
+			return "failed"
+		}
+	}
+	if rawSuccess, ok := result["success"].(bool); ok {
+		if rawSuccess {
+			return "completed"
+		}
+		return "failed"
+	}
+	return "queued"
+}
+
 func optionalStates(values ...string) []string {
 	result := make([]string, 0, len(values))
 	for _, value := range values {
@@ -4345,11 +5014,11 @@ func optionalStates(values ...string) []string {
 	return result
 }
 
-func buildToolStatus(saltMinionID string, saltConnected *bool, wazuhAgentID string, hasSaltSoftware bool, hasWazuhSoftware bool, hasOpenSCAPSoftware bool, hasClamAVSoftware bool) gin.H {
+func buildToolStatus(saltMinionID string, saltConnected *bool, wazuhAgentID string, hasSaltSoftware bool, hasWazuhSoftware bool, hasOpenSCAPSignal bool, hasClamAVSoftware bool) gin.H {
 	return gin.H{
 		"salt":     saltToolStatusEntry(strings.TrimSpace(saltMinionID), saltConnected, hasSaltSoftware),
 		"wazuh":    toolStatusEntry(strings.TrimSpace(wazuhAgentID), hasWazuhSoftware, "Wazuh agent ID linked", "Wazuh software detected", "Wazuh not detected"),
-		"openscap": softwareToolStatusEntry(hasOpenSCAPSoftware, "OpenSCAP detected", "OpenSCAP not detected"),
+		"openscap": softwareToolStatusEntry(hasOpenSCAPSignal, "OpenSCAP detected", "OpenSCAP not detected"),
 		"clamav":   softwareToolStatusEntry(hasClamAVSoftware, "ClamAV detected", "ClamAV not detected"),
 	}
 }
@@ -4431,6 +5100,10 @@ func (server *apiServer) getAssetTerminal(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
 	if !asset.IsCompute {
 		httpx.Error(c, http.StatusBadRequest, "terminal is only available for compute assets")
 		return
@@ -4454,6 +5127,10 @@ func (server *apiServer) suggestHostname(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "entity_id and dept_id are required")
 		return
 	}
+	if !server.entityAllowedByID(c, entityID) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
 	hostname, err := server.peekHostname(c.Request.Context(), entityID, deptID)
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
@@ -4466,25 +5143,57 @@ func (server *apiServer) listAudit(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	page, pageSize, paginate := parsePaginationRequest(c, 25)
 	entityID := c.Query("entity")
+	if strings.TrimSpace(entityID) != "" && claims.Role != "super_admin" && !server.entityAllowedByID(c, strings.TrimSpace(entityID)) {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
 	actorQuery := strings.TrimSpace(c.Query("actor"))
 	actionQuery := strings.TrimSpace(c.Query("action"))
 	targetTypeFilter := strings.TrimSpace(strings.ToLower(c.Query("entity_type")))
 	targetIDFilter := strings.TrimSpace(c.Query("entity_id"))
 	moduleFilter := strings.TrimSpace(strings.ToLower(c.Query("module")))
 	searchQuery := strings.TrimSpace(strings.ToLower(c.Query("search")))
+	whereClauses := []string{"1 = 1"}
+	args := make([]any, 0, 8)
+	argIndex := 1
+	if claims.Role != "super_admin" {
+		entityArg := argIndex
+		userArg := argIndex + 1
+		whereClauses = append(whereClauses, fmt.Sprintf("(a.entity_id = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = a.entity_id))", entityArg, userArg))
+		args = append(args, claims.EntityID, claims.UserID)
+		argIndex += 2
+	}
+	if strings.TrimSpace(entityID) != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("a.entity_id = $%d::uuid", argIndex))
+		args = append(args, strings.TrimSpace(entityID))
+		argIndex++
+	}
+	if actionQuery != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("a.action = $%d", argIndex))
+		args = append(args, actionQuery)
+		argIndex++
+	}
+	if actorQuery != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("lower(COALESCE(u.full_name, '') || ' ' || COALESCE(u.emp_id, '')) LIKE $%d", argIndex))
+		args = append(args, "%"+strings.ToLower(actorQuery)+"%")
+		argIndex++
+	}
 	rows, err := server.db.Query(`
 		SELECT a.id, COALESCE(u.full_name, ''), COALESCE(u.emp_id, ''), COALESCE(e.short_code, ''), a.action, COALESCE(a.target_type, ''), COALESCE(a.target_id::text, ''), a.detail, a.created_at
 		FROM audit_log a
 		LEFT JOIN users u ON u.id = a.actor_id
 		LEFT JOIN entities e ON e.id = a.entity_id
-		WHERE ($1 = '' OR a.entity_id = $1::uuid)
-		  AND ($2 = '' OR a.action = $2)
-		  AND ($3 = '' OR lower(COALESCE(u.full_name, '') || ' ' || COALESCE(u.emp_id, '')) LIKE $4)
+		WHERE `+strings.Join(whereClauses, " AND ")+`
 		ORDER BY a.created_at DESC
 		LIMIT 500
-	`, entityID, actionQuery, actorQuery, "%"+strings.ToLower(actorQuery)+"%")
+	`, args...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -4503,7 +5212,7 @@ func (server *apiServer) listAudit(c *gin.Context) {
 		var detail any
 		_ = json.Unmarshal(detailRaw, &detail)
 		module := auditModuleForTargetType(targetType)
-		summary := fmt.Sprintf("%s %s", strings.ReplaceAll(action, "_", " "), strings.TrimSpace(targetType))
+		summary := auditSummaryForAction(action, targetType, detail)
 		if searchQuery != "" {
 			searchable := strings.ToLower(strings.Join([]string{summary, action, targetType, actor, empID, targetID, module}, " "))
 			if !strings.Contains(searchable, searchQuery) {
@@ -4568,6 +5277,11 @@ func (server *apiServer) getAudit(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	var detailRaw []byte
 	var actor, action, targetType, targetID, entityID string
 	var createdAt time.Time
@@ -4583,6 +5297,10 @@ func (server *apiServer) getAudit(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if claims.Role != "super_admin" && (strings.TrimSpace(entityID) == "" || !server.entityAllowedByID(c, entityID)) {
+		httpx.Error(c, http.StatusNotFound, "audit record not found")
+		return
+	}
 	var detail any
 	_ = json.Unmarshal(detailRaw, &detail)
 	httpx.JSON(c, http.StatusOK, gin.H{"id": c.Param("id"), "actor_id": emptyToNil(actor), "entity_id": emptyToNil(entityID), "action": action, "target_type": emptyToNil(targetType), "target_id": emptyToNil(targetID), "detail": detail, "created_at": createdAt})
@@ -4592,14 +5310,28 @@ func (server *apiServer) exportAudit(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
-	rows, err := server.db.Query(`
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	query := `
 		SELECT a.created_at, COALESCE(u.full_name, ''), COALESCE(u.emp_id, ''), COALESCE(e.short_code, ''), a.action, COALESCE(a.target_type, ''), COALESCE(a.target_id::text, ''), a.detail
 		FROM audit_log a
 		LEFT JOIN users u ON u.id = a.actor_id
 		LEFT JOIN entities e ON e.id = a.entity_id
+	`
+	args := make([]any, 0, 2)
+	if claims.Role != "super_admin" {
+		query += `
+		WHERE (a.entity_id = $1::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $2::uuid AND uea.entity_id = a.entity_id))`
+		args = append(args, claims.EntityID, claims.UserID)
+	}
+	query += `
 		ORDER BY a.created_at DESC
 		LIMIT 5000
-	`)
+	`
+	rows, err := server.db.Query(query, args...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -4751,17 +5483,17 @@ func (server *apiServer) fetchAssetDetailBlocks(assetID string) (gin.H, gin.H, [
 		_ = json.Unmarshal(statsRaw, &stats)
 		network = gin.H{"wired_ip": emptyToNil(wiredIP), "wireless_ip": emptyToNil(wirelessIP), "netbird_ip": emptyToNil(netbirdIP), "dns": emptyToNil(dns), "gateway": emptyToNil(gateway), "interface_stats": stats}
 	}
-	rows, err := server.db.Query(`SELECT id, name, COALESCE(version, ''), COALESCE(install_date::text, '') FROM asset_software_inventory WHERE asset_id = $1::uuid ORDER BY name`, assetID)
+	rows, err := server.db.Query(`SELECT id, name, COALESCE(version, ''), COALESCE(install_date::text, ''), COALESCE(source, '') FROM asset_software_inventory WHERE asset_id = $1::uuid ORDER BY name`, assetID)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var id, name, version, installDate string
-		if err := rows.Scan(&id, &name, &version, &installDate); err != nil {
+		var id, name, version, installDate, source string
+		if err := rows.Scan(&id, &name, &version, &installDate, &source); err != nil {
 			return nil, nil, nil, err
 		}
-		software = append(software, gin.H{"id": id, "name": name, "version": emptyToNil(version), "install_date": emptyToNil(installDate)})
+		software = append(software, gin.H{"id": id, "name": name, "version": emptyToNil(version), "install_date": emptyToNil(installDate), "source": emptyToNil(source)})
 	}
 	return details, network, software, nil
 }
@@ -4789,6 +5521,9 @@ func (server *apiServer) userAuthPayload(user dbUser) gin.H {
 	} else if user.Role == "it_team" {
 		portal = "/it/dashboard"
 		portals = []string{"it_team", "employee"}
+	} else if user.Role == "auditor" {
+		portal = "/audit/dashboard"
+		portals = []string{"auditor"}
 	}
 	return gin.H{"id": user.ID, "emp_id": user.EmpID, "email": user.Email, "full_name": user.FullName, "role": user.Role, "entity_id": user.EntityID, "dept_id": emptyToNil(user.DeptID), "location_id": emptyToNil(user.LocationID), "default_portal": portal, "portals": portals}
 }
@@ -4819,7 +5554,7 @@ func (server *apiServer) collectAssetAlerts(ctx context.Context, asset dbAsset) 
 	return items, nil
 }
 
-func (server *apiServer) queuePatchRun(c *gin.Context, asset dbAsset) (gin.H, error) {
+func (server *apiServer) queuePatchRun(c *gin.Context, asset dbAsset, action string, state string, command string) (gin.H, error) {
 	if strings.TrimSpace(asset.SaltMinionID) == "" {
 		err := fmt.Errorf("salt minion is not linked for this asset")
 		server.recordOperationalAlert(asset, middleware.CurrentClaims(c).UserID, "salt_patch", "high", "Salt patch unavailable", err.Error())
@@ -4842,20 +5577,132 @@ func (server *apiServer) queuePatchRun(c *gin.Context, asset dbAsset) (gin.H, er
 	if tgtType == "" {
 		tgtType = "glob"
 	}
-	response := gin.H{"status": "queued", "target": target, "tgt_type": tgtType}
-	if server.salt != nil && server.salt.Enabled() {
-		result, err := server.salt.RunPatch(c.Request.Context(), target)
+	response := gin.H{"target": target, "tgt_type": tgtType}
+	if server.salt == nil || !server.salt.Enabled() {
+		err := fmt.Errorf("saltstack integration is not configured")
+		server.recordOperationalAlert(asset, middleware.CurrentClaims(c).UserID, "salt_patch", "high", "Salt patch unavailable", err.Error())
+		return nil, err
+	}
+
+	definition, err := server.resolveAssetPatchDefinition(asset, action, state, command)
+	if err != nil {
+		return nil, err
+	}
+	response["action"] = definition.Action
+	response["integration"] = definition.Integration
+	response["component"] = definition.Component
+
+	if definition.State != "" {
+		result, err := server.salt.RunState(c.Request.Context(), target, definition.State)
 		if err != nil {
 			server.recordOperationalAlert(asset, middleware.CurrentClaims(c).UserID, "salt_patch", "high", "Salt patch execution failed", err.Error())
 			return nil, err
 		}
-		response["integration"] = "saltstack"
+		response["state"] = definition.State
 		response["result"] = result
+		response["status"] = patchRunStatus(response)
 	} else {
-		response["integration"] = "local_history"
+		result, err := server.salt.RunCommand(c.Request.Context(), target, definition.Command)
+		if err != nil {
+			server.recordOperationalAlert(asset, middleware.CurrentClaims(c).UserID, "salt_patch", "high", "Salt patch execution failed", err.Error())
+			return nil, err
+		}
+		response["command"] = definition.Command
+		response["result"] = result
+		response["status"] = commandRunStatus(result)
 	}
 	_, _ = server.recordAssetHistory(asset.ID, middleware.CurrentClaims(c).UserID, "patch_run", response)
 	return response, nil
+}
+
+func patchRunStatus(detail map[string]any) string {
+	if status := patchRunResultStatus(detail["result"]); status != "" {
+		return status
+	}
+
+	status := strings.TrimSpace(strings.ToLower(fmt.Sprint(detail["status"])))
+	if status == "" || status == "<nil>" {
+		return "queued"
+	}
+	return status
+}
+
+func patchRunResultStatus(result any) string {
+	resultMap, ok := result.(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	returns, ok := resultMap["return"].([]any)
+	if !ok {
+		return ""
+	}
+
+	sawCompleted := false
+	for _, item := range returns {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		for _, value := range entry {
+			status, matched := patchRunReturnStatus(value)
+			if !matched {
+				continue
+			}
+			if status == "failed" {
+				return status
+			}
+			if status == "completed" {
+				sawCompleted = true
+			}
+		}
+	}
+
+	if sawCompleted {
+		return "completed"
+	}
+	return ""
+}
+
+func patchRunReturnStatus(value any) (string, bool) {
+	switch typed := value.(type) {
+	case bool:
+		if typed {
+			return "completed", true
+		}
+		return "failed", true
+	case string:
+		if strings.TrimSpace(typed) != "" {
+			return "failed", true
+		}
+	case []any:
+		for _, item := range typed {
+			if strings.TrimSpace(fmt.Sprint(item)) != "" {
+				return "failed", true
+			}
+		}
+	case map[string]any:
+		sawStateResult := false
+		for _, item := range typed {
+			stateResult, ok := item.(map[string]any)
+			if !ok {
+				continue
+			}
+			resultValue, ok := stateResult["result"].(bool)
+			if !ok {
+				continue
+			}
+			sawStateResult = true
+			if !resultValue {
+				return "failed", true
+			}
+		}
+		if sawStateResult {
+			return "completed", true
+		}
+	}
+
+	return "", false
 }
 
 func (server *apiServer) buildTerminalPayload(asset dbAsset) (gin.H, error) {
@@ -4944,7 +5791,7 @@ func extractWebSocketBearerToken(request *http.Request) string {
 			}
 		}
 	}
-	return strings.TrimSpace(request.URL.Query().Get("token"))
+	return ""
 }
 
 func websocketSubprotocols(request *http.Request) []string {
@@ -5197,6 +6044,37 @@ func (server *apiServer) recordAssetHistory(assetID string, actorID string, acti
 	return id, err
 }
 
+func (server *apiServer) recordAuditLog(c *gin.Context, meta middleware.AuditMeta) error {
+	claims := middleware.CurrentClaims(c)
+	actorID := meta.ActorID
+	entityID := meta.EntityID
+	if actorID == "" && claims != nil {
+		actorID = claims.UserID
+	}
+	if entityID == "" && claims != nil {
+		entityID = claims.EntityID
+	}
+	detail := meta.Detail
+	if detail == nil {
+		if body, exists := c.Get(middleware.AuditBodyKey); exists {
+			detail = gin.H{"request": body}
+		}
+	}
+	payload, _ := json.Marshal(detail)
+	clientIP := strings.TrimSpace(c.GetHeader("X-Forwarded-For"))
+	if clientIP != "" {
+		parts := strings.Split(clientIP, ",")
+		clientIP = strings.TrimSpace(parts[0])
+	} else {
+		clientIP = c.ClientIP()
+	}
+	_, err := server.db.Exec(`
+		INSERT INTO audit_log (actor_id, entity_id, action, target_type, target_id, detail, ip_address, auth_method)
+		VALUES (NULLIF($1, '')::uuid, NULLIF($2, '')::uuid, $3, $4, NULLIF($5, '')::uuid, $6::jsonb, NULLIF($7, '')::inet, $8)
+	`, actorID, entityID, meta.Action, meta.TargetType, meta.TargetID, string(payload), clientIP, meta.AuthMethod)
+	return err
+}
+
 func (server *apiServer) recordOperationalAlert(asset dbAsset, fallbackUserID string, source string, severity string, title string, detail string) {
 	alertUserID := strings.TrimSpace(asset.AssignedTo)
 	if alertUserID == "" {
@@ -5361,12 +6239,12 @@ func (server *apiServer) fetchAssetByTag(ctx context.Context, assetTag string) (
 	var asset dbAsset
 	err := server.db.QueryRowContext(ctx, `
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
-			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(warranty_until::text, ''),
+			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
 			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
 		FROM assets
 		WHERE asset_tag = $1
 		LIMIT 1
-	`, strings.TrimSpace(assetTag)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, strings.TrimSpace(assetTag)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 

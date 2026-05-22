@@ -60,3 +60,19 @@ func TestValidatePatchPolicySettingsRejectsIncompleteWindow(t *testing.T) {
 		t.Fatal("validatePatchPolicySettings error = nil, want non-nil")
 	}
 }
+
+func TestNormalizeWorkflowSettingsDropsRedundantStandardDepartmentRing(t *testing.T) {
+	settings := normalizeWorkflowSettings(workflowSettings{
+		PatchDepartmentRings: []patchDepartmentRing{
+			{Match: " Finance ", Ring: "standard"},
+			{Match: "IT", Ring: "critical"},
+		},
+	})
+
+	if len(settings.PatchDepartmentRings) != 1 {
+		t.Fatalf("patch department ring count = %d, want 1", len(settings.PatchDepartmentRings))
+	}
+	if settings.PatchDepartmentRings[0].Match != "it" || settings.PatchDepartmentRings[0].Ring != "critical" {
+		t.Fatalf("patch department rings = %+v, want only critical IT override", settings.PatchDepartmentRings)
+	}
+}

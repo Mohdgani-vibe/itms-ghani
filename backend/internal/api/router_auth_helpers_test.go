@@ -2,6 +2,7 @@ package api
 
 import (
 	"bytes"
+	"database/sql"
 	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
@@ -238,6 +239,26 @@ func expectAssetLookup(mock sqlmock.Sqlmock, assetID string, assetTag string, na
 		"id", "asset_tag", "name", "hostname", "category", "is_compute", "serial_number", "manufacturer", "model", "entity_id",
 		"assigned_to", "dept_id", "location_id", "purchase_date", "cost", "warranty_until", "status", "condition", "glpi_id", "salt_minion_id", "wazuh_agent_id", "notes",
 	}).AddRow(assetID, assetTag, name, hostname, category, isCompute, "", "", "", entityID, "", "", "", "", "", "", status, condition, 0, saltMinionID, wazuhAgentID, ""))
+}
+
+func expectAssetLookupNotFound(mock sqlmock.Sqlmock, assetID string) {
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
+			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
+			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
+		FROM assets WHERE id = $1::uuid
+	`)).WithArgs(assetID).WillReturnError(sql.ErrNoRows)
+}
+
+func expectTerminalTargetLookupNotFound(mock sqlmock.Sqlmock, target string) {
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
+			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
+			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
+		FROM assets
+		WHERE is_compute = TRUE AND (hostname = $1 OR salt_minion_id = $1 OR asset_tag = $1)
+		LIMIT 1
+	`)).WithArgs(target).WillReturnError(sql.ErrNoRows)
 }
 
 func expectChatUserMembershipExists(mock sqlmock.Sqlmock, userID string, exists bool) {
@@ -497,6 +518,7 @@ func expectGatepassReceiverUploadUpdate(mock sqlmock.Sqlmock, gatepassID string,
 			receiver_signed_file_uploaded_by = $6::uuid,
 			receiver_signed_verification_status = $7,
 			receiver_signed_verification_notes = NULLIF($8, ''),
+			status = 'closed',
 			updated_at = NOW()
 		WHERE id = $1::uuid
 	`)).WithArgs(gatepassID, receiverName, fileName, contentType, fileContent, uploadedBy, verificationStatus, verificationNotes).WillReturnResult(sqlmock.NewResult(1, 1))

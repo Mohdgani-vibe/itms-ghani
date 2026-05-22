@@ -228,6 +228,13 @@ func seedRolesAndPermissions(db *sql.DB) error {
 				"assets.view", "gatepass.create",
 			},
 		},
+		{
+			Name:   "auditor",
+			System: true,
+			Perms: []string{
+				"assets.view", "audit.view",
+			},
+		},
 	}
 
 	permissionLabels := map[string]string{

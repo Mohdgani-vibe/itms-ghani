@@ -121,6 +121,11 @@ func (server *apiServer) inventoryModuleOptions(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team", "auditor") {
 		return
 	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 
 	items, err := server.simpleLookup(`SELECT id, name FROM items ORDER BY name`)
 	if err != nil {
@@ -132,7 +137,21 @@ func (server *apiServer) inventoryModuleOptions(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	branches, err := server.simpleLookup(`SELECT id, full_name AS name FROM locations ORDER BY full_name`)
+	branchesQuery := `SELECT id, full_name AS name FROM locations ORDER BY full_name`
+	branchArgs := []any(nil)
+	if claims.Role != "super_admin" {
+		branchesQuery = `
+			SELECT l.id, l.full_name AS name
+			FROM locations l
+			WHERE l.entity_id = $1::uuid
+			   OR EXISTS (
+			       SELECT 1 FROM user_entity_access uea
+			       WHERE uea.user_id = $2::uuid AND uea.entity_id = l.entity_id
+			   )
+			ORDER BY l.full_name`
+		branchArgs = []any{claims.EntityID, claims.UserID}
+	}
+	branches, err := server.simpleLookupArgs(branchesQuery, branchArgs...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -168,22 +187,36 @@ func (server *apiServer) inventoryModuleOptions(c *gin.Context) {
 		})
 	}
 
-	claims := middleware.CurrentClaims(c)
-	if claims == nil {
-		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
-		return
-	}
 	defaultCompanyName := ""
 	if claims.EntityID != "" {
 		_ = server.db.QueryRow(`SELECT COALESCE(full_name, '') FROM entities WHERE id = $1::uuid`, claims.EntityID).Scan(&defaultCompanyName)
 	}
-	userRows, err := server.db.Query(`
+	userQuery := `
 		SELECT u.id, u.full_name, COALESCE(u.email, ''), COALESCE(u.emp_id, ''), COALESCE(l.full_name, '')
 		FROM users u
 		LEFT JOIN locations l ON l.id = u.location_id
 		WHERE u.is_active = TRUE
 		ORDER BY u.full_name
-	`)
+	`
+	userArgs := []any(nil)
+	if claims.Role != "super_admin" {
+		userQuery = `
+			SELECT u.id, u.full_name, COALESCE(u.email, ''), COALESCE(u.emp_id, ''), COALESCE(l.full_name, '')
+			FROM users u
+			LEFT JOIN locations l ON l.id = u.location_id
+			WHERE u.is_active = TRUE
+			  AND (
+			      u.entity_id = $1::uuid
+			      OR EXISTS (
+			          SELECT 1 FROM user_entity_access uea
+			          WHERE uea.user_id = $2::uuid AND uea.entity_id = u.entity_id
+			      )
+			  )
+			ORDER BY u.full_name
+		`
+		userArgs = []any{claims.EntityID, claims.UserID}
+	}
+	userRows, err := server.db.Query(userQuery, userArgs...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -195,13 +228,6 @@ func (server *apiServer) inventoryModuleOptions(c *gin.Context) {
 		if err := userRows.Scan(&id, &fullName, &email, &empID, &branchName); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
-		}
-		user, err := server.fetchUserByID(id)
-		if err != nil {
-			continue
-		}
-		if claims.Role != "super_admin" && !server.entityAllowedByID(c, user.EntityID) {
-			continue
 		}
 		employees = append(employees, gin.H{"id": id, "name": fullName, "email": emptyToNil(email), "empId": emptyToNil(empID), "branchName": emptyToNil(branchName)})
 	}

@@ -320,6 +320,23 @@ func (server *apiServer) acknowledgeAlert(c *gin.Context) {
 		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	if claims.Role != "super_admin" && claims.Role != "it_team" && claims.Role != "employee" {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
+	allowed, err := server.alertScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "alert not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "alert not found")
+		return
+	}
 
 	query := `UPDATE alerts SET acknowledged = TRUE WHERE id = $1::uuid`
 	args := []any{c.Param("id")}
@@ -347,6 +364,19 @@ func (server *apiServer) resolveAlert(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	allowed, err := server.alertScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "alert not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "alert not found")
+		return
+	}
 	var title, userID string
 	if err := server.db.QueryRow(`UPDATE alerts SET resolved = TRUE, acknowledged = TRUE WHERE id = $1::uuid RETURNING title, user_id`, c.Param("id")).Scan(&title, &userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -362,23 +392,43 @@ func (server *apiServer) resolveAlert(c *gin.Context) {
 
 func (server *apiServer) listAnnouncements(c *gin.Context) {
 	page, pageSize, paginate := parsePaginationRequest(c, 12)
+	claims := middleware.CurrentClaims(c)
+	role := ""
+	if claims != nil {
+		role = claims.Role
+	}
+	allowedAudiences := announcementAudiencesForRole(role)
+	allowedAudienceLookup := make(map[string]struct{}, len(allowedAudiences))
+	for _, audience := range allowedAudiences {
+		allowedAudienceLookup[audience] = struct{}{}
+	}
 	audienceFilters := c.QueryArray("audience")
 	normalizedAudiences := make([]string, 0, len(audienceFilters))
 	audienceLookup := map[string]struct{}{}
+	hasRequestedAudienceFilter := false
 	for _, audience := range audienceFilters {
 		audience = strings.TrimSpace(audience)
 		if audience != "" {
+			hasRequestedAudienceFilter = true
 			if _, exists := audienceLookup[audience]; exists {
+				continue
+			}
+			if _, allowed := allowedAudienceLookup[audience]; !allowed {
 				continue
 			}
 			audienceLookup[audience] = struct{}{}
 			normalizedAudiences = append(normalizedAudiences, audience)
 		}
 	}
+	if !hasRequestedAudienceFilter {
+		normalizedAudiences = append(normalizedAudiences, allowedAudiences...)
+	}
 	whereClauses := make([]string, 0, 1)
 	args := make([]any, 0, len(normalizedAudiences)+2)
 	argIndex := 1
-	if len(normalizedAudiences) > 0 {
+	if hasRequestedAudienceFilter && len(normalizedAudiences) == 0 {
+		whereClauses = append(whereClauses, "1 = 0")
+	} else if len(normalizedAudiences) > 0 {
 		placeholders := make([]string, 0, len(normalizedAudiences))
 		for _, audience := range normalizedAudiences {
 			placeholders = append(placeholders, fmt.Sprintf("$%d", argIndex))
@@ -567,6 +617,10 @@ func (server *apiServer) markAnnouncementRead(c *gin.Context) {
 }
 
 func (server *apiServer) createGatepass(c *gin.Context) {
+    if !server.requireRoles(c, "super_admin", "it_team") {
+        return
+    }
+
 	claims := middleware.CurrentClaims(c)
 	if claims == nil {
 		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
@@ -687,6 +741,9 @@ func (server *apiServer) listGatepasses(c *gin.Context) {
 	if claims.Role == "employee" {
 		query += ` WHERE g.requester_id = $1::uuid`
 		args = append(args, claims.UserID)
+	} else if claims.Role != "super_admin" {
+		query += ` WHERE (requester.entity_id = $1::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $2::uuid AND uea.entity_id = requester.entity_id))`
+		args = append(args, claims.EntityID, claims.UserID)
 	}
 	countQuery := `
 		SELECT
@@ -704,9 +761,12 @@ func (server *apiServer) listGatepasses(c *gin.Context) {
 				)
 			)
 		FROM gatepasses g
+		JOIN users requester ON requester.id = g.requester_id
 	`
 	if claims.Role == "employee" {
 		countQuery += ` WHERE g.requester_id = $1::uuid`
+	} else if claims.Role != "super_admin" {
+		countQuery += ` WHERE (requester.entity_id = $1::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $2::uuid AND uea.entity_id = requester.entity_id))`
 	}
 	query += ` ORDER BY g.created_at DESC`
 	if paginate {
@@ -790,6 +850,19 @@ func (server *apiServer) completeGatepass(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	allowed, err := server.gatepassScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "gatepass not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "gatepass not found")
+		return
+	}
 	var input struct {
 		ReceiverSignedName string `json:"receiverSignedName"`
 		SecuritySignedName string `json:"securitySignedName"`
@@ -828,6 +901,19 @@ func (server *apiServer) completeGatepass(c *gin.Context) {
 
 func (server *apiServer) uploadReceiverSignedGatepass(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	allowed, err := server.gatepassScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "gatepass not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "gatepass not found")
 		return
 	}
 	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, 9<<20)
@@ -896,6 +982,7 @@ func (server *apiServer) uploadReceiverSignedGatepass(c *gin.Context) {
 			receiver_signed_file_uploaded_by = $6::uuid,
 			receiver_signed_verification_status = $7,
 			receiver_signed_verification_notes = NULLIF($8, ''),
+			status = 'closed',
 			updated_at = NOW()
 		WHERE id = $1::uuid
 	`, c.Param("id"), receiverName, strings.TrimSpace(fileHeader.Filename), contentType, content, claims.UserID, verificationStatus, verificationNotes)
@@ -909,18 +996,35 @@ func (server *apiServer) uploadReceiverSignedGatepass(c *gin.Context) {
 	}
 	detail := gin.H{"receiverSignedName": receiverName, "fileName": fileHeader.Filename, "verificationStatus": verificationStatus, "verificationNotes": verificationNotes}
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "gatepass_receiver_upload", TargetType: "gatepass", TargetID: c.Param("id"), Detail: detail})
-	httpx.JSON(c, http.StatusOK, gin.H{"status": "uploaded", "verificationStatus": verificationStatus, "verificationNotes": verificationNotes})
+	httpx.JSON(c, http.StatusOK, gin.H{"status": "closed", "verificationStatus": verificationStatus, "verificationNotes": verificationNotes})
 }
 
 func (server *apiServer) downloadReceiverSignedGatepass(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+
 	claims := middleware.CurrentClaims(c)
 	if claims == nil {
 		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	allowed, err := server.gatepassScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "gatepass not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "gatepass not found")
+		return
+	}
 	var fileName, contentType string
 	var data []byte
-	if err := server.db.QueryRow(`SELECT COALESCE(receiver_signed_file_name, ''), COALESCE(receiver_signed_file_content_type, ''), receiver_signed_file_data FROM gatepasses WHERE id = $1::uuid`, c.Param("id")).Scan(&fileName, &contentType, &data); err != nil {
+	if err = server.db.QueryRow(`SELECT COALESCE(receiver_signed_file_name, ''), COALESCE(receiver_signed_file_content_type, ''), receiver_signed_file_data FROM gatepasses WHERE id = $1::uuid`, c.Param("id")).Scan(&fileName, &contentType, &data); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "gatepass not found")
 			return
@@ -948,9 +1052,22 @@ func (server *apiServer) decideGatepass(c *gin.Context, status string) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	allowed, err := server.gatepassScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "gatepass not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "gatepass not found")
+		return
+	}
 	claims := middleware.CurrentClaims(c)
 	var requesterID string
-	if err := server.db.QueryRow(`
+	if err = server.db.QueryRow(`
 		UPDATE gatepasses
 		SET status = $2, approver_id = $3::uuid, updated_at = NOW()
 		WHERE id = $1::uuid
@@ -1022,8 +1139,126 @@ func extractSearchableUploadText(content []byte) string {
 	return builder.String()
 }
 
-func (server *apiServer) listStock(c *gin.Context) {
-	if !server.requireRoles(c, "super_admin", "it_team") {
+func (server *apiServer) inventoryItemScope(c *gin.Context, inventoryItemID string) (bool, error) {
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		return false, nil
+	}
+	if claims.Role == "super_admin" {
+		return true, nil
+	}
+	var branchEntityID, assignedEntityID sql.NullString
+	       err := server.db.QueryRow(`
+		       SELECT l.entity_id::text, u.entity_id::text
+		       FROM stock_items s
+		       LEFT JOIN locations l ON l.id = s.branch_id
+		       LEFT JOIN users u ON u.id = s.assigned_user_id
+		       WHERE s.id = $1::uuid
+	       `, inventoryItemID).Scan(&branchEntityID, &assignedEntityID)
+	if err != nil {
+		return false, err
+	}
+	if branchEntityID.Valid && branchEntityID.String != "" && server.entityAllowedByID(c, branchEntityID.String) {
+		return true, nil
+	}
+	if assignedEntityID.Valid && assignedEntityID.String != "" && server.entityAllowedByID(c, assignedEntityID.String) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (server *apiServer) requestScope(c *gin.Context, requestID string) (string, error) {
+	var requesterEntityID, requestType string
+	err := server.db.QueryRow(`
+		SELECT requester.entity_id::text, r.type
+		FROM requests r
+		JOIN users requester ON requester.id = r.requester_id
+		WHERE r.id = $1::uuid
+	`, requestID).Scan(&requesterEntityID, &requestType)
+	if err != nil {
+		return "", err
+	}
+	if !server.entityAllowedByID(c, requesterEntityID) {
+		return "", sql.ErrNoRows
+	}
+	return requestType, nil
+}
+
+func (server *apiServer) locationScope(c *gin.Context, locationID string) (bool, error) {
+	trimmedLocationID := strings.TrimSpace(locationID)
+	if trimmedLocationID == "" {
+		return true, nil
+	}
+	var entityID string
+	err := server.db.QueryRow(`SELECT entity_id::text FROM locations WHERE id = $1::uuid`, trimmedLocationID).Scan(&entityID)
+	if err != nil {
+		return false, err
+	}
+	return server.entityAllowedByID(c, entityID), nil
+}
+
+func (server *apiServer) alertScope(c *gin.Context, alertID string) (bool, error) {
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		return false, nil
+	}
+	if claims.Role == "super_admin" {
+		return true, nil
+	}
+	var assetEntityID, userEntityID, alertUserID sql.NullString
+	err := server.db.QueryRow(`
+		SELECT a.entity_id::text, u.entity_id::text, al.user_id::text
+		FROM alerts al
+		LEFT JOIN assets a ON a.id = al.device_id
+		LEFT JOIN users u ON u.id = al.user_id
+		WHERE al.id = $1::uuid
+	`, alertID).Scan(&assetEntityID, &userEntityID, &alertUserID)
+	if err != nil {
+		return false, err
+	}
+	if claims.Role == "employee" {
+		return alertUserID.Valid && alertUserID.String == claims.UserID, nil
+	}
+	if assetEntityID.Valid && assetEntityID.String != "" && server.entityAllowedByID(c, assetEntityID.String) {
+		return true, nil
+	}
+	if userEntityID.Valid && userEntityID.String != "" && server.entityAllowedByID(c, userEntityID.String) {
+		return true, nil
+	}
+	return false, nil
+}
+
+func (server *apiServer) gatepassScope(c *gin.Context, gatepassID string) (bool, error) {
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		return false, nil
+	}
+	var requesterID, requesterEntityID string
+	err := server.db.QueryRow(`
+		SELECT requester.id::text, requester.entity_id::text
+		FROM gatepasses g
+		JOIN users requester ON requester.id = g.requester_id
+		WHERE g.id = $1::uuid
+	`, gatepassID).Scan(&requesterID, &requesterEntityID)
+	if err != nil {
+		return false, err
+	}
+	if claims.Role == "employee" {
+		return requesterID == claims.UserID, nil
+	}
+	if claims.Role == "super_admin" {
+		return true, nil
+	}
+	return server.entityAllowedByID(c, requesterEntityID), nil
+}
+
+func (server *apiServer) listInventory(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team", "auditor") {
+		return
+	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 	page, pageSize, paginate := parsePaginationRequest(c, 24)
@@ -1032,48 +1267,59 @@ func (server *apiServer) listStock(c *gin.Context) {
 	whereClauses := []string{"1 = 1"}
 	args := make([]any, 0, 4)
 	argIndex := 1
+	if claims.Role != "super_admin" {
+		entityArg := argIndex
+		userArg := argIndex + 1
+		whereClauses = append(whereClauses, fmt.Sprintf("(COALESCE(branch.entity_id, assignee.entity_id) = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = COALESCE(branch.entity_id, assignee.entity_id)))", entityArg, userArg))
+		args = append(args, claims.EntityID, claims.UserID)
+		argIndex += 2
+	}
 	if branchFilter != "" && branchFilter != "all" {
-		whereClauses = append(whereClauses, fmt.Sprintf("branch_id = $%d::uuid", argIndex))
+		whereClauses = append(whereClauses, fmt.Sprintf("s.branch_id = $%d::uuid", argIndex))
 		args = append(args, branchFilter)
 		argIndex++
 	}
 	if searchQuery != "" {
-		whereClauses = append(whereClauses, fmt.Sprintf("lower(concat_ws(' ', item_code, name, COALESCE(serial_number, ''), COALESCE(specs, ''), category)) LIKE $%d", argIndex))
+		whereClauses = append(whereClauses, fmt.Sprintf("lower(concat_ws(' ', s.item_code, COALESCE(s.asset_tag, ''), s.name, COALESCE(s.serial_number, ''), COALESCE(s.specs, ''), s.category, COALESCE(branch.full_name, ''), s.status, COALESCE(s.cost::text, ''))) LIKE $%d", argIndex))
 		args = append(args, "%"+searchQuery+"%")
 		argIndex++
 	}
 	whereSQL := strings.Join(whereClauses, " AND ")
 
-	var total, available, allocated, retired, returned, inventory int
-	err := server.db.QueryRow(`
-		SELECT
-			COUNT(*),
-			COUNT(*) FILTER (WHERE status IN ('inventory', 'returned')),
-			COUNT(*) FILTER (WHERE status = 'allocated'),
-			COUNT(*) FILTER (WHERE status = 'retired'),
-			COUNT(*) FILTER (WHERE status = 'returned'),
-			COUNT(*) FILTER (WHERE status = 'inventory')
-		FROM stock_items
-		WHERE `+whereSQL, args...).Scan(&total, &available, &allocated, &retired, &returned, &inventory)
+	       var total, available, allocated, retired, returned, inventory int
+	       err := server.db.QueryRow(`
+		       SELECT
+			       COUNT(*),
+			       COUNT(*) FILTER (WHERE s.status IN ('inventory', 'returned')),
+			       COUNT(*) FILTER (WHERE s.status = 'allocated'),
+			       COUNT(*) FILTER (WHERE s.status = 'retired'),
+			       COUNT(*) FILTER (WHERE s.status = 'returned'),
+			       COUNT(*) FILTER (WHERE s.status = 'inventory')
+		       FROM stock_items s
+		       LEFT JOIN locations branch ON branch.id = s.branch_id
+		       LEFT JOIN users assignee ON assignee.id = s.assigned_user_id
+		       WHERE `+whereSQL, args...).Scan(&total, &available, &allocated, &retired, &returned, &inventory)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	groupRows, err := server.db.Query(`
-		SELECT
-			category,
-			name,
-			COUNT(*) AS total,
-			COUNT(*) FILTER (WHERE status IN ('inventory', 'returned')) AS available,
-			COUNT(*) FILTER (WHERE status = 'allocated') AS allocated,
-			COUNT(*) FILTER (WHERE status = 'retired') AS retired,
-			COUNT(*) FILTER (WHERE status = 'returned') AS returned
-		FROM stock_items
-		WHERE `+whereSQL+`
-		GROUP BY category, name
-		ORDER BY COUNT(*) FILTER (WHERE status IN ('inventory', 'returned')) ASC, name ASC
-	`, args...)
+	       groupRows, err := server.db.Query(`
+		       SELECT
+			       s.category,
+			       s.name,
+			       COUNT(*) AS total,
+			       COUNT(*) FILTER (WHERE s.status IN ('inventory', 'returned')) AS available,
+			       COUNT(*) FILTER (WHERE s.status = 'allocated') AS allocated,
+			       COUNT(*) FILTER (WHERE s.status = 'retired') AS retired,
+			       COUNT(*) FILTER (WHERE s.status = 'returned') AS returned
+		       FROM stock_items s
+		       LEFT JOIN locations branch ON branch.id = s.branch_id
+		       LEFT JOIN users assignee ON assignee.id = s.assigned_user_id
+		       WHERE `+whereSQL+`
+		       GROUP BY s.category, s.name
+		       ORDER BY COUNT(*) FILTER (WHERE s.status IN ('inventory', 'returned')) ASC, s.name ASC
+	       `, args...)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -1099,12 +1345,14 @@ func (server *apiServer) listStock(c *gin.Context) {
 	}
 
 	queryArgs := append([]any{}, args...)
-	query := `
-		SELECT id, item_code, category, name, COALESCE(serial_number, ''), COALESCE(specs, ''), COALESCE(branch_id::text, ''),
-			COALESCE(assigned_user_id::text, ''), COALESCE(warranty_expires_at::text, ''), status, created_at
-		FROM stock_items
-		WHERE ` + whereSQL + `
-		ORDER BY created_at DESC`
+	       query := `
+		       SELECT s.id, s.item_code, s.category, s.name, COALESCE(s.asset_tag, ''), COALESCE(s.serial_number, ''), COALESCE(s.specs, ''), COALESCE(s.branch_id::text, ''),
+			       COALESCE(branch.full_name, ''), COALESCE(s.assigned_user_id::text, ''), COALESCE(s.warranty_expires_at::text, ''), COALESCE(s.cost::text, ''), s.status, s.created_at
+		       FROM stock_items s
+		       LEFT JOIN locations branch ON branch.id = s.branch_id
+		       LEFT JOIN users assignee ON assignee.id = s.assigned_user_id
+		       WHERE ` + whereSQL + `
+		       ORDER BY s.created_at DESC`
 	if paginate {
 		query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", argIndex, argIndex+1)
 		queryArgs = append(queryArgs, pageSize, (page-1)*pageSize)
@@ -1119,9 +1367,9 @@ func (server *apiServer) listStock(c *gin.Context) {
 	result := make([]gin.H, 0)
 	summary := gin.H{"total": total, "available": available, "allocated": allocated, "retired": retired, "returned": returned, "inventory": inventory}
 	for rows.Next() {
-		var id, itemCode, category, name, serialNumber, specs, branchID, assignedUserID, warranty, status string
+		var id, itemCode, category, name, assetTag, serialNumber, specs, branchID, branchName, assignedUserID, warranty, cost, status string
 		var createdAt time.Time
-		if err := rows.Scan(&id, &itemCode, &category, &name, &serialNumber, &specs, &branchID, &assignedUserID, &warranty, &status, &createdAt); err != nil {
+		if err := rows.Scan(&id, &itemCode, &category, &name, &assetTag, &serialNumber, &specs, &branchID, &branchName, &assignedUserID, &warranty, &cost, &status, &createdAt); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -1130,11 +1378,14 @@ func (server *apiServer) listStock(c *gin.Context) {
 			"itemCode":          itemCode,
 			"category":          category,
 			"name":              name,
+			"assetTag":          assetTag,
 			"serialNumber":      serialNumber,
 			"specs":             specs,
 			"branchId":          emptyToNullString(branchID),
+			"branchName":        emptyToNullString(branchName),
 			"assignedUserId":    emptyToNullString(assignedUserID),
 			"warrantyExpiresAt": emptyToNullString(warranty),
+			"cost":              emptyToNullString(cost),
 			"status":            status,
 			"createdAt":         createdAt,
 		}
@@ -1147,71 +1398,135 @@ func (server *apiServer) listStock(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, gin.H{"items": result, "total": total, "page": page, "pageSize": pageSize, "summary": summary, "groups": groups})
 }
 
-func (server *apiServer) createStockItem(c *gin.Context) {
+func (server *apiServer) createInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
 	var input struct {
 		Category          string `json:"category"`
 		Name              string `json:"name"`
+		AssetTag          string `json:"assetTag"`
 		SerialNumber      string `json:"serialNumber"`
 		Specs             string `json:"specs"`
 		BranchID          string `json:"branchId"`
 		WarrantyExpiresAt string `json:"warrantyExpiresAt"`
+		Cost              string `json:"cost"`
+		Status            string `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid stock payload")
+		return
+	}
+	if strings.TrimSpace(input.Category) == "" {
+		httpx.Error(c, http.StatusBadRequest, "category is required")
 		return
 	}
 	if strings.TrimSpace(input.Name) == "" {
 		httpx.Error(c, http.StatusBadRequest, "name is required")
 		return
 	}
-	var id, itemCode string
-	err := server.db.QueryRow(`
-		INSERT INTO stock_items (category, name, serial_number, specs, branch_id, warranty_expires_at, status)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, '')::uuid, NULLIF($6, '')::date, 'inventory')
-		RETURNING id, item_code
-	`, strings.TrimSpace(input.Category), strings.TrimSpace(input.Name), strings.TrimSpace(input.SerialNumber), strings.TrimSpace(input.Specs), strings.TrimSpace(input.BranchID), strings.TrimSpace(input.WarrantyExpiresAt)).Scan(&id, &itemCode)
+	if strings.TrimSpace(input.AssetTag) == "" {
+		httpx.Error(c, http.StatusBadRequest, "assetTag is required")
+		return
+	}
+	if strings.TrimSpace(input.BranchID) == "" {
+		httpx.Error(c, http.StatusBadRequest, "branchId is required")
+		return
+	}
+	allowed, err := server.locationScope(c, input.BranchID)
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_created", TargetType: "stock_item", TargetID: id, Detail: input})
+	if !allowed {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
+	var id, itemCode string
+	       err = server.db.QueryRow(`
+		       INSERT INTO stock_items (category, name, asset_tag, serial_number, specs, branch_id, warranty_expires_at, cost, status)
+		       VALUES ($1, $2, $3, NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, '')::uuid, NULLIF($7, '')::date, NULLIF($8, '')::numeric(12,2), COALESCE(NULLIF($9, ''), 'inventory'))
+		       RETURNING id, item_code
+	       `, strings.TrimSpace(input.Category), strings.TrimSpace(input.Name), strings.TrimSpace(input.AssetTag), strings.TrimSpace(input.SerialNumber), strings.TrimSpace(input.Specs), strings.TrimSpace(input.BranchID), strings.TrimSpace(input.WarrantyExpiresAt), strings.TrimSpace(input.Cost), strings.TrimSpace(input.Status)).Scan(&id, &itemCode)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_created", TargetType: "inventory_item", TargetID: id, Detail: input})
 	httpx.Created(c, gin.H{"id": id, "itemCode": itemCode})
 }
 
-func (server *apiServer) updateStockItem(c *gin.Context) {
+func (server *apiServer) updateInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
 	var input struct {
 		Category          string `json:"category"`
 		Name              string `json:"name"`
+		AssetTag          string `json:"assetTag"`
 		SerialNumber      string `json:"serialNumber"`
 		Specs             string `json:"specs"`
 		BranchID          string `json:"branchId"`
 		WarrantyExpiresAt string `json:"warrantyExpiresAt"`
+		Cost              string `json:"cost"`
+		Status            string `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil {
 		httpx.Error(c, http.StatusBadRequest, "invalid stock payload")
+		return
+	}
+	if strings.TrimSpace(input.Category) == "" {
+		httpx.Error(c, http.StatusBadRequest, "category is required")
 		return
 	}
 	if strings.TrimSpace(input.Name) == "" {
 		httpx.Error(c, http.StatusBadRequest, "name is required")
 		return
 	}
-	result, err := server.db.Exec(`
-		UPDATE stock_items
+	if strings.TrimSpace(input.AssetTag) == "" {
+		httpx.Error(c, http.StatusBadRequest, "assetTag is required")
+		return
+	}
+	if strings.TrimSpace(input.BranchID) == "" {
+		httpx.Error(c, http.StatusBadRequest, "branchId is required")
+		return
+	}
+	allowed, err := server.inventoryItemScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "stock item not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "stock item not found")
+		return
+	}
+	allowed, err = server.locationScope(c, input.BranchID)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusForbidden, "forbidden")
+		return
+	}
+	       result, err := server.db.Exec(`
+		       UPDATE stock_items
 		SET category = $2,
 			name = $3,
-			serial_number = NULLIF($4, ''),
-			specs = NULLIF($5, ''),
-			branch_id = NULLIF($6, '')::uuid,
-			warranty_expires_at = NULLIF($7, '')::date,
+			asset_tag = $4,
+			serial_number = NULLIF($5, ''),
+			specs = NULLIF($6, ''),
+			branch_id = NULLIF($7, '')::uuid,
+			warranty_expires_at = NULLIF($8, '')::date,
+			cost = NULLIF($9, '')::numeric(12,2),
+			status = COALESCE(NULLIF($10, ''), status),
 			updated_at = NOW()
 		WHERE id = $1::uuid
-	`, c.Param("id"), strings.TrimSpace(input.Category), strings.TrimSpace(input.Name), strings.TrimSpace(input.SerialNumber), strings.TrimSpace(input.Specs), strings.TrimSpace(input.BranchID), strings.TrimSpace(input.WarrantyExpiresAt))
+	`, c.Param("id"), strings.TrimSpace(input.Category), strings.TrimSpace(input.Name), strings.TrimSpace(input.AssetTag), strings.TrimSpace(input.SerialNumber), strings.TrimSpace(input.Specs), strings.TrimSpace(input.BranchID), strings.TrimSpace(input.WarrantyExpiresAt), strings.TrimSpace(input.Cost), strings.TrimSpace(input.Status))
 	if err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
@@ -1220,16 +1535,29 @@ func (server *apiServer) updateStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "stock item not found")
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_updated", TargetType: "stock_item", TargetID: c.Param("id"), Detail: input})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_updated", TargetType: "inventory_item", TargetID: c.Param("id"), Detail: input})
 	httpx.JSON(c, http.StatusOK, gin.H{"status": "updated"})
 }
 
-func (server *apiServer) deleteStockItem(c *gin.Context) {
+func (server *apiServer) deleteInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	allowed, err := server.inventoryItemScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "stock item not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "stock item not found")
+		return
+	}
 	var status string
-	if err := server.db.QueryRow(`SELECT status FROM stock_items WHERE id = $1::uuid`, c.Param("id")).Scan(&status); err != nil {
+	if err = server.db.QueryRow(`SELECT status FROM stock_items WHERE id = $1::uuid`, c.Param("id")).Scan(&status); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "stock item not found")
 			return
@@ -1250,11 +1578,11 @@ func (server *apiServer) deleteStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "stock item not found")
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_deleted", TargetType: "stock_item", TargetID: c.Param("id")})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_deleted", TargetType: "inventory_item", TargetID: c.Param("id")})
 	httpx.JSON(c, http.StatusOK, gin.H{"status": "deleted"})
 }
 
-func (server *apiServer) allocateStockItem(c *gin.Context) {
+func (server *apiServer) allocateInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
@@ -1265,8 +1593,30 @@ func (server *apiServer) allocateStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "userId is required")
 		return
 	}
-	result, err := server.db.Exec(`
-		UPDATE stock_items
+	allowed, err := server.inventoryItemScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "stock item not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "stock item not found")
+		return
+	}
+	user, err := server.fetchUserByID(strings.TrimSpace(input.UserID))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "user not found")
+		return
+	}
+	if !server.entityAllowedByID(c, user.EntityID) {
+		httpx.Error(c, http.StatusBadRequest, "user not found")
+		return
+	}
+	       result, err := server.db.Exec(`
+		       UPDATE stock_items
 		SET assigned_user_id = $2::uuid, status = 'allocated', updated_at = NOW()
 		WHERE id = $1::uuid
 	`, c.Param("id"), strings.TrimSpace(input.UserID))
@@ -1278,16 +1628,29 @@ func (server *apiServer) allocateStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "stock item not found")
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_allocated", TargetType: "stock_item", TargetID: c.Param("id"), Detail: input})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_allocated", TargetType: "inventory_item", TargetID: c.Param("id"), Detail: input})
 	httpx.JSON(c, http.StatusOK, gin.H{"status": "allocated"})
 }
 
-func (server *apiServer) returnStockItem(c *gin.Context) {
+func (server *apiServer) returnInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
-	result, err := server.db.Exec(`
-		UPDATE stock_items
+	allowed, err := server.inventoryItemScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "stock item not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "stock item not found")
+		return
+	}
+	       result, err := server.db.Exec(`
+		       UPDATE stock_items
 		SET assigned_user_id = NULL, status = 'returned', updated_at = NOW()
 		WHERE id = $1::uuid
 	`, c.Param("id"))
@@ -1299,16 +1662,29 @@ func (server *apiServer) returnStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "stock item not found")
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_returned", TargetType: "stock_item", TargetID: c.Param("id")})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_returned", TargetType: "inventory_item", TargetID: c.Param("id")})
 	httpx.JSON(c, http.StatusOK, gin.H{"status": "returned"})
 }
 
-func (server *apiServer) retireStockItem(c *gin.Context) {
+func (server *apiServer) retireInventoryItem(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
-	result, err := server.db.Exec(`
-		UPDATE stock_items
+	allowed, err := server.inventoryItemScope(c, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "stock item not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !allowed {
+		httpx.Error(c, http.StatusNotFound, "stock item not found")
+		return
+	}
+	       result, err := server.db.Exec(`
+		       UPDATE stock_items
 		SET assigned_user_id = NULL, status = 'retired', updated_at = NOW()
 		WHERE id = $1::uuid
 	`, c.Param("id"))
@@ -1320,7 +1696,7 @@ func (server *apiServer) retireStockItem(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "stock item not found")
 		return
 	}
-	middleware.TagAudit(c, middleware.AuditMeta{Action: "stock_item_retired", TargetType: "stock_item", TargetID: c.Param("id")})
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "inventory_item_retired", TargetType: "inventory_item", TargetID: c.Param("id")})
 	httpx.JSON(c, http.StatusOK, gin.H{"status": "retired"})
 }
 
@@ -1438,6 +1814,11 @@ func (server *apiServer) listRequests(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	page, pageSize, paginate := parsePaginationRequest(c, 12)
 	searchQuery := strings.ToLower(strings.TrimSpace(c.Query("search")))
 	statusFilter := strings.TrimSpace(c.Query("status"))
@@ -1452,6 +1833,13 @@ func (server *apiServer) listRequests(c *gin.Context) {
 	whereClauses := []string{"1 = 1"}
 	args := make([]any, 0, 8)
 	argIndex := 1
+	if claims.Role != "super_admin" {
+		entityArg := argIndex
+		userArg := argIndex + 1
+		whereClauses = append(whereClauses, fmt.Sprintf("(requester.entity_id = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = requester.entity_id))", entityArg, userArg))
+		args = append(args, claims.EntityID, claims.UserID)
+		argIndex += 2
+	}
 	if statusFilter != "" && statusFilter != "all" {
 		whereClauses = append(whereClauses, fmt.Sprintf("r.status = $%d", argIndex))
 		args = append(args, statusFilter)
@@ -1644,8 +2032,8 @@ func (server *apiServer) updateRequestStatus(c *gin.Context) {
 	requestID := c.Param("id")
 	status := strings.TrimSpace(input.Status)
 	notes := strings.TrimSpace(input.Notes)
-	var requestType string
-	if err := server.db.QueryRow(`SELECT type FROM requests WHERE id = $1::uuid`, requestID).Scan(&requestType); err != nil {
+	requestType, err := server.requestScope(c, requestID)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "request not found")
 			return
@@ -1705,8 +2093,25 @@ func (server *apiServer) assignRequest(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "assigneeId is required")
 		return
 	}
+	if _, err := server.requestScope(c, c.Param("id")); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "request not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := server.validateTicketAssignee(strings.TrimSpace(input.AssigneeID)); err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	assignee, err := server.fetchUserByID(strings.TrimSpace(input.AssigneeID))
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, "assigneeId is invalid")
+		return
+	}
+	if !server.entityAllowedByID(c, assignee.EntityID) {
+		httpx.Error(c, http.StatusBadRequest, "assigneeId is invalid")
 		return
 	}
 	result, err := server.db.Exec(`
@@ -1785,6 +2190,9 @@ func (server *apiServer) loadRequests(clause string, args ...any) ([]gin.H, erro
 }
 
 func (server *apiServer) listChatChannels(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team", "employee") {
+		return
+	}
 	claims := middleware.CurrentClaims(c)
 	if claims == nil {
 		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
@@ -1793,16 +2201,22 @@ func (server *apiServer) listChatChannels(c *gin.Context) {
 	page, pageSize, paginate := parsePaginationRequest(c, 100)
 	searchQuery := strings.ToLower(strings.TrimSpace(c.Query("search")))
 	kindFilter := strings.ToLower(strings.TrimSpace(c.Query("kind")))
+	statusFilter := strings.ToLower(strings.TrimSpace(c.Query("status")))
 	if err := server.ensureChatChannelsForUser(claims); err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
-	whereClauses := []string{"m.user_id = $1::uuid", "(c.status <> 'closed' OR c.closed_at IS NULL OR c.closed_at >= NOW() - INTERVAL '7 days')"}
+	whereClauses := []string{"m.user_id = $1::uuid"}
 	args := []any{claims.UserID}
 	argIndex := 2
 	if kindFilter != "" && kindFilter != "all" {
 		whereClauses = append(whereClauses, fmt.Sprintf("c.kind = $%d", argIndex))
 		args = append(args, kindFilter)
+		argIndex++
+	}
+	if statusFilter == "open" || statusFilter == "closed" {
+		whereClauses = append(whereClauses, fmt.Sprintf("c.status = $%d", argIndex))
+		args = append(args, statusFilter)
 		argIndex++
 	}
 	if searchQuery != "" {
@@ -2026,6 +2440,8 @@ func (server *apiServer) createChatChannel(c *gin.Context) {
 		return
 	}
 	defer tx.Rollback()
+	var initialMessageID string
+	var initialMessageCreatedAt time.Time
 
 	var channelID string
 	if err := tx.QueryRow(`
@@ -2062,10 +2478,11 @@ func (server *apiServer) createChatChannel(c *gin.Context) {
 		}
 	}
 	if input.InitialMessage != "" {
-		if _, err := tx.Exec(`
+		if err := tx.QueryRow(`
 			INSERT INTO chat_messages (channel_id, author_id, body)
 			VALUES ($1::uuid, $2::uuid, $3)
-		`, channelID, claims.UserID, input.InitialMessage); err != nil {
+			RETURNING id, created_at
+		`, channelID, claims.UserID, input.InitialMessage).Scan(&initialMessageID, &initialMessageCreatedAt); err != nil {
 			httpx.Error(c, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -2852,8 +3269,8 @@ func (server *apiServer) chatWebsocket(c *gin.Context) {
 		if body == "" || len(body) > 4000 {
 			continue
 		}
-		var channelStatus string
-		if err := server.db.QueryRow(`SELECT status FROM chat_channels WHERE id = $1::uuid`, channelID).Scan(&channelStatus); err != nil {
+		var channelStatus, channelName, channelKind string
+		if err := server.db.QueryRow(`SELECT status, name, kind FROM chat_channels WHERE id = $1::uuid`, channelID).Scan(&channelStatus, &channelName, &channelKind); err != nil {
 			continue
 		}
 		if channelStatus == "closed" {
@@ -2880,14 +3297,14 @@ func (server *apiServer) chatWebsocket(c *gin.Context) {
 			CreatedAt:  createdAt.Format(time.RFC3339Nano),
 		}
 		server.chat.publish(channelID, envelope)
-			server.mirrorChatMessageToMattermost(c.Request.Context(), chatbridge.OutboundMessageInput{
-				ChatChannelID: channelID,
-				ChannelName:   channelName,
-				ChannelKind:   channelKind,
-				ChatMessageID: messageID,
-				AuthorName:    claims.Name,
-				Body:          body,
-			})
+		server.mirrorChatMessageToMattermost(c.Request.Context(), chatbridge.OutboundMessageInput{
+			ChatChannelID: channelID,
+			ChannelName:   channelName,
+			ChannelKind:   channelKind,
+			ChatMessageID: messageID,
+			AuthorName:    claims.Name,
+			Body:          body,
+		})
 	}
 }
 

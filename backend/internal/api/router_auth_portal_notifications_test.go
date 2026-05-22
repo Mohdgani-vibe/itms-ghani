@@ -337,6 +337,164 @@ func TestRouterListAlertsReturnsClamAVTrendSummary(t *testing.T) {
 	}
 }
 
+func TestRouterAlertsDashboardRoute(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/alerts/dashboard?source=clamav", "")
+	defer cleanup()
+
+	createdAt := time.Now().UTC()
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT al.id,
+			COALESCE(a.id::text, ''), COALESCE(a.asset_tag, ''), COALESCE(a.name, ''), COALESCE(a.hostname, ''),
+			COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''),
+			COALESCE(NULLIF(ad.name, ''), NULLIF(ud.name, ''), 'Unassigned'),
+			CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'openscap'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'clamav'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'terminal'
+		ELSE lower(al.source)
+	END AS source_key,
+			CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'Patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'OpenSCAP Hardening'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'ClamScan'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'Terminal'
+		ELSE initcap(replace(lower(al.source), '_', ' '))
+	END AS source_label,
+			COALESCE(al.source, ''), al.severity, al.title, COALESCE(al.detail, ''), al.acknowledged, al.resolved, al.created_at
+		FROM alerts al
+		LEFT JOIN assets a ON a.id = al.device_id
+		LEFT JOIN users u ON u.id = al.user_id
+		LEFT JOIN departments ad ON ad.id = a.dept_id
+		LEFT JOIN departments ud ON ud.id = u.dept_id
+		WHERE 1 = 1 AND (COALESCE(a.entity_id, u.entity_id) = $1::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $2::uuid AND uea.entity_id = COALESCE(a.entity_id, u.entity_id))) AND CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'openscap'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'clamav'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'terminal'
+		ELSE lower(al.source)
+	END IN ('wazuh', 'openscap', 'clamav')
+		ORDER BY al.created_at DESC
+	`)).WithArgs("entity-1", "user-1").WillReturnRows(sqlmock.NewRows([]string{"id", "asset_id", "asset_tag", "asset_name", "hostname", "user_id", "user_name", "user_email", "department", "source_key", "source_label", "raw_source", "severity", "title", "detail", "acknowledged", "resolved", "created_at"}).
+		AddRow("alert-1", "asset-1", "AST-001", "Laptop 1", "host-1", "user-1", "User One", "user1@example.com", "Security", "clamav", "ClamScan", "clamav", "critical", "Malware detected", "Trojan signature found", true, false, createdAt))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "alerts dashboard route")
+
+	var body struct {
+		Source      string `json:"source"`
+		SourceLabel string `json:"sourceLabel"`
+		Systems     []struct {
+			Hostname   string `json:"hostname"`
+			Status     string `json:"status"`
+			ErrorCount int    `json:"errorCount"`
+		} `json:"systems"`
+		Departments []struct {
+			Name       string `json:"name"`
+			ErrorCount int    `json:"errorCount"`
+		} `json:"departments"`
+		ModuleCards []struct {
+			Source             string `json:"source"`
+			TotalSystemsScanned int   `json:"totalSystemsScanned"`
+			ErrorSystemsCount  int    `json:"errorSystemsCount"`
+			StatusColor        string `json:"statusColor"`
+		} `json:"moduleCards"`
+		Report struct {
+			Module string `json:"module"`
+		} `json:"report"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if body.Source != "clamav" || body.SourceLabel != "ClamScan" {
+		t.Fatalf("source = %q/%q, want clamav/ClamScan", body.Source, body.SourceLabel)
+	}
+	if len(body.Systems) != 1 || body.Systems[0].Hostname != "host-1" || body.Systems[0].Status != "error" || body.Systems[0].ErrorCount != 1 {
+		t.Fatalf("systems = %+v, want single error system for host-1", body.Systems)
+	}
+	if len(body.Departments) != 1 || body.Departments[0].Name != "Security" || body.Departments[0].ErrorCount != 1 {
+		t.Fatalf("departments = %+v, want Security error summary", body.Departments)
+	}
+	var clamavCardFound bool
+	for _, card := range body.ModuleCards {
+		if card.Source == "clamav" {
+			clamavCardFound = true
+			if card.TotalSystemsScanned != 1 || card.ErrorSystemsCount != 1 || card.StatusColor != "red" {
+				t.Fatalf("clamav module card = %+v, want scanned=1 errors=1 statusColor=red", card)
+			}
+		}
+	}
+	if !clamavCardFound {
+		t.Fatal("expected clamav module card in dashboard response")
+	}
+	if body.Report.Module != "clamav" {
+		t.Fatalf("report.module = %q, want clamav", body.Report.Module)
+	}
+}
+
+func TestRouterMyAlertsDashboardRestrictsToCurrentUser(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "employee", "employee-1", "entity-1", http.MethodGet, "/api/me/alerts/dashboard?source=wazuh", "")
+	defer cleanup()
+
+	createdAt := time.Now().UTC()
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT al.id,
+			COALESCE(a.id::text, ''), COALESCE(a.asset_tag, ''), COALESCE(a.name, ''), COALESCE(a.hostname, ''),
+			COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''),
+			COALESCE(NULLIF(ad.name, ''), NULLIF(ud.name, ''), 'Unassigned'),
+			CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'openscap'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'clamav'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'terminal'
+		ELSE lower(al.source)
+	END AS source_key,
+			CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'Patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'OpenSCAP Hardening'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'ClamScan'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'Terminal'
+		ELSE initcap(replace(lower(al.source), '_', ' '))
+	END AS source_label,
+			COALESCE(al.source, ''), al.severity, al.title, COALESCE(al.detail, ''), al.acknowledged, al.resolved, al.created_at
+		FROM alerts al
+		LEFT JOIN assets a ON a.id = al.device_id
+		LEFT JOIN users u ON u.id = al.user_id
+		LEFT JOIN departments ad ON ad.id = a.dept_id
+		LEFT JOIN departments ud ON ud.id = u.dept_id
+		WHERE 1 = 1 AND al.user_id = $1::uuid AND CASE
+		WHEN lower(al.source) IN ('salt', 'salt_patch', 'patch') THEN 'patch'
+		WHEN lower(al.source) IN ('openscap', 'open_scap', 'hardening') THEN 'openscap'
+		WHEN lower(al.source) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'clamav'
+		WHEN lower(al.source) IN ('terminal', 'terminal_session') THEN 'terminal'
+		ELSE lower(al.source)
+	END IN ('wazuh', 'openscap', 'clamav')
+		ORDER BY al.created_at DESC
+	`)).WithArgs("employee-1").WillReturnRows(sqlmock.NewRows([]string{"id", "asset_id", "asset_tag", "asset_name", "hostname", "user_id", "user_name", "user_email", "department", "source_key", "source_label", "raw_source", "severity", "title", "detail", "acknowledged", "resolved", "created_at"}).
+		AddRow("alert-1", "asset-1", "AST-001", "Laptop 1", "host-1", "employee-1", "Employee One", "employee1@example.com", "Finance", "wazuh", "Wazuh", "wazuh", "high", "Endpoint drift detected", "Policy mismatch", true, false, createdAt))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "my alerts dashboard route")
+
+	var body struct {
+		Source  string `json:"source"`
+		Systems []struct {
+			Hostname string `json:"hostname"`
+			Username string `json:"username"`
+			Status   string `json:"status"`
+		} `json:"systems"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if body.Source != "wazuh" {
+		t.Fatalf("source = %q, want wazuh", body.Source)
+	}
+	if len(body.Systems) != 1 || body.Systems[0].Hostname != "host-1" || body.Systems[0].Username != "Employee One" || body.Systems[0].Status != "error" {
+		t.Fatalf("systems = %+v, want single user-scoped wazuh system", body.Systems)
+	}
+}
+
 func TestRouterListAnnouncementsAllowsEmployee(t *testing.T) {
 	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "employee", "employee-1", "entity-1", http.MethodGet, "/api/announcements", "")
 	defer cleanup()

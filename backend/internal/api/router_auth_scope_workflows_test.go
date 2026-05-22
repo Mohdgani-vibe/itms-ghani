@@ -79,9 +79,9 @@ func TestRouterListUsersScopesEmployeeToSelf(t *testing.T) {
 	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "employee", "employee-1", "entity-1", http.MethodGet, "/api/users", "")
 	defer cleanup()
 
-	mock.ExpectQuery(`SELECT u\.id::text, .*COALESCE\(l\.full_name, ''\), .*AS device_count, .*AS item_count, .*AS asset_count, COUNT\(\*\) OVER\(\) FROM users u LEFT JOIN roles r ON r\.id = u\.role_id LEFT JOIN departments d ON d\.id = u\.dept_id LEFT JOIN locations l ON l\.id = u\.location_id WHERE 1 = 1 AND u\.id = \$1::uuid AND lower\(u\.full_name\) NOT LIKE '%probe%' AND lower\(u\.full_name\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%smoke%' ORDER BY COALESCE\(u\.full_name, ''\), COALESCE\(u\.email, ''\), u\.id`).WithArgs("employee-1").WillReturnRows(sqlmock.NewRows([]string{
-		"id", "full_name", "email", "emp_id", "status", "entity_id", "dept_id", "location_id", "role", "department_name", "location_name", "device_count", "item_count", "asset_count", "count",
-	}).AddRow("employee-1", "Portal Employee", "employee@example.com", "EMP-1", "active", "entity-1", "dept-1", "loc-1", "employee", "Engineering", "Bengaluru", 1, 0, 1, 1))
+	mock.ExpectQuery(`SELECT u\.id::text, .*COALESCE\(l\.full_name, ''\), .*AS asset_count, COUNT\(\*\) OVER\(\) FROM users u LEFT JOIN roles r ON r\.id = u\.role_id LEFT JOIN departments d ON d\.id = u\.dept_id LEFT JOIN locations l ON l\.id = u\.location_id WHERE 1 = 1 AND u\.id = \$1::uuid AND lower\(u\.full_name\) NOT LIKE '%probe%' AND lower\(u\.full_name\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%smoke%' ORDER BY COALESCE\(u\.full_name, ''\), COALESCE\(u\.email, ''\), u\.id`).WithArgs("employee-1").WillReturnRows(sqlmock.NewRows([]string{
+		"id", "full_name", "email", "emp_id", "status", "entity_id", "dept_id", "location_id", "role", "department_name", "location_name", "asset_count", "count",
+	}).AddRow("employee-1", "Portal Employee", "employee@example.com", "EMP-1", "active", "entity-1", "dept-1", "loc-1", "employee", "Engineering", "Bengaluru", 1, 1))
 	mock.ExpectQuery(`SELECT department_label, COUNT\(\*\) FROM \( SELECT COALESCE\(NULLIF\(d\.name, ''\), NULLIF\(l\.full_name, ''\), 'Unassigned'\) AS department_label FROM users u LEFT JOIN roles r ON r\.id = u\.role_id LEFT JOIN departments d ON d\.id = u\.dept_id LEFT JOIN locations l ON l\.id = u\.location_id WHERE 1 = 1 AND u\.id = \$1::uuid AND lower\(u\.full_name\) NOT LIKE '%probe%' AND lower\(u\.full_name\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.email, ''\)\) NOT LIKE '%smoke%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%probe%' AND lower\(COALESCE\(u\.emp_id, ''\)\) NOT LIKE '%smoke%' \) summary_users GROUP BY department_label ORDER BY COUNT\(\*\) DESC, department_label ASC`).WithArgs("employee-1").WillReturnRows(sqlmock.NewRows([]string{"department_label", "count"}).AddRow("Engineering", 1))
 
 	router.ServeHTTP(recorder, request)
@@ -101,6 +101,74 @@ func TestRouterListUsersScopesEmployeeToSelf(t *testing.T) {
 	}
 	if len(body.Items) != 1 || body.Items[0].ID != "employee-1" {
 		t.Fatalf("items = %+v, want single employee self row", body.Items)
+	}
+}
+
+func TestRouterGetUserAssetsRejectsOutOfScopeUser(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/users/user-2/assets", "")
+	defer cleanup()
+
+	expectUserByIDLookup(mock, "user-2", "EMP-2", "Scoped User", "user-2@example.com", "entity-2", "employee", true)
+	expectEntityAccessCheck(mock, "user-1", "entity-2", false)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusForbidden, "get user assets out-of-scope route")
+}
+
+func TestRouterUserMetaOptionsScopesDepartmentsAndBranches(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/users/meta/options", "")
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT id, name FROM roles ORDER BY name`)).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("role-1", "employee"))
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT d.id, d.name
+			FROM departments d
+			WHERE d.entity_id = $1::uuid
+			   OR EXISTS (
+			       SELECT 1 FROM user_entity_access uea
+			       WHERE uea.user_id = $2::uuid AND uea.entity_id = d.entity_id
+			   )
+			ORDER BY d.name`)).
+		WithArgs("entity-1", "user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("dept-1", "Finance"))
+	mock.ExpectQuery(regexp.QuoteMeta(`
+			SELECT l.id, l.full_name AS name
+			FROM locations l
+			WHERE l.entity_id = $1::uuid
+			   OR EXISTS (
+			       SELECT 1 FROM user_entity_access uea
+			       WHERE uea.user_id = $2::uuid AND uea.entity_id = l.entity_id
+			   )
+			ORDER BY l.full_name`)).
+		WithArgs("entity-1", "user-1").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name"}).AddRow("branch-1", "HQ"))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "user meta options scoped route")
+
+	var body struct {
+		Roles []struct {
+			ID string `json:"id"`
+		} `json:"roles"`
+		Departments []struct {
+			ID string `json:"id"`
+		} `json:"departments"`
+		Branches []struct {
+			ID string `json:"id"`
+		} `json:"branches"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if len(body.Roles) != 1 || body.Roles[0].ID != "role-1" {
+		t.Fatalf("roles = %+v, want roles payload", body.Roles)
+	}
+	if len(body.Departments) != 1 || body.Departments[0].ID != "dept-1" {
+		t.Fatalf("departments = %+v, want scoped department payload", body.Departments)
+	}
+	if len(body.Branches) != 1 || body.Branches[0].ID != "branch-1" {
+		t.Fatalf("branches = %+v, want scoped branch payload", body.Branches)
 	}
 }
 
