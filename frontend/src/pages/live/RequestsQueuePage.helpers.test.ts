@@ -66,8 +66,8 @@ describe('RequestsQueuePage helpers', () => {
       badge: 'bg-brand-100 text-brand-700',
     });
     expect(getSectionTone('support')).toMatchObject({
-      shell: 'border-sky-100 bg-white/95 shadow-sm backdrop-blur',
-      badge: 'bg-sky-100 text-sky-700',
+      shell: 'border-emerald-100 bg-white/95 shadow-sm backdrop-blur',
+      badge: 'bg-emerald-100 text-emerald-700',
     });
   });
 

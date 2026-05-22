@@ -12,8 +12,8 @@ describe('RequestsQueueSection', () => {
         emptyMessage="No pending requests"
         visibleItems={4}
         tone={{
-          shell: 'border-sky-100 bg-white',
-          badge: 'bg-sky-100 text-sky-700',
+          shell: 'border-emerald-100 bg-white',
+          badge: 'bg-emerald-100 text-emerald-700',
           heading: 'text-zinc-950',
           subtext: 'text-zinc-600',
         }}
@@ -38,8 +38,8 @@ describe('RequestsQueueSection', () => {
         emptyMessage="No pending requests"
         visibleItems={0}
         tone={{
-          shell: 'border-sky-100 bg-white',
-          badge: 'bg-sky-100 text-sky-700',
+          shell: 'border-emerald-100 bg-white',
+          badge: 'bg-emerald-100 text-emerald-700',
           heading: 'text-zinc-950',
           subtext: 'text-zinc-600',
         }}

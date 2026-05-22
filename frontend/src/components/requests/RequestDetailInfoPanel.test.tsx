@@ -25,7 +25,7 @@ describe('RequestDetailInfoPanel', () => {
     expect(markup).toContain('Created');
     expect(markup).toContain('07 May 2026');
     expect(markup).toContain('Updated 08 May 2026');
-    expect(markup).toContain('text-sky-700');
+    expect(markup).toContain('text-emerald-700');
   });
 
   it('renders static names when profile links are unavailable', () => {

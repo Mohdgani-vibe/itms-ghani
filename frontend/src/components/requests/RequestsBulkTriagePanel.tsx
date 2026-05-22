@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface BulkFeedback {
   tone: 'success' | 'warning';
   actionLabel: string;
@@ -44,7 +46,7 @@ export default function RequestsBulkTriagePanel({
 }: RequestsBulkTriagePanelProps) {
   return (
     <>
-      <div className="mb-4 rounded-2xl border border-sky-100 bg-[linear-gradient(180deg,_#ffffff_0%,_rgba(240,249,255,0.9)_100%)] p-4 shadow-sm">
+      <div className="mb-4 rounded-2xl border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_rgba(240,253,244,0.9)_100%)] p-4 shadow-sm">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Bulk Triage</div>
@@ -53,17 +55,17 @@ export default function RequestsBulkTriagePanel({
           <div className="text-sm font-semibold text-zinc-900">{bulkSelectedCount} selected</div>
         </div>
         <div className="mt-4 grid gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)_auto_auto]">
-          <select value={bulkAssigneeId} onChange={(event) => onAssigneeChange(event.target.value)} className="rounded-xl border border-sky-100 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm">
+          <select value={bulkAssigneeId} onChange={(event) => onAssigneeChange(event.target.value)} className="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm">
             <option value="">Assign selected requests</option>
             {assigneeOptions.map((user) => <option key={user.value} value={user.value}>{user.label}</option>)}
           </select>
-          <select value={bulkStatus} onChange={(event) => onStatusChange(event.target.value)} className="rounded-xl border border-sky-100 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm">
+          <select value={bulkStatus} onChange={(event) => onStatusChange(event.target.value)} className="rounded-xl border border-emerald-100 bg-white px-3 py-2 text-sm text-zinc-900 shadow-sm">
             {statusOptions.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
           </select>
-          <button type="button" onClick={onAssignSelected} disabled={bulkSaving || !bulkSelectedCount || !bulkAssigneeId} className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700 hover:bg-sky-100 disabled:opacity-60">
+          <button type="button" onClick={onAssignSelected} disabled={bulkSaving || !bulkSelectedCount || !bulkAssigneeId} className={`rounded-xl px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}>
             Assign Selected
           </button>
-          <button type="button" onClick={onUpdateStatus} disabled={bulkSaving || !bulkSelectedCount} className="rounded-xl bg-sky-700 px-4 py-2 text-sm font-bold text-white hover:bg-sky-800 disabled:opacity-60">
+          <button type="button" onClick={onUpdateStatus} disabled={bulkSaving || !bulkSelectedCount} className={`rounded-xl px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.save}`}>
             {bulkSaving ? 'Applying...' : 'Update Status'}
           </button>
         </div>
@@ -100,7 +102,7 @@ export default function RequestsBulkTriagePanel({
           </div>
         ) : null}
       </div>
-      <div className="mb-3 flex items-center justify-between rounded-2xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-xs text-zinc-600 lg:hidden">
+      <div className="mb-3 flex items-center justify-between rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs text-zinc-600 lg:hidden">
         <div className="font-semibold text-zinc-900">Compact table mode</div>
         <div>Requester, assignee, and updated details collapse into each row on smaller screens.</div>
       </div>

@@ -49,6 +49,7 @@ export default function RequestsQueueToolbar({
   typeCounts,
   activeTypeLabel,
   activeStatusLabel,
+  viewMode,
   unassignedCount,
   needsReviewCount,
   recentActivityCount,
@@ -59,7 +60,7 @@ export default function RequestsQueueToolbar({
   onViewModeChange,
 }: RequestsQueueToolbarProps) {
   return (
-    <section className="rounded-[24px] border border-sky-100 bg-white/95 p-4 shadow-sm md:p-5">
+    <section className="rounded-[24px] border border-emerald-100 bg-white/95 p-4 shadow-sm md:p-5">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:gap-4">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
@@ -67,7 +68,7 @@ export default function RequestsQueueToolbar({
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Search title, requester, assignee, request id"
-            className="w-full rounded-[20px] border border-sky-100 bg-white py-3 pl-10 pr-4 text-sm text-zinc-900 shadow-sm"
+            className="w-full rounded-[20px] border border-emerald-100 bg-white py-3 pl-10 pr-4 text-sm text-zinc-900 shadow-sm"
           />
         </div>
 
@@ -76,7 +77,7 @@ export default function RequestsQueueToolbar({
           <select
             value={typeFilter}
             onChange={(event) => onTypeFilterChange(event.target.value)}
-            className="w-full rounded-[20px] border border-sky-100 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm"
+            className="w-full rounded-[20px] border border-emerald-100 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm"
           >
             {TYPE_FILTER_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -91,7 +92,7 @@ export default function RequestsQueueToolbar({
           <select
             value={statusFilter}
             onChange={(event) => onStatusFilterChange(event.target.value)}
-            className="w-full rounded-[20px] border border-sky-100 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm"
+            className="w-full rounded-[20px] border border-emerald-100 bg-white px-4 py-3 text-sm font-medium text-zinc-700 shadow-sm"
           >
             {[
               { value: 'all', label: 'All', count: totalRequests },
@@ -111,20 +112,20 @@ export default function RequestsQueueToolbar({
         </div>
       </div>
 
-      <div className="mt-4 rounded-xl border border-sky-100 bg-sky-50/70 px-4 py-3 text-sm text-zinc-600">
+      <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-sm text-zinc-600">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-end">
-          <div className="inline-flex rounded-full border border-sky-100 bg-white p-1 shadow-sm">
+          <div className="inline-flex rounded-full border border-emerald-100 bg-white p-1 shadow-sm">
             <button
               type="button"
               onClick={() => onViewModeChange('list')}
-              className="rounded-full bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-700 transition hover:bg-sky-50"
+              className={`rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${viewMode === 'list' ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
             >
               List View
             </button>
             <button
               type="button"
               onClick={() => onViewModeChange('table')}
-              className="rounded-full bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-sky-700 transition hover:bg-sky-50"
+              className={`rounded-full px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition ${viewMode === 'table' ? 'bg-emerald-100 text-emerald-800' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
             >
               Table View
             </button>
@@ -133,34 +134,34 @@ export default function RequestsQueueToolbar({
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-3 xl:grid-cols-4">
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-4">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Unassigned</div>
-            <UserPlus className="h-4 w-4 text-sky-500" />
+            <UserPlus className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-zinc-950">{unassignedCount}</div>
           <div className="mt-1 text-xs text-zinc-500">Requests still waiting for an owner.</div>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-4">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Active Today</div>
-            <Clock3 className="h-4 w-4 text-sky-500" />
+            <Clock3 className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-zinc-950">{recentActivityCount}</div>
           <div className="mt-1 text-xs text-zinc-500">Requests updated in the last 24 hours.</div>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-4">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Needs Review</div>
-            <Sparkles className="h-4 w-4 text-sky-500" />
+            <Sparkles className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-zinc-950">{needsReviewCount}</div>
           <div className="mt-1 text-xs text-zinc-500">Enrollments and unowned tickets to handle first.</div>
         </div>
-        <div className="rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-4">
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Filtered View</div>
-            <Filter className="h-4 w-4 text-sky-500" />
+            <Filter className="h-4 w-4 text-emerald-500" />
           </div>
           <div className="mt-2 text-2xl font-black text-zinc-950">{hasActiveFilters ? 1 : 0}</div>
           <div className="mt-1 text-xs text-zinc-500">{hasActiveFilters ? 'Custom filters are narrowing the queue.' : 'Viewing the full queue with default filters.'}</div>

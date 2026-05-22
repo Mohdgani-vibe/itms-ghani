@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ClipboardList, Clock3, MessageSquareText, PlusCircle, Sparkles } from 'lucide-react';
 import { apiRequest } from '../../lib/api';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import Pagination from '../../components/Pagination';
 
 interface RequestComment {
@@ -161,7 +162,7 @@ export default function MyRequestsPage() {
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.12),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#fff8eb_100%)] px-6 py-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
+              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
                 <Sparkles className="mr-2 h-3.5 w-3.5" />
                 Employee Workspace
               </div>
@@ -195,7 +196,7 @@ export default function MyRequestsPage() {
 
       <form onSubmit={handleSubmit} className="grid gap-4 rounded-[28px] border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fbfdff_100%)] p-6 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="rounded-[20px] bg-sky-50 p-3 text-sky-700">
+          <div className="rounded-[20px] bg-emerald-50 p-3 text-emerald-700">
             <PlusCircle className="h-5 w-5" />
           </div>
           <div>
@@ -221,7 +222,7 @@ export default function MyRequestsPage() {
           <div className="mt-2 text-xs text-zinc-500">Useful details: device name, software name, urgency, affected date, and what you already tried.</div>
         </div>
         <div>
-          <button type="submit" disabled={submitting} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60">
+          <button type="submit" disabled={submitting} className={`rounded-lg px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}>
             {submitting ? 'Submitting...' : 'Raise Request'}
           </button>
         </div>
@@ -278,7 +279,7 @@ export default function MyRequestsPage() {
                           key={section.id}
                           type="button"
                           onClick={() => setDetailSectionByRequestId((current) => ({ ...current, [request.id]: section.id }))}
-                          className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-sky-300 bg-sky-100 text-sky-800 shadow-sm' : 'border-zinc-200 bg-white text-sky-700 hover:border-sky-200 hover:bg-sky-50'}`}
+                          className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? `${actionButtonStyles.save} shadow-sm` : 'border-emerald-200 bg-white text-emerald-800 hover:bg-emerald-50'}`}
                         >
                           {section.label}
                         </button>

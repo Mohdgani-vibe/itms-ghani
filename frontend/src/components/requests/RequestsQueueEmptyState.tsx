@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface RequestsQueueEmptyStateProps {
   hasActiveFilters: boolean;
   onResetFilters: () => void;
@@ -19,11 +21,11 @@ export default function RequestsQueueEmptyState({ hasActiveFilters, onResetFilte
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           {hasActiveFilters ? (
-            <button type="button" onClick={onResetFilters} className="rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-zinc-800">
+            <button type="button" onClick={onResetFilters} className={`rounded-2xl px-4 py-3 text-sm font-bold transition ${actionButtonStyles.save}`}>
               Reset Filters
             </button>
           ) : null}
-          <button type="button" onClick={onOpenDashboard} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50">
+          <button type="button" onClick={onOpenDashboard} className={`rounded-2xl px-4 py-3 text-sm font-bold transition ${actionButtonStyles.add}`}>
             Open Dashboard
           </button>
         </div>
