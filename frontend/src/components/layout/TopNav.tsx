@@ -319,8 +319,8 @@ export default function TopNav() {
                 to={`${basePath}${item.path}`}
                 className={`portal-nav-link px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
                   active
-                    ? 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
-                    : 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
+                    ? 'portal-nav-link-active bg-emerald-100 text-emerald-900 shadow-sm ring-1 ring-emerald-200/80 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-200 dark:hover:bg-emerald-500/20 dark:hover:text-white'
+                    : 'portal-nav-link-inactive bg-white text-emerald-700 hover:bg-emerald-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
                 }`}
               >
                 {item.name}

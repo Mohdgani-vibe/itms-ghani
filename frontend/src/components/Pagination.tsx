@@ -55,7 +55,7 @@ export default function Pagination({ currentPage, totalItems, pageSize, onPageCh
             key={page}
             type="button"
             onClick={() => onPageChange(page)}
-            className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+            className="rounded-lg bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
           >
             {page}
           </button>

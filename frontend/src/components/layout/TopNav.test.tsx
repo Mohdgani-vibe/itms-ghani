@@ -90,6 +90,7 @@ describe('TopNav', () => {
     expect(markup).toContain('Alerts');
     expect(markup).toContain('Requests');
     expect(markup).toContain('View Settings');
+    expect(markup).toContain('portal-nav-link-active');
     expect(markup).toContain('placeholder="Search..."');
     expect(markup).toContain('AK');
   });

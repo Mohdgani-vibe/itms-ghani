@@ -23,8 +23,54 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-slate-50, #f8fafc);
-  color: #18181b;
+  color: #000;
   transition: background-color 160ms ease, color 160ms ease;
+}
+
+::selection {
+  background-color: #dbeafe;
+  color: #0f172a;
+}
+
+body:not(.dark *) {
+  caret-color: #2563eb;
+}
+
+body:not(.dark *) .portal-nav-link-inactive,
+body:not(.dark *) .patch-workspace-tab-inactive {
+  background-color: #ffffff !important;
+  color: #1d4ed8 !important;
+}
+
+body:not(.dark *) .portal-nav-link-inactive:hover,
+body:not(.dark *) .patch-workspace-tab-inactive:hover {
+  background-color: #eff6ff !important;
+}
+
+body:not(.dark *) .portal-nav-link-active,
+body:not(.dark *) .patch-workspace-tab-active {
+  background-color: #dbeafe !important;
+  color: #1e3a8a !important;
+}
+
+body:not(.dark *) input,
+body:not(.dark *) textarea,
+body:not(.dark *) select,
+body:not(.dark *) button,
+body:not(.dark *) label,
+body:not(.dark *) p,
+body:not(.dark *) span,
+body:not(.dark *) td,
+body:not(.dark *) th,
+body:not(.dark *) li,
+body:not(.dark *) a,
+body:not(.dark *) h1,
+body:not(.dark *) h2,
+body:not(.dark *) h3,
+body:not(.dark *) h4,
+body:not(.dark *) h5,
+body:not(.dark *) h6 {
+  color: inherit;
 }
 
 #root {

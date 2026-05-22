@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 
+import { actionButtonStyles } from '../lib/buttonStyles';
+
 interface AppErrorBoundaryProps {
   children: ReactNode;
 }
@@ -44,13 +46,13 @@ export default class AppErrorBoundary extends Component<AppErrorBoundaryProps, A
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800"
+                className={`rounded-lg px-4 py-2 text-sm font-bold transition ${actionButtonStyles.add}`}
               >
                 Reload Portal
               </button>
               <a
                 href="/login"
-                className="rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50"
+                className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
               >
                 Return to Login
               </a>
