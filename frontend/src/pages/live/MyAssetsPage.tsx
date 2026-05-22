@@ -216,7 +216,7 @@ export default function MyAssetsPage() {
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.10),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#f6fbf7_100%)] px-6 py-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
+              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
                 Employee Workspace
               </div>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">My Assets</h1>
@@ -250,7 +250,7 @@ export default function MyAssetsPage() {
               key={section.id}
               type="button"
               onClick={() => handleSelectSection(section.id)}
-              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-sky-300 bg-sky-100 text-sky-800 shadow-sm' : 'border-zinc-200 bg-white text-sky-700 hover:border-sky-200 hover:bg-sky-50'}`}
+              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
             >
               {section.label}
             </button>

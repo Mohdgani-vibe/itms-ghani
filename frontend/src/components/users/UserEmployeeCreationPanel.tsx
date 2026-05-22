@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface LookupOption {
   id: string;
   name: string;
@@ -105,7 +107,7 @@ export default function UserEmployeeCreationPanel({
           <input type="password" value={employeeForm.initialPassword} onChange={(event) => onEmployeeFormFieldChange('initialPassword', event.target.value)} className="mt-2 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2 text-sm text-zinc-900" />
         </label>
       </div>
-      <button type="submit" disabled={creatingEmployee || !defaultEntityId} className="mt-5 rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60">{creatingEmployee ? 'Creating...' : 'Create Employee'}</button>
+      <button type="submit" disabled={creatingEmployee || !defaultEntityId} className={`mt-5 rounded-lg px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}>{creatingEmployee ? 'Creating...' : 'Create Employee'}</button>
     </form>
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
       <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Entity</div>

@@ -56,7 +56,7 @@ export default function UserDirectoryCard({
         onSelect();
       }
     }}
-    className={`cursor-pointer rounded-2xl border p-4 shadow-sm transition-colors ${active ? 'border-sky-300 bg-sky-100/70' : 'border-zinc-200 bg-white hover:border-sky-200 hover:bg-sky-50/40'}`}
+    className={`cursor-pointer rounded-2xl border p-4 shadow-sm transition-colors ${active ? 'border-emerald-300 bg-emerald-100/70' : 'border-zinc-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/40'}`}
   >
     <div className="flex items-start justify-between gap-4">
       <div className="flex min-w-0 items-start gap-3">
@@ -67,7 +67,7 @@ export default function UserDirectoryCard({
             disabled={isCurrentSessionUser}
             onChange={(event) => onToggleBulkSelection(event.target.checked)}
             onClick={(event) => event.stopPropagation()}
-            className="mt-1 h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
+            className="mt-1 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
           />
         ) : null}
         <div className="min-w-0">

@@ -55,7 +55,7 @@ export default function UserAuditToolbar({
             key={module}
             type="button"
             onClick={() => onAuditModuleFilterChange(module)}
-            className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+            className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${auditModuleFilter === module ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
           >
             {formatAuditModuleLabel(module)}
             <span className="ml-2 opacity-80">{module === 'all' ? auditTotal : (auditModuleCounts.get(module) || 0)}</span>
@@ -70,7 +70,7 @@ export default function UserAuditToolbar({
               key={action}
               type="button"
               onClick={() => onAuditActionFilterChange(action)}
-              className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${auditActionFilter === action ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
             >
               {formatAuditActionLabel(action)}
             </button>

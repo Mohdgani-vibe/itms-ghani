@@ -1,4 +1,5 @@
 import { ShieldCheck } from 'lucide-react';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 
 interface PortalChoice {
   id: string;
@@ -83,13 +84,13 @@ export default function UserAccessCard({
             const selected = selectedPortals.includes(portal.id);
             const disabled = isLockedUser || isSaving || (portal.id === 'employee' && selectedPortals.some((value) => value === 'it_team' || value === 'super_admin' || value === 'auditor'));
             return (
-              <label key={portal.id} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold ${selected ? 'border-sky-300 bg-sky-100 text-sky-800 shadow-sm' : 'border-zinc-200 bg-white text-zinc-700'} ${disabled ? 'opacity-70' : ''}`}>
+              <label key={portal.id} className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-sm font-semibold ${selected ? 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm' : 'border-zinc-200 bg-white text-zinc-700'} ${disabled ? 'opacity-70' : ''}`}>
                 <input
                   type="checkbox"
                   checked={selected}
                   disabled={disabled}
                   onChange={(event) => onPortalToggle(portal.id, event.target.checked)}
-                  className="h-4 w-4 rounded border-zinc-300 text-sky-600 focus:ring-sky-500"
+                  className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
                 />
                 <span>{portal.label}</span>
               </label>
@@ -101,7 +102,7 @@ export default function UserAccessCard({
             type="button"
             onClick={onSaveAccess}
             disabled={saveDisabled}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`rounded-lg px-4 py-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.save}`}
           >
             {isSaving ? 'Saving access...' : 'Save Access'}
           </button>

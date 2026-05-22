@@ -11,6 +11,7 @@ interface UserDepartmentSidebarProps {
 }
 
 export default function UserDepartmentSidebar({
+  departmentFilter,
   directoryTotal,
   departmentCounts,
   onDepartmentFilterChange,
@@ -25,7 +26,7 @@ export default function UserDepartmentSidebar({
       <button
         type="button"
         onClick={() => onDepartmentFilterChange('all')}
-        className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-3 text-left text-sm font-semibold text-sky-700 transition hover:bg-sky-50"
+        className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${departmentFilter === 'all' ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
       >
         <span>All Departments</span>
         <span>{directoryTotal}</span>
@@ -37,7 +38,7 @@ export default function UserDepartmentSidebar({
             key={entry.name}
             type="button"
             onClick={() => onDepartmentFilterChange(entry.name)}
-            className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-3 text-left text-sm font-medium text-sky-700 transition hover:bg-sky-50"
+            className={`flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium transition ${departmentFilter === entry.name ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
           >
             <span>{entry.name}</span>
             <span>{entry.count}</span>

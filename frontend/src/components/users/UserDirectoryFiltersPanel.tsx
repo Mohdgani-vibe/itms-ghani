@@ -44,6 +44,7 @@ export default function UserDirectoryFiltersPanel({
   userRoleFilter,
   userEntityFilter,
   userBranchFilter,
+  userStatusFilter,
   userSystemAssignmentFilter,
   hideUserSystemAssignmentFilter = false,
   availableRoleOptions,
@@ -108,7 +109,7 @@ export default function UserDirectoryFiltersPanel({
             key={status}
             type="button"
             onClick={() => onUserStatusFilterChange(status)}
-            className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${userStatusFilter === status ? 'bg-emerald-100 text-emerald-900 shadow-sm' : 'bg-white text-emerald-700 hover:bg-emerald-50'}`}
           >
             {status === 'all' ? 'All Users' : status === 'active' ? 'Active Users' : 'Inactive Users'}
           </button>

@@ -55,6 +55,7 @@ export default function UserInstallSidebar({
   userRoleFilter,
   userEntityFilter,
   userBranchFilter,
+  userStatusFilter,
   availableRoleOptions,
   activeEntityOptions,
   branchOptions,
@@ -119,7 +120,7 @@ export default function UserInstallSidebar({
           key={status}
           type="button"
           onClick={() => onUserStatusFilterChange(status)}
-          className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-sky-700 transition hover:bg-sky-50"
+          className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${userStatusFilter === status ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
         >
           {status === 'all' ? 'All Users' : status === 'active' ? 'Active Users' : 'Inactive Users'}
         </button>

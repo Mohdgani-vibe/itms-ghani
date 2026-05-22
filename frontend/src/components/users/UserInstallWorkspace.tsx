@@ -110,6 +110,46 @@ const INSTALL_VARIANTS = [
   })),
 ] as const;
 
+interface InstallVariantCommandState {
+  installCommand: string;
+  syncCommand: string;
+  syncCopyKind: 'fedora' | 'centos' | 'redhat' | 'linux-sync' | 'windows-sync';
+  syncTitle: string;
+}
+
+export function resolveInstallVariantCommandState(
+  selectedInstallVariant: (typeof INSTALL_VARIANTS)[number],
+  linuxInstallCommand: string,
+  linuxSyncCommand: string,
+  windowsInstallCommand: string,
+  windowsSyncCommand: string,
+): InstallVariantCommandState {
+  const linuxVariantSupported = selectedInstallVariant.commandType !== 'linux' || selectedInstallVariant.supported;
+
+  return {
+    installCommand: selectedInstallVariant.commandType === 'windows'
+      ? windowsInstallCommand
+      : linuxVariantSupported
+        ? linuxInstallCommand
+        : RPM_INSTALLER_NOTICE,
+    syncCommand: selectedInstallVariant.commandType === 'windows'
+      ? windowsSyncCommand
+      : linuxVariantSupported
+        ? linuxSyncCommand
+        : RPM_INSTALLER_NOTICE,
+    syncCopyKind: selectedInstallVariant.commandType === 'windows'
+      ? 'windows-sync'
+      : linuxVariantSupported
+        ? 'linux-sync'
+        : selectedInstallVariant.copyKind,
+    syncTitle: selectedInstallVariant.commandType === 'windows'
+      ? 'Windows Sync Code'
+      : linuxVariantSupported
+        ? 'Linux Sync Code'
+        : `${selectedInstallVariant.label} sync status`,
+  };
+}
+
 export default function UserInstallWorkspace({
   selectedUser,
   installConfig,
@@ -139,16 +179,18 @@ export default function UserInstallWorkspace({
     () => INSTALL_VARIANTS.find((variant) => variant.key === selectedInstallVariantKey) || INSTALL_VARIANTS[0],
     [selectedInstallVariantKey],
   );
-  const selectedInstallCommand = selectedInstallVariant.commandType === 'windows'
-    ? windowsInstallCommand
-    : selectedInstallVariant.supported
-      ? linuxInstallCommand
-      : RPM_INSTALLER_NOTICE;
-  const selectedSyncCommand = selectedInstallVariant.commandType === 'windows'
-    ? windowsSyncCommand
-    : linuxSyncCommand;
-  const selectedSyncCopyKind = selectedInstallVariant.commandType === 'windows' ? 'windows-sync' : 'linux-sync';
-  const selectedSyncTitle = selectedInstallVariant.commandType === 'windows' ? 'Windows Sync Code' : 'Linux Sync Code';
+  const {
+    installCommand: selectedInstallCommand,
+    syncCommand: selectedSyncCommand,
+    syncCopyKind: selectedSyncCopyKind,
+    syncTitle: selectedSyncTitle,
+  } = resolveInstallVariantCommandState(
+    selectedInstallVariant,
+    linuxInstallCommand,
+    linuxSyncCommand,
+    windowsInstallCommand,
+    windowsSyncCommand,
+  );
 
   return <section className="space-y-4">
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">

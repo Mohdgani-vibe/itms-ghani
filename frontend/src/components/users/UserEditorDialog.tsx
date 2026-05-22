@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface LookupOption {
   id: string;
   name: string;
@@ -166,7 +168,7 @@ export default function UserEditorDialog({
           type="button"
           onClick={onSave}
           disabled={savingEditedUser || (userEditorMode === 'reset-password' && !editingUser.nextPassword.trim())}
-          className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-60"
+          className={`rounded-lg px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.save}`}
         >
           {savingEditedUser ? 'Saving...' : userEditorMode === 'reset-password' ? 'Reset Password' : 'Save User'}
         </button>

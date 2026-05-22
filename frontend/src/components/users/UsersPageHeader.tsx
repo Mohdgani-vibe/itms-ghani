@@ -21,6 +21,7 @@ export default function UsersPageHeader({
   assetTotal,
   auditTotal,
   unassignedTotal,
+  activeTab,
   isSuperAdmin,
   isAuditor,
   UsersIcon,
@@ -76,10 +77,10 @@ export default function UsersPageHeader({
             key={item.id}
             type="button"
             onClick={() => onTabChange(item.id as DirectoryTab)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-sky-700 shadow-sm transition hover:bg-sky-50"
+            className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-sm font-bold shadow-sm transition ${activeTab === item.id ? 'border-emerald-200 bg-emerald-100 text-emerald-900' : 'border-zinc-200 bg-white text-emerald-700 hover:bg-emerald-50'}`}
           >
             <span>{item.label}</span>
-            {typeof item.badge === 'number' ? <span className="inline-flex min-w-6 items-center justify-center rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-xs font-bold text-zinc-800">{item.badge}</span> : null}
+            {typeof item.badge === 'number' ? <span className={`inline-flex min-w-6 items-center justify-center rounded-full border px-2 py-0.5 text-xs font-bold ${activeTab === item.id ? 'border-emerald-300 bg-white text-emerald-900' : 'border-emerald-200 bg-emerald-50 text-zinc-800'}`}>{item.badge}</span> : null}
           </button>
         ))}
       </div>
