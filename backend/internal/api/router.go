@@ -85,11 +85,20 @@ var terminalPresetGroups = []gin.H{
 	{"label": "System", "commands": []string{"hostname", "uptime"}},
 	{"label": "Storage", "commands": []string{"df -h", "free -h"}},
 	{"label": "Processes", "commands": []string{"ps aux"}},
+	{"label": "Salt States", "commands": []string{"state.apply patch.run"}},
 	{"label": "Services", "commands": []string{"systemctl status wazuh-agent", "journalctl -n 100"}},
 	{"label": "Network", "commands": []string{"ip addr"}},
 }
 
 var terminalBlockedExamples = []string{"rm -rf /tmp/demo", "tail -f /var/log/syslog", "systemctl restart wazuh-agent", "sudo cat /etc/shadow", "curl https://example.com/script.sh", "ps aux | grep salt"}
+var terminalStatePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+
+type terminalCommandMode string
+
+const (
+	terminalCommandModeShell terminalCommandMode = "shell"
+	terminalCommandModeState terminalCommandMode = "state"
+)
 
 var userImportCSVHeaders = []string{"Username", "Email id", "Employee id", "department", "password", "role", "entity_code", "location", "is_active"}
 
@@ -128,6 +137,60 @@ func terminalCommandPolicy(command string) error {
 	return nil
 }
 
+func normalizeTerminalCommand(command string) (string, error) {
+	_, normalized, err := parseTerminalCommand(command)
+	if err != nil {
+		return "", err
+	}
+	return normalized, nil
+}
+
+func parseTerminalCommand(command string) (terminalCommandMode, string, error) {
+	trimmed := strings.TrimSpace(command)
+	if trimmed == "" {
+		return terminalCommandModeShell, "", fmt.Errorf("command is required")
+	}
+	fields := strings.Fields(trimmed)
+	if len(fields) == 0 {
+		return terminalCommandModeShell, "", fmt.Errorf("command is required")
+	}
+	switch strings.ToLower(strings.TrimSpace(fields[0])) {
+	case "cmd.run", "cmd.run_all":
+		normalized := strings.TrimSpace(trimmed[len(fields[0]):])
+		if normalized == "" {
+			return terminalCommandModeShell, "", fmt.Errorf("command is required")
+		}
+		if unquoted, err := strconv.Unquote(normalized); err == nil {
+			normalized = strings.TrimSpace(unquoted)
+		} else if len(normalized) >= 2 && normalized[0] == '\'' && normalized[len(normalized)-1] == '\'' {
+			normalized = strings.TrimSpace(normalized[1 : len(normalized)-1])
+		}
+		if normalized == "" {
+			return terminalCommandModeShell, "", fmt.Errorf("command is required")
+		}
+		return terminalCommandModeShell, normalized, nil
+	case "state", "state.apply", "state.sls":
+		stateName := strings.TrimSpace(strings.Join(fields[1:], " "))
+		if stateName == "" {
+			return terminalCommandModeState, "", fmt.Errorf("state is required")
+		}
+		return terminalCommandModeState, stateName, nil
+	default:
+		return terminalCommandModeShell, trimmed, nil
+	}
+}
+
+func terminalStatePolicy(stateName string) error {
+	trimmed := strings.TrimSpace(stateName)
+	if trimmed == "" {
+		return fmt.Errorf("state is required")
+	}
+	if !terminalStatePattern.MatchString(trimmed) {
+		return fmt.Errorf("only simple Salt state names are allowed in the terminal console")
+	}
+	return nil
+}
+
 func terminalPolicyPayload() gin.H {
 	allowedCommands := make([]string, 0, len(terminalAllowedCommands))
 	for command := range terminalAllowedCommands {
@@ -141,6 +204,7 @@ func terminalPolicyPayload() gin.H {
 		"blockedExamples": terminalBlockedExamples,
 		"restrictions": []string{
 			"Only approved read-only diagnostic commands are allowed.",
+			"Salt state runs are allowed only as state.apply <state_name> or state <state_name>.",
 			"Shell chaining, pipes, redirection, and subshell expressions are blocked.",
 			"Privilege escalation, remote access, download tools, and interpreter launches are blocked.",
 			"Interactive editors and long-running terminal UIs are blocked.",
@@ -2981,6 +3045,15 @@ func (server *apiServer) listTerminalSessionsCompat(c *gin.Context) {
 		return
 	}
 	deviceID := c.Query("deviceId")
+	asset, err := server.fetchAsset(strings.TrimSpace(deviceID))
+	if err != nil {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
 	rows, err := server.db.Query(`
 		SELECT h.id, h.created_at, COALESCE(u.full_name, '')
 		FROM asset_history h
@@ -3023,6 +3096,10 @@ func (server *apiServer) createTerminalSessionCompat(c *gin.Context) {
 		httpx.Error(c, http.StatusNotFound, "asset not found")
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
 	terminalPayload, err := server.buildTerminalPayload(asset)
 	if err != nil {
 		server.recordOperationalAlert(asset, middleware.CurrentClaims(c).UserID, "terminal", "high", "Terminal session unavailable", err.Error())
@@ -3043,7 +3120,7 @@ func (server *apiServer) getTerminalTarget(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "terminal target is required")
 		return
 	}
-	asset, err := server.fetchAssetByMinionID(minionID)
+	asset, err := server.fetchAssetByTerminalTarget(minionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "terminal target not found")
@@ -3052,13 +3129,18 @@ func (server *apiServer) getTerminalTarget(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "terminal target not found")
+		return
+	}
 	if !asset.IsCompute {
 		httpx.Error(c, http.StatusBadRequest, "terminal is only available for compute assets")
 		return
 	}
+	target := coalesceString(asset.SaltMinionID, coalesceString(asset.Hostname, asset.AssetTag))
 	connected := false
 	if server.salt != nil && server.salt.Enabled() {
-		connected, err = server.salt.TargetConnected(c.Request.Context(), minionID)
+		connected, err = server.salt.TargetConnected(c.Request.Context(), target)
 		if err != nil {
 			httpx.Error(c, http.StatusBadGateway, err.Error())
 			return
@@ -3071,12 +3153,23 @@ func (server *apiServer) getTerminalTarget(c *gin.Context) {
 	if hostname == "" {
 		hostname = minionID
 	}
+	departmentName := ""
+	if strings.TrimSpace(asset.DeptID) != "" {
+		_ = server.db.QueryRow(`SELECT COALESCE(name, '') FROM departments WHERE id = $1::uuid`, asset.DeptID).Scan(&departmentName)
+	}
+	locationName := ""
+	if strings.TrimSpace(asset.LocationID) != "" {
+		_ = server.db.QueryRow(`SELECT COALESCE(full_name, '') FROM locations WHERE id = $1::uuid`, asset.LocationID).Scan(&locationName)
+	}
 	httpx.JSON(c, http.StatusOK, gin.H{
-		"assetId":   asset.ID,
-		"hostname":  hostname,
-		"assetTag":  asset.AssetTag,
-		"minionId":  minionID,
-		"connected": connected,
+		"assetId":        asset.ID,
+		"assetName":      emptyToNil(strings.TrimSpace(asset.Name)),
+		"hostname":       hostname,
+		"assetTag":       asset.AssetTag,
+		"departmentName": emptyToNil(strings.TrimSpace(departmentName)),
+		"locationName":   emptyToNil(strings.TrimSpace(locationName)),
+		"minionId":       target,
+		"connected":      connected,
 		"policy":    terminalPolicyPayload(),
 	})
 }
@@ -3111,7 +3204,12 @@ func (server *apiServer) executeTerminalCommand(c *gin.Context) {
 		httpx.Error(c, http.StatusBadRequest, "command is required")
 		return
 	}
-	asset, err := server.fetchAssetByMinionID(minionID)
+	commandMode, normalizedCommand, err := parseTerminalCommand(command)
+	if err != nil {
+		httpx.Error(c, http.StatusBadRequest, err.Error())
+		return
+	}
+	asset, err := server.fetchAssetByTerminalTarget(minionID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "terminal target not found")
@@ -3120,25 +3218,37 @@ func (server *apiServer) executeTerminalCommand(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "terminal target not found")
+		return
+	}
 	if !asset.IsCompute {
 		httpx.Error(c, http.StatusBadRequest, "terminal is only available for compute assets")
 		return
 	}
+	target := coalesceString(asset.SaltMinionID, coalesceString(asset.Hostname, asset.AssetTag))
 	hostname := strings.TrimSpace(asset.Hostname)
 	if hostname == "" {
 		hostname = strings.TrimSpace(asset.AssetTag)
 	}
 	if hostname == "" {
-		hostname = minionID
+		hostname = target
 	}
-	if err := terminalCommandPolicy(command); err != nil {
-		detail := gin.H{"minionId": minionID, "hostname": hostname, "command": command, "policy": err.Error()}
-		middleware.TagAudit(c, middleware.AuditMeta{Action: "terminal_command_blocked", TargetType: "asset", TargetID: asset.ID, Detail: detail})
+	var policyErr error
+	if commandMode == terminalCommandModeState {
+		policyErr = terminalStatePolicy(normalizedCommand)
+	} else {
+		policyErr = terminalCommandPolicy(normalizedCommand)
+	}
+	if policyErr != nil {
+		detail := gin.H{"minionId": target, "hostname": hostname, "command": command, "normalizedCommand": normalizedCommand, "policy": policyErr.Error()}
+		detail["mode"] = string(commandMode)
+		_ = server.recordAuditLog(c, middleware.AuditMeta{Action: "terminal_command_blocked", TargetType: "asset", TargetID: asset.ID, Detail: detail})
 		_, _ = server.recordAssetHistory(asset.ID, claims.UserID, "terminal_command_blocked", detail)
-		httpx.Error(c, http.StatusBadRequest, err.Error())
+		httpx.Error(c, http.StatusBadRequest, policyErr.Error())
 		return
 	}
-	connected, err := server.salt.TargetConnected(c.Request.Context(), minionID)
+	connected, err := server.salt.TargetConnected(c.Request.Context(), target)
 	if err != nil {
 		httpx.Error(c, http.StatusBadGateway, err.Error())
 		return
@@ -3147,48 +3257,70 @@ func (server *apiServer) executeTerminalCommand(c *gin.Context) {
 		httpx.Error(c, http.StatusBadGateway, "salt minion is not connected to the master for this asset")
 		return
 	}
-	output, err := server.salt.RunCommand(c.Request.Context(), minionID, command)
+	var output map[string]any
+	if commandMode == terminalCommandModeState {
+		output, err = server.salt.RunState(c.Request.Context(), target, normalizedCommand)
+	} else {
+		output, err = server.salt.RunCommand(c.Request.Context(), target, normalizedCommand)
+	}
 	if err != nil {
 		server.recordOperationalAlert(asset, claims.UserID, "terminal", "high", "Terminal command failed", err.Error())
 		httpx.Error(c, http.StatusBadGateway, err.Error())
 		return
 	}
-	stdout := strings.TrimRight(fmt.Sprint(output["stdout"]), "\n")
-	stderr := strings.TrimRight(fmt.Sprint(output["stderr"]), "\n")
-	if stdout == "<nil>" {
-		stdout = ""
-	}
-	if stderr == "<nil>" {
-		stderr = ""
+	stdout := ""
+	stderr := ""
+	retcode := any(0)
+	if commandMode == terminalCommandModeState {
+		formatted, marshalErr := json.MarshalIndent(output, "", "  ")
+		if marshalErr != nil {
+			stdout = strings.TrimSpace(fmt.Sprint(output))
+		} else {
+			stdout = strings.TrimSpace(string(formatted))
+		}
+	} else {
+		stdout = strings.TrimRight(fmt.Sprint(output["stdout"]), "\n")
+		stderr = strings.TrimRight(fmt.Sprint(output["stderr"]), "\n")
+		if stdout == "<nil>" {
+			stdout = ""
+		}
+		if stderr == "<nil>" {
+			stderr = ""
+		}
+		retcode = output["retcode"]
 	}
 	auditDetail := gin.H{
-		"minionId":    minionID,
-		"hostname":    hostname,
-		"command":     command,
-		"retcode":     output["retcode"],
-		"stdoutBytes": len(stdout),
-		"stderrBytes": len(stderr),
+		"minionId":          target,
+		"hostname":          hostname,
+		"command":           command,
+		"normalizedCommand": normalizedCommand,
+		"mode":              string(commandMode),
+		"retcode":           retcode,
+		"stdoutBytes":       len(stdout),
+		"stderrBytes":       len(stderr),
 	}
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "terminal_command_executed", TargetType: "asset", TargetID: asset.ID, Detail: auditDetail})
 	_, _ = server.recordAssetHistory(asset.ID, claims.UserID, "terminal_command", auditDetail)
 	httpx.JSON(c, http.StatusOK, gin.H{
-		"command": command,
+		"command": normalizedCommand,
+		"mode":    string(commandMode),
 		"stdout":  stdout,
 		"stderr":  stderr,
-		"retcode": output["retcode"],
+		"retcode": retcode,
 	})
 }
 
 func (server *apiServer) loadCompatDevices(c *gin.Context) ([]compatDeviceRecord, error) {
 	rows, err := server.db.Query(`
-		SELECT a.id, a.asset_tag, COALESCE(NULLIF(a.hostname, ''), a.asset_tag), a.category, COALESCE(cd.os_name, ''), a.status,
+		SELECT a.id, a.asset_tag, COALESCE(NULLIF(a.hostname, ''), a.asset_tag), a.category, COALESCE(cd.os_name, ''), COALESCE(cd.last_seen::text, ''), a.status,
 			COALESCE(cd.pending_updates, 0), COALESCE(alerts.open_alerts, 0), COALESCE(a.serial_number, ''), COALESCE(a.model, ''),
 			COALESCE(a.warranty_until::text, ''), COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''), COALESCE(u.emp_id, ''),
-			COALESCE(d.name, ''), COALESCE(l.full_name, ''), COALESCE(a.assigned_to::text, ''), a.entity_id::text
+			COALESCE(ad.name, ud.name, ''), COALESCE(l.full_name, ''), COALESCE(a.assigned_to::text, ''), a.entity_id::text
 		FROM assets a
 		LEFT JOIN asset_compute_details cd ON cd.asset_id = a.id
 		LEFT JOIN users u ON u.id = a.assigned_to
-		LEFT JOIN departments d ON d.id = a.dept_id
+		LEFT JOIN departments ad ON ad.id = a.dept_id
+		LEFT JOIN departments ud ON ud.id = u.dept_id
 		LEFT JOIN locations l ON l.id = a.location_id
 		LEFT JOIN (
 			SELECT asset_id, COUNT(*) AS open_alerts
@@ -4516,6 +4648,7 @@ type dbAsset struct {
 	DeptID        string
 	LocationID    string
 	PurchaseDate  string
+	Cost          string
 	WarrantyUntil string
 	Status        string
 	Condition     string
@@ -4559,22 +4692,23 @@ func (server *apiServer) fetchAsset(id string) (dbAsset, error) {
 	var asset dbAsset
 	err := server.db.QueryRow(`
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
-			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(warranty_until::text, ''),
+			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
 			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
 		FROM assets WHERE id = $1::uuid
-	`, id).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, id).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 
-func (server *apiServer) fetchAssetByMinionID(minionID string) (dbAsset, error) {
+func (server *apiServer) fetchAssetByTerminalTarget(target string) (dbAsset, error) {
 	var asset dbAsset
 	err := server.db.QueryRow(`
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
-			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(warranty_until::text, ''),
+			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
 			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
-		FROM assets WHERE salt_minion_id = $1
+		FROM assets
+		WHERE is_compute = TRUE AND (hostname = $1 OR salt_minion_id = $1 OR asset_tag = $1)
 		LIMIT 1
-	`, strings.TrimSpace(minionID)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, strings.TrimSpace(target)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 
@@ -4582,19 +4716,29 @@ func (server *apiServer) fetchAssetDetailBlocks(assetID string) (gin.H, gin.H, [
 	details := gin.H{}
 	network := gin.H{}
 	software := make([]gin.H, 0)
-	var processor, ram, storage, gpu, display, biosVersion, macAddress, osName, osVersion, kernel, architecture, osBuild string
+	var processor, ram, storage, gpu, display, biosVersion, macAddress, osName, osVersion, kernel, architecture, osBuild, anydeskID, rustdeskID, diskLayout string
 	var lastBoot, lastSeen sql.NullTime
 	var pendingUpdates int
+	var volumesRaw, loggedInUsersRaw []byte
 	err := server.db.QueryRow(`
 		SELECT COALESCE(processor, ''), COALESCE(ram, ''), COALESCE(storage, ''), COALESCE(gpu, ''), COALESCE(display, ''), COALESCE(bios_version, ''), COALESCE(mac_address, ''),
-			COALESCE(os_name, ''), COALESCE(os_version, ''), COALESCE(kernel, ''), COALESCE(architecture, ''), COALESCE(os_build, ''), last_boot, last_seen, pending_updates
+			COALESCE(os_name, ''), COALESCE(os_version, ''), COALESCE(kernel, ''), COALESCE(architecture, ''), COALESCE(os_build, ''), last_boot, last_seen, pending_updates,
+			COALESCE(anydesk_id, ''), COALESCE(rustdesk_id, ''), COALESCE(disk_layout, ''), volumes_json, logged_in_users_json
 		FROM asset_compute_details WHERE asset_id = $1::uuid
-	`, assetID).Scan(&processor, &ram, &storage, &gpu, &display, &biosVersion, &macAddress, &osName, &osVersion, &kernel, &architecture, &osBuild, &lastBoot, &lastSeen, &pendingUpdates)
+	`, assetID).Scan(&processor, &ram, &storage, &gpu, &display, &biosVersion, &macAddress, &osName, &osVersion, &kernel, &architecture, &osBuild, &lastBoot, &lastSeen, &pendingUpdates, &anydeskID, &rustdeskID, &diskLayout, &volumesRaw, &loggedInUsersRaw)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, nil, nil, err
 	}
 	if err == nil {
-		details = gin.H{"processor": emptyToNil(processor), "ram": emptyToNil(ram), "storage": emptyToNil(storage), "gpu": emptyToNil(gpu), "display": emptyToNil(display), "bios_version": emptyToNil(biosVersion), "mac_address": emptyToNil(macAddress), "os_name": emptyToNil(osName), "os_version": emptyToNil(osVersion), "kernel": emptyToNil(kernel), "architecture": emptyToNil(architecture), "os_build": emptyToNil(osBuild), "last_boot": nullTime(lastBoot), "last_seen": nullTime(lastSeen), "pending_updates": pendingUpdates}
+		volumes := make([]any, 0)
+		loggedInUsers := make([]string, 0)
+		if len(volumesRaw) > 0 {
+			_ = json.Unmarshal(volumesRaw, &volumes)
+		}
+		if len(loggedInUsersRaw) > 0 {
+			_ = json.Unmarshal(loggedInUsersRaw, &loggedInUsers)
+		}
+		details = gin.H{"processor": emptyToNil(processor), "ram": emptyToNil(ram), "storage": emptyToNil(storage), "gpu": emptyToNil(gpu), "display": emptyToNil(display), "bios_version": emptyToNil(biosVersion), "mac_address": emptyToNil(macAddress), "os_name": emptyToNil(osName), "os_version": emptyToNil(osVersion), "kernel": emptyToNil(kernel), "architecture": emptyToNil(architecture), "os_build": emptyToNil(osBuild), "last_boot": nullTime(lastBoot), "last_seen": nullTime(lastSeen), "logged_in_users": loggedInUsers, "pending_updates": pendingUpdates, "anydesk_id": emptyToNil(anydeskID), "rustdesk_id": emptyToNil(rustdeskID), "disk_layout": emptyToNil(diskLayout), "volumes": volumes}
 	}
 	var wiredIP, wirelessIP, netbirdIP, dns, gateway string
 	var statsRaw []byte

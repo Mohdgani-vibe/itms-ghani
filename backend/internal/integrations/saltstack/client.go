@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -111,7 +112,7 @@ func (client *Client) TargetConnected(ctx context.Context, target string) (bool,
 	}
 
 	return false, nil
-	}
+}
 
 func (client *Client) AcceptMinionKey(ctx context.Context, target string) error {
 	if !client.Enabled() {
@@ -286,15 +287,22 @@ func (client *Client) doJSON(ctx context.Context, method string, path string, bo
 
 func (client *Client) doJSONWithTimeout(ctx context.Context, method string, path string, body any, out any, timeout time.Duration) error {
 	var encoded []byte
-	var requestBody *bytes.Reader
+	var requestBody io.Reader
+	contentType := "application/json"
 	httpClient := client.httpClient
 	if body != nil {
-		var err error
-		encoded, err = json.Marshal(client.lowstateBody(path, body))
-		if err != nil {
-			return err
+		if client.usesInlineEAuth(path, body) {
+			encoded = []byte(client.formEncodedBody(body))
+			requestBody = strings.NewReader(string(encoded))
+			contentType = "application/x-www-form-urlencoded"
+		} else {
+			var err error
+			encoded, err = json.Marshal(client.lowstateBody(path, body))
+			if err != nil {
+				return err
+			}
+			requestBody = bytes.NewReader(encoded)
 		}
-		requestBody = bytes.NewReader(encoded)
 	} else {
 		requestBody = bytes.NewReader(nil)
 	}
@@ -308,7 +316,7 @@ func (client *Client) doJSONWithTimeout(ctx context.Context, method string, path
 	if err != nil {
 		return err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", contentType)
 	if client.token != "" {
 		req.Header.Set("Authorization", "Bearer "+client.token)
 	} else if !client.usesInlineEAuth(path, body) {
@@ -335,7 +343,7 @@ func (client *Client) doJSONWithTimeout(ctx context.Context, method string, path
 		if err != nil {
 			return err
 		}
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("X-Auth-Token", token)
 		resp.Body.Close()
 		resp, err = httpClient.Do(req)
@@ -448,6 +456,31 @@ func (client *Client) usesInlineEAuth(path string, body any) bool {
 
 func (client *Client) lowstateBody(path string, body any) any {
 	return body
+}
+
+func (client *Client) formEncodedBody(body any) string {
+	values := url.Values{}
+	payload, ok := body.(map[string]any)
+	if !ok {
+		return values.Encode()
+	}
+	for key, value := range payload {
+		switch typed := value.(type) {
+		case []string:
+			for _, item := range typed {
+				values.Add(key, item)
+			}
+		case []any:
+			for _, item := range typed {
+				values.Add(key, fmt.Sprint(item))
+			}
+		case nil:
+			continue
+		default:
+			values.Add(key, fmt.Sprint(typed))
+		}
+	}
+	return values.Encode()
 }
 
 func firstNonEmpty(values ...string) string {
