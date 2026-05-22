@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface DirectoryUser {
   id: string;
   fullName: string;
@@ -60,7 +62,7 @@ export default function SettingsWorkflowMembersPanel({
             type="button"
             onClick={() => onAddWorkflowMember('ticketAssigneeIds', ticketAssigneeDraft)}
             disabled={!canEditWorkflowSettings || !ticketAssigneeDraft}
-            className="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
           >
             Add
           </button>
@@ -79,7 +81,7 @@ export default function SettingsWorkflowMembersPanel({
               type="button"
               onClick={() => onRemoveWorkflowMember('ticketAssigneeIds', user.id)}
               disabled={!canEditWorkflowSettings}
-              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 disabled:cursor-default"
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-default ${actionButtonStyles.remove}`}
             >
               {user.fullName} • Remove
             </button>
@@ -108,7 +110,7 @@ export default function SettingsWorkflowMembersPanel({
             type="button"
             onClick={() => onAddWorkflowMember('chatMemberIds', chatMemberDraft)}
             disabled={!canEditWorkflowSettings || !chatMemberDraft}
-            className="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60"
+            className={`rounded-xl px-4 py-2.5 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
           >
             Add
           </button>
@@ -121,7 +123,7 @@ export default function SettingsWorkflowMembersPanel({
               type="button"
               onClick={() => onRemoveWorkflowMember('chatMemberIds', user.id)}
               disabled={!canEditWorkflowSettings}
-              className="rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 disabled:cursor-default"
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition disabled:cursor-default ${actionButtonStyles.remove}`}
             >
               {user.fullName} • Remove
             </button>

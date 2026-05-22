@@ -44,9 +44,31 @@ vi.mock('../../components/settings/SettingsWorkflowMembersPanel', () => ({ defau
 vi.mock('../../components/settings/SettingsWorkflowRulesPanel', () => ({ default: () => null }));
 vi.mock('../../components/settings/SettingsWorkflowRoutingPanel', () => ({ default: () => null }));
 
-import SettingsPage from './SettingsPage';
+import SettingsPage, { normalizeWorkflowSettings } from './SettingsPage';
 
 describe('SettingsPage', () => {
+  it('normalizes legacy patch department ring names', () => {
+    const normalized = normalizeWorkflowSettings({
+      requestAutoAssignEnabled: false,
+      chatAutoCreateEnabled: false,
+      chatAutoRouteEnabled: false,
+      requestFallbackAssigneeId: null,
+      chatFallbackAssigneeId: null,
+      ticketAssigneeIds: [],
+      chatMemberIds: [],
+      requestTypeRoutes: [],
+      requestSubjectRoutes: [],
+      chatSubjectRoutes: [],
+      patchWindowEnabled: false,
+      patchWindowStart: '',
+      patchWindowEnd: '',
+      patchAllowedRings: [],
+      patchDepartmentRings: [{ match: '  IT   Operations ', ring: 'critical' }],
+    });
+
+    expect(normalized.patchDepartmentRings).toEqual([{ match: 'it operations', ring: 'critical' }]);
+  });
+
   it('renders the default platform section and overview navigation for a super admin', () => {
     settingsMocks.useLocationMock.mockReturnValue({ pathname: '/admin/settings', hash: '' });
     settingsMocks.useNavigateMock.mockReturnValue(vi.fn());
@@ -71,4 +93,5 @@ describe('SettingsPage', () => {
       sessionUser: { role: 'super_admin' },
     }));
   });
+
 });

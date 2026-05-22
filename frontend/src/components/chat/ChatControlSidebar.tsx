@@ -1,5 +1,6 @@
 import { ShieldPlus, Users } from 'lucide-react';
 import type { ChannelMember, ChatChannel, PendingTeammateAction } from './types';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 
 interface ChatControlSidebarProps {
   activeChannel: ChatChannel | null;
@@ -129,7 +130,7 @@ export default function ChatControlSidebar({
               type="button"
               onClick={() => onBackupOwnerUpdate()}
               disabled={!activeChannel || transferringOwner || selectedBackupOwnerId === (activeChannel?.backupOwner?.id ?? null) || isActiveChannelClosed}
-              className="rounded-lg bg-zinc-900 px-3 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-60"
+              className={`rounded-lg px-3 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.save}`}
             >
               {transferringOwner ? 'Updating...' : 'Set Backup'}
             </button>
@@ -167,7 +168,7 @@ export default function ChatControlSidebar({
             type="button"
             onClick={onOpenAddTeammateDialog}
             disabled={!activeChannel || !selectedTeammateId || addingTeammate || isActiveChannelClosed}
-            className="mt-3 w-full rounded-lg bg-zinc-900 px-3 py-2 text-sm font-bold text-white hover:bg-zinc-800 disabled:opacity-60"
+            className={`mt-3 w-full rounded-lg px-3 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
           >
             {addingTeammate ? 'Adding...' : 'Add Teammate'}
           </button>

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BellRing, Megaphone, Plus } from 'lucide-react';
 import { apiRequest } from '../lib/api';
+import { actionButtonStyles } from '../lib/buttonStyles';
 import { getStoredSession } from '../lib/session';
 import Pagination from '../components/Pagination';
 
@@ -165,10 +166,10 @@ export default function Announcements() {
 
    return (
       <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
-         <section className="overflow-hidden rounded-[32px] border border-sky-100 bg-[radial-gradient(circle_at_top_left,_rgba(224,242,254,0.95),_rgba(255,255,255,0.98)_45%,_rgba(240,249,255,1)_100%)] shadow-sm">
+         <section className="overflow-hidden rounded-[32px] border border-emerald-100 bg-[radial-gradient(circle_at_top_left,_rgba(220,252,231,0.95),_rgba(255,255,255,0.98)_45%,_rgba(244,251,246,1)_100%)] shadow-sm">
             <div className="grid gap-6 px-6 py-7 lg:grid-cols-[minmax(0,1.2fr)_360px] lg:px-8">
                <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
                      <Megaphone className="h-3.5 w-3.5" />
                      Broadcast Center
                   </div>
@@ -195,20 +196,20 @@ export default function Announcements() {
                   </div>
                </div>
 
-               <div className="rounded-[28px] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-xl shadow-sky-100/50">
+               <div className="rounded-[28px] border border-emerald-700 bg-emerald-800 p-6 text-white shadow-xl shadow-emerald-100/50">
                   <div className="flex items-center justify-between gap-3">
                      <div>
-                        <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-sky-200">Live Feed</div>
+                        <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-100">Live Feed</div>
                         <div className="mt-2 text-2xl font-bold">Broadcast pulse</div>
                      </div>
-                     <BellRing className="h-8 w-8 text-sky-300" />
+                     <BellRing className="h-8 w-8 text-emerald-200" />
                   </div>
                   <div className="mt-5 space-y-3">
                      {featuredAnnouncements.slice(0, 2).map((item) => (
                         <div key={`hero-${item.id}`} className="rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                            <div className="flex items-center justify-between gap-3">
                               <div className="text-sm font-semibold">{item.title}</div>
-                              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${item.urgent ? 'bg-rose-500/20 text-rose-100' : 'bg-sky-400/15 text-sky-100'}`}>
+                              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${item.urgent ? 'bg-rose-500/20 text-rose-100' : 'bg-emerald-400/15 text-emerald-100'}`}>
                                  {item.urgent ? 'Urgent' : item.audience}
                               </span>
                            </div>
@@ -222,7 +223,7 @@ export default function Announcements() {
             </div>
          </section>
 
-         {isAuditor ? <div className="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900">Auditor access is read-only. You can review employee, IT, and super admin broadcasts here, but posting stays restricted to IT operations and super admin users.</div> : null}
+         {isAuditor ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">Auditor access is read-only. You can review employee, IT, and super admin broadcasts here, but posting stays restricted to IT operations and super admin users.</div> : null}
          {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
          {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{successMessage}</div> : null}
 
@@ -243,18 +244,18 @@ export default function Announcements() {
                         </div>
                      </div>
                      <div className="grid gap-4 md:grid-cols-2">
-                        <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Announcement title" className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100" />
-                        <select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100">
+                        <input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Announcement title" className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100" />
+                        <select value={form.audience} onChange={(event) => setForm((current) => ({ ...current, audience: event.target.value }))} className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100">
                            {AUDIENCE_OPTIONS.map((option) => <option key={option} value={option}>{option}</option>)}
                         </select>
                      </div>
-                     <textarea value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} rows={5} placeholder="Write the announcement body" className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-sky-300 focus:ring-2 focus:ring-sky-100" />
+                     <textarea value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} rows={5} placeholder="Write the announcement body" className="w-full rounded-2xl border border-zinc-200 px-4 py-3 text-sm text-zinc-900 outline-none transition focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100" />
                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <label className="flex items-center gap-2 text-sm text-zinc-700">
                            <input type="checkbox" checked={form.urgent} onChange={(event) => setForm((current) => ({ ...current, urgent: event.target.checked }))} />
                            Mark as urgent
                         </label>
-                        <button type="submit" disabled={saving} className="inline-flex items-center justify-center rounded-2xl border border-sky-200 bg-sky-50 px-5 py-3 text-sm font-semibold text-sky-800 shadow-sm transition hover:bg-sky-100 disabled:opacity-60">
+                        <button type="submit" disabled={saving} className={`inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold shadow-sm transition disabled:opacity-60 ${actionButtonStyles.save}`}>
                            <Plus className="mr-2 h-4 w-4" />
                            {saving ? 'Posting...' : 'Post Announcement'}
                         </button>
@@ -273,7 +274,7 @@ export default function Announcements() {
                                  key={option}
                                  type="button"
                                  onClick={() => setAudienceFilter(option)}
-                                 className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${active ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700'}`}
+                                 className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${active ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'}`}
                               >
                                  {option}
                               </button>
@@ -293,7 +294,7 @@ export default function Announcements() {
 
                   {featuredAnnouncements.slice(0, 1).map((item) => (
                      <article key={item.id} className={`relative overflow-hidden rounded-[28px] border bg-white p-6 shadow-sm md:p-7 ${item.urgent ? 'border-rose-200' : 'border-zinc-200'}`}>
-                        <div className={`absolute inset-x-0 top-0 h-1 ${item.urgent ? 'bg-rose-500' : 'bg-sky-500'}`} />
+                        <div className={`absolute inset-x-0 top-0 h-1 ${item.urgent ? 'bg-rose-500' : 'bg-emerald-500'}`} />
                         <div className="flex flex-wrap items-start justify-between gap-4">
                            <div>
                               <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-600">
@@ -319,7 +320,7 @@ export default function Announcements() {
                         <article key={item.id} className={`rounded-[24px] border bg-white p-5 shadow-sm ${item.urgent ? 'border-rose-200' : 'border-zinc-200'}`}>
                            <div className="flex items-center justify-between gap-3">
                               <div className="text-sm font-bold uppercase tracking-[0.18em] text-zinc-500">{item.audience}</div>
-                              <div className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${item.urgent ? 'bg-rose-100 text-rose-700' : 'bg-sky-100 text-sky-700'}`}>
+                              <div className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] ${item.urgent ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
                                  {item.urgent ? 'Urgent' : 'Broadcast'}
                               </div>
                            </div>

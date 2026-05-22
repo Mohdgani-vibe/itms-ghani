@@ -15,6 +15,7 @@ import { isProbeLikeUser } from '../../lib/userVisibility';
 
 const LINUX_HARDINFO_PREFERENCE_KEY = 'itms_install_linux_hardinfo_fallback';
 const REQUEST_ROUTE_TYPES = ['Laptop change', 'OS reinstall', 'Software install', 'Portal access', 'Settings change', 'General issue', 'Hardware replacement', 'Peripheral request', 'Other'];
+const VALID_PATCH_RINGS = new Set(['pilot', 'standard', 'broad', 'critical']);
 
 interface InstallAgentConfig {
   publicServerUrl: string;
@@ -119,6 +120,8 @@ interface PaginatedUsersResponse {
 
 type SettingsSection = 'platform' | 'workflow' | 'bootstrap';
 
+const PRIVILEGED_REQUEST_WORKFLOW_ROLES = new Set(['admin', 'it_team', 'super_admin']);
+
 export function normalizeDirectoryUsers(items: ApiDirectoryUser[]) {
   return items.map((user) => ({
     id: user.id,
@@ -133,21 +136,91 @@ export function isProbeWorkflowUser(user: DirectoryUser) {
   return isProbeLikeUser(user);
 }
 
+export function filterRequestWorkflowUsers(users: DirectoryUser[]) {
+  if (users.some((user) => user.role === 'employee')) {
+    return users;
+  }
+  return users.filter((user) => PRIVILEGED_REQUEST_WORKFLOW_ROLES.has(user.role));
+}
+
+function normalizeWorkflowId(value: string | null | undefined) {
+  return value?.trim() || '';
+}
+
+function normalizeWorkflowIds(values: string[] | null | undefined) {
+  return Array.from(new Set((values || []).map((value) => normalizeWorkflowId(value)).filter(Boolean)));
+}
+
+function normalizeWorkflowRoute(route: WorkflowRoute) {
+  return {
+    match: normalizePatchDepartmentName(route.match),
+    assigneeId: normalizeWorkflowId(route.assigneeId),
+  };
+}
+
+function normalizeWorkflowRoutes(routes: WorkflowRoute[] | null | undefined) {
+  return (routes || []).map((route) => normalizeWorkflowRoute(route)).filter((route) => route.match && route.assigneeId);
+}
+
+export function resolveWorkflowMemberUsers(users: DirectoryUser[], selectedIds: string[] | null | undefined) {
+  const normalizedIds = normalizeWorkflowIds(selectedIds);
+  if (normalizedIds.length === 0) {
+    return {
+      selectedUsers: [] as DirectoryUser[],
+      effectiveUsers: users,
+    };
+  }
+
+  const selectedUsers = users.filter((user) => normalizedIds.includes(user.id));
+  return {
+    selectedUsers,
+    effectiveUsers: selectedUsers,
+  };
+}
+
+export function pruneWorkflowSettingsForEligibleUsers(
+  settings: WorkflowSettings,
+  requestEligibleUserIds: string[],
+  chatEligibleUserIds: string[],
+  requestSubjectRoutes = settings.requestSubjectRoutes,
+  chatSubjectRoutes = settings.chatSubjectRoutes,
+): WorkflowSettings {
+  const requestEligibleSet = new Set(normalizeWorkflowIds(requestEligibleUserIds));
+  const chatEligibleSet = new Set(normalizeWorkflowIds(chatEligibleUserIds));
+
+  return {
+    ...settings,
+    requestFallbackAssigneeId: requestEligibleSet.has(normalizeWorkflowId(settings.requestFallbackAssigneeId))
+      ? normalizeWorkflowId(settings.requestFallbackAssigneeId)
+      : null,
+    chatFallbackAssigneeId: chatEligibleSet.has(normalizeWorkflowId(settings.chatFallbackAssigneeId))
+      ? normalizeWorkflowId(settings.chatFallbackAssigneeId)
+      : null,
+    requestTypeRoutes: normalizeWorkflowRoutes(settings.requestTypeRoutes).filter((route) => requestEligibleSet.has(route.assigneeId)),
+    requestSubjectRoutes: normalizeWorkflowRoutes(requestSubjectRoutes).filter((route) => requestEligibleSet.has(route.assigneeId)),
+    chatSubjectRoutes: normalizeWorkflowRoutes(chatSubjectRoutes).filter((route) => chatEligibleSet.has(route.assigneeId)),
+  };
+}
+
 export function normalizeWorkflowSettings(settings: WorkflowSettings): WorkflowSettings {
   return {
     ...settings,
-    requestFallbackAssigneeId: settings.requestFallbackAssigneeId || null,
-    chatFallbackAssigneeId: settings.chatFallbackAssigneeId || null,
-    ticketAssigneeIds: settings.ticketAssigneeIds || [],
-    chatMemberIds: settings.chatMemberIds || [],
-    requestTypeRoutes: settings.requestTypeRoutes || [],
-    requestSubjectRoutes: settings.requestSubjectRoutes || [],
-    chatSubjectRoutes: settings.chatSubjectRoutes || [],
+    requestFallbackAssigneeId: normalizeWorkflowId(settings.requestFallbackAssigneeId) || null,
+    chatFallbackAssigneeId: normalizeWorkflowId(settings.chatFallbackAssigneeId) || null,
+    ticketAssigneeIds: normalizeWorkflowIds(settings.ticketAssigneeIds),
+    chatMemberIds: normalizeWorkflowIds(settings.chatMemberIds),
+    requestTypeRoutes: normalizeWorkflowRoutes(settings.requestTypeRoutes),
+    requestSubjectRoutes: normalizeWorkflowRoutes(settings.requestSubjectRoutes),
+    chatSubjectRoutes: normalizeWorkflowRoutes(settings.chatSubjectRoutes),
     patchWindowEnabled: settings.patchWindowEnabled === true,
-    patchWindowStart: settings.patchWindowStart || '22:00',
-    patchWindowEnd: settings.patchWindowEnd || '06:00',
-    patchAllowedRings: settings.patchAllowedRings || [],
-    patchDepartmentRings: settings.patchDepartmentRings || [],
+    patchWindowStart: normalizePatchWindowTime(settings.patchWindowStart) || '22:00',
+    patchWindowEnd: normalizePatchWindowTime(settings.patchWindowEnd) || '06:00',
+    patchAllowedRings: Array.from(new Set((settings.patchAllowedRings || []).map((ring) => normalizePatchRing(ring)).filter(Boolean))),
+    patchDepartmentRings: (settings.patchDepartmentRings || []).map((route) => ({
+      ...route,
+      match: normalizePatchDepartmentName(route.match),
+      ring: normalizePatchRing(route.ring),
+    })).filter((route) => route.match && route.ring && route.ring !== 'standard'),
   };
 }
 
@@ -161,6 +234,28 @@ export function serializeWorkflowSettings(settings: WorkflowSettings) {
 
 export function normalizePatchDepartmentName(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+export function normalizePatchRing(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return VALID_PATCH_RINGS.has(normalized) ? normalized : '';
+}
+
+export function normalizePatchWindowTime(value: string) {
+  const normalized = value.trim();
+  if (!normalized) {
+    return '';
+  }
+  const match = normalized.match(/^(\d{2}):(\d{2})$/);
+  if (!match) {
+    return '';
+  }
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return '';
+  }
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 export function routesToEditorText(routes: WorkflowRoute[]) {
@@ -390,18 +485,14 @@ export default function SettingsPage() {
     () => requestWorkflowUsers.filter((user) => !workflowSettings?.ticketAssigneeIds.includes(user.id)),
     [requestWorkflowUsers, workflowSettings?.ticketAssigneeIds],
   );
-  const ticketAssigneeUsers = useMemo(() => {
-    if (!workflowSettings || workflowSettings.ticketAssigneeIds.length === 0) {
-      return requestWorkflowUsers;
-    }
-    return requestWorkflowUsers.filter((user) => workflowSettings.ticketAssigneeIds.includes(user.id));
-  }, [requestWorkflowUsers, workflowSettings]);
-  const chatMemberUsers = useMemo(() => {
-    if (!workflowSettings || workflowSettings.chatMemberIds.length === 0) {
-      return chatWorkflowUsers;
-    }
-    return chatWorkflowUsers.filter((user) => workflowSettings.chatMemberIds.includes(user.id));
-  }, [chatWorkflowUsers, workflowSettings]);
+  const { selectedUsers: selectedTicketAssigneeUsers, effectiveUsers: effectiveTicketAssigneeUsers } = useMemo(
+    () => resolveWorkflowMemberUsers(requestWorkflowUsers, workflowSettings?.ticketAssigneeIds),
+    [requestWorkflowUsers, workflowSettings?.ticketAssigneeIds],
+  );
+  const { selectedUsers: selectedChatMemberUsers, effectiveUsers: effectiveChatMemberUsers } = useMemo(
+    () => resolveWorkflowMemberUsers(chatWorkflowUsers, workflowSettings?.chatMemberIds),
+    [chatWorkflowUsers, workflowSettings?.chatMemberIds],
+  );
   const availableChatMemberOptions = useMemo(
     () => chatWorkflowUsers.filter((user) => !workflowSettings?.chatMemberIds.includes(user.id)),
     [chatWorkflowUsers, workflowSettings?.chatMemberIds],
@@ -440,16 +531,27 @@ export default function SettingsPage() {
 
         if (!cancelled) {
           const normalizedWorkflowData = workflowData ? normalizeWorkflowSettings(workflowData) : workflowData;
-          const requestWorkflowUserItems = normalizeDirectoryUsers(requestWorkflowUsersData.items || []).filter((user) => !isProbeWorkflowUser(user));
+          const requestWorkflowUserItems = filterRequestWorkflowUsers(
+            normalizeDirectoryUsers(requestWorkflowUsersData.items || []).filter((user) => !isProbeWorkflowUser(user)),
+          );
           const chatWorkflowUserItems = normalizeDirectoryUsers(chatWorkflowUsersData.items || []);
+          const requestEligibleUserIds = normalizedWorkflowData
+            ? resolveWorkflowMemberUsers(requestWorkflowUserItems, normalizedWorkflowData.ticketAssigneeIds).effectiveUsers.map((user) => user.id)
+            : [];
+          const chatEligibleUserIds = normalizedWorkflowData
+            ? resolveWorkflowMemberUsers(chatWorkflowUserItems, normalizedWorkflowData.chatMemberIds).effectiveUsers.map((user) => user.id)
+            : [];
+          const prunedWorkflowData = normalizedWorkflowData
+            ? pruneWorkflowSettingsForEligibleUsers(normalizedWorkflowData, requestEligibleUserIds, chatEligibleUserIds)
+            : normalizedWorkflowData;
           setInstallConfig(installData);
           setSyncStatus(syncData);
           setMeta(metaData);
-          setWorkflowSettings(normalizedWorkflowData);
+          setWorkflowSettings(prunedWorkflowData);
           setRequestWorkflowUsers(requestWorkflowUserItems);
           setChatWorkflowUsers(chatWorkflowUserItems);
-          setRequestSubjectEditor(routesToEditorText(normalizedWorkflowData?.requestSubjectRoutes ?? []));
-          setChatSubjectEditor(routesToEditorText(normalizedWorkflowData?.chatSubjectRoutes ?? []));
+          setRequestSubjectEditor(routesToEditorText(prunedWorkflowData?.requestSubjectRoutes ?? []));
+          setChatSubjectEditor(routesToEditorText(prunedWorkflowData?.chatSubjectRoutes ?? []));
         }
       } catch (requestError) {
         if (!cancelled) {
@@ -533,19 +635,30 @@ export default function SettingsPage() {
           : Promise.resolve({ items: [] }),
       ]);
       const normalizedWorkflowData = workflowData ? normalizeWorkflowSettings(workflowData) : workflowData;
-      const requestWorkflowUserItems = normalizeDirectoryUsers(requestWorkflowUsersData.items || []).filter((user) => !isProbeWorkflowUser(user));
+      const requestWorkflowUserItems = filterRequestWorkflowUsers(
+        normalizeDirectoryUsers(requestWorkflowUsersData.items || []).filter((user) => !isProbeWorkflowUser(user)),
+      );
       const chatWorkflowUserItems = normalizeDirectoryUsers(chatWorkflowUsersData.items || []);
+      const requestEligibleUserIds = normalizedWorkflowData
+        ? resolveWorkflowMemberUsers(requestWorkflowUserItems, normalizedWorkflowData.ticketAssigneeIds).effectiveUsers.map((user) => user.id)
+        : [];
+      const chatEligibleUserIds = normalizedWorkflowData
+        ? resolveWorkflowMemberUsers(chatWorkflowUserItems, normalizedWorkflowData.chatMemberIds).effectiveUsers.map((user) => user.id)
+        : [];
+      const prunedWorkflowData = normalizedWorkflowData
+        ? pruneWorkflowSettingsForEligibleUsers(normalizedWorkflowData, requestEligibleUserIds, chatEligibleUserIds)
+        : normalizedWorkflowData;
       if (!mountedRef.current) {
         return;
       }
       setInstallConfig(installData);
       setSyncStatus(syncData);
       setMeta(metaData);
-      setWorkflowSettings(normalizedWorkflowData);
+      setWorkflowSettings(prunedWorkflowData);
       setRequestWorkflowUsers(requestWorkflowUserItems);
       setChatWorkflowUsers(chatWorkflowUserItems);
-      setRequestSubjectEditor(routesToEditorText(normalizedWorkflowData?.requestSubjectRoutes ?? []));
-      setChatSubjectEditor(routesToEditorText(normalizedWorkflowData?.chatSubjectRoutes ?? []));
+      setRequestSubjectEditor(routesToEditorText(prunedWorkflowData?.requestSubjectRoutes ?? []));
+      setChatSubjectEditor(routesToEditorText(prunedWorkflowData?.chatSubjectRoutes ?? []));
     } catch (requestError) {
       if (mountedRef.current) {
         setError(requestError instanceof Error ? requestError.message : 'Failed to refresh settings');
@@ -570,7 +683,10 @@ export default function SettingsPage() {
     });
   };
 
-  const patchDepartmentRing = (departmentName: string) => workflowSettings?.patchDepartmentRings.find((route) => route.match === normalizePatchDepartmentName(departmentName))?.ring || '';
+  const patchDepartmentRing = (departmentName: string) => {
+    const ring = workflowSettings?.patchDepartmentRings.find((route) => normalizePatchDepartmentName(route.match) === normalizePatchDepartmentName(departmentName))?.ring || '';
+    return ring === 'standard' ? '' : ring;
+  };
 
   const handlePatchDepartmentRingChange = (departmentName: string, ring: string) => {
     setWorkflowSettings((current) => {
@@ -578,10 +694,11 @@ export default function SettingsPage() {
         return current;
       }
       const match = normalizePatchDepartmentName(departmentName);
-      const remaining = current.patchDepartmentRings.filter((route) => route.match !== match);
+      const remaining = current.patchDepartmentRings.filter((route) => normalizePatchDepartmentName(route.match) !== match);
+      const normalizedRing = normalizePatchRing(ring);
       return {
         ...current,
-        patchDepartmentRings: ring ? [...remaining, { match, ring }] : remaining,
+        patchDepartmentRings: normalizedRing && normalizedRing !== 'standard' ? [...remaining, { match, ring: normalizedRing }] : remaining,
       };
     });
   };
@@ -591,18 +708,42 @@ export default function SettingsPage() {
   const findWorkflowUserName = (userId: string) => requestWorkflowUsers.find((user) => user.id === userId)?.fullName || chatWorkflowUsers.find((user) => user.id === userId)?.fullName || 'Selected teammate';
 
   const addWorkflowMember = (key: 'ticketAssigneeIds' | 'chatMemberIds', userId: string) => {
-    if (!userId) {
+    if (!userId || !workflowSettings) {
       return;
     }
-    setWorkflowSettings((current) => {
-      if (!current || current[key].includes(userId)) {
-        return current;
-      }
-      return {
-        ...current,
-        [key]: [...current[key], userId],
-      };
-    });
+
+    if (workflowSettings[key].includes(userId)) {
+      return;
+    }
+
+    const nextSelectedIds = [...workflowSettings[key], userId];
+    const requestEligibleUserIds = resolveWorkflowMemberUsers(
+      requestWorkflowUsers,
+      key === 'ticketAssigneeIds' ? nextSelectedIds : workflowSettings.ticketAssigneeIds,
+    ).effectiveUsers.map((user) => user.id);
+    const chatEligibleUserIds = resolveWorkflowMemberUsers(
+      chatWorkflowUsers,
+      key === 'chatMemberIds' ? nextSelectedIds : workflowSettings.chatMemberIds,
+    ).effectiveUsers.map((user) => user.id);
+    const nextWorkflowSettings = pruneWorkflowSettingsForEligibleUsers(
+      {
+        ...workflowSettings,
+        [key]: nextSelectedIds,
+      },
+      requestEligibleUserIds,
+      chatEligibleUserIds,
+      parsedRequestSubjectRoutes.invalidLines.length === 0 ? parsedRequestSubjectRoutes.routes : workflowSettings.requestSubjectRoutes,
+      parsedChatSubjectRoutes.invalidLines.length === 0 ? parsedChatSubjectRoutes.routes : workflowSettings.chatSubjectRoutes,
+    );
+
+    setWorkflowSettings(nextWorkflowSettings);
+
+    if (parsedRequestSubjectRoutes.invalidLines.length === 0) {
+      setRequestSubjectEditor(routesToEditorText(nextWorkflowSettings.requestSubjectRoutes));
+    }
+    if (parsedChatSubjectRoutes.invalidLines.length === 0) {
+      setChatSubjectEditor(routesToEditorText(nextWorkflowSettings.chatSubjectRoutes));
+    }
   };
 
   const openAddWorkflowMemberDialog = (key: 'ticketAssigneeIds' | 'chatMemberIds', userId: string) => {
@@ -617,18 +758,38 @@ export default function SettingsPage() {
   };
 
   const removeWorkflowMember = (key: 'ticketAssigneeIds' | 'chatMemberIds', userId: string) => {
-    setWorkflowSettings((current) => {
-      if (!current) {
-        return current;
-      }
-      const next = current[key].filter((id) => id !== userId);
-      return {
-        ...current,
-        [key]: next,
-        requestFallbackAssigneeId: key === 'ticketAssigneeIds' && current.requestFallbackAssigneeId === userId ? null : current.requestFallbackAssigneeId,
-        chatFallbackAssigneeId: key === 'chatMemberIds' && current.chatFallbackAssigneeId === userId ? null : current.chatFallbackAssigneeId,
-      };
-    });
+    if (!workflowSettings) {
+      return;
+    }
+
+    const nextSelectedIds = workflowSettings[key].filter((id) => id !== userId);
+    const requestEligibleUserIds = resolveWorkflowMemberUsers(
+      requestWorkflowUsers,
+      key === 'ticketAssigneeIds' ? nextSelectedIds : workflowSettings.ticketAssigneeIds,
+    ).effectiveUsers.map((user) => user.id);
+    const chatEligibleUserIds = resolveWorkflowMemberUsers(
+      chatWorkflowUsers,
+      key === 'chatMemberIds' ? nextSelectedIds : workflowSettings.chatMemberIds,
+    ).effectiveUsers.map((user) => user.id);
+    const nextWorkflowSettings = pruneWorkflowSettingsForEligibleUsers(
+      {
+        ...workflowSettings,
+        [key]: nextSelectedIds,
+      },
+      requestEligibleUserIds,
+      chatEligibleUserIds,
+      parsedRequestSubjectRoutes.invalidLines.length === 0 ? parsedRequestSubjectRoutes.routes : workflowSettings.requestSubjectRoutes,
+      parsedChatSubjectRoutes.invalidLines.length === 0 ? parsedChatSubjectRoutes.routes : workflowSettings.chatSubjectRoutes,
+    );
+
+    setWorkflowSettings(nextWorkflowSettings);
+
+    if (parsedRequestSubjectRoutes.invalidLines.length === 0) {
+      setRequestSubjectEditor(routesToEditorText(nextWorkflowSettings.requestSubjectRoutes));
+    }
+    if (parsedChatSubjectRoutes.invalidLines.length === 0) {
+      setChatSubjectEditor(routesToEditorText(nextWorkflowSettings.chatSubjectRoutes));
+    }
   };
 
   const handleConfirmWorkflowMemberAction = () => {
@@ -661,15 +822,24 @@ export default function SettingsPage() {
       setSavingWorkflow(true);
       setError('');
       setWorkflowSaveStatus('');
+      const prunedWorkflowSettings = pruneWorkflowSettingsForEligibleUsers(
+        workflowSettings,
+        effectiveTicketAssigneeUsers.map((user) => user.id),
+        effectiveChatMemberUsers.map((user) => user.id),
+        parsedRequestSubjectRoutes.routes,
+        parsedChatSubjectRoutes.routes,
+      );
       const saved = await apiRequest<WorkflowSettings>('/api/settings/workflow', {
         method: 'PUT',
         body: JSON.stringify({
-          ...serializeWorkflowSettings(workflowSettings),
-          requestSubjectRoutes: parsedRequestSubjectRoutes.routes,
-          chatSubjectRoutes: parsedChatSubjectRoutes.routes,
+          ...serializeWorkflowSettings(prunedWorkflowSettings),
         }),
       });
-      const normalizedSaved = normalizeWorkflowSettings(saved);
+      const normalizedSaved = pruneWorkflowSettingsForEligibleUsers(
+        normalizeWorkflowSettings(saved),
+        effectiveTicketAssigneeUsers.map((user) => user.id),
+        effectiveChatMemberUsers.map((user) => user.id),
+      );
       if (!mountedRef.current) {
         return;
       }
@@ -753,8 +923,8 @@ export default function SettingsPage() {
               chatMemberDraft={chatMemberDraft}
               availableTicketAssigneeOptions={availableTicketAssigneeOptions}
               availableChatMemberOptions={availableChatMemberOptions}
-              ticketAssigneeUsers={ticketAssigneeUsers}
-              chatMemberUsers={chatMemberUsers}
+              ticketAssigneeUsers={selectedTicketAssigneeUsers}
+              chatMemberUsers={selectedChatMemberUsers}
               onTicketAssigneeDraftChange={setTicketAssigneeDraft}
               onChatMemberDraftChange={setChatMemberDraft}
               onAddWorkflowMember={openAddWorkflowMemberDialog}
@@ -764,8 +934,8 @@ export default function SettingsPage() {
             <SettingsWorkflowRoutingPanel
               canEditWorkflowSettings={canEditWorkflowSettings}
               workflowSettings={workflowSettings}
-              ticketAssigneeUsers={ticketAssigneeUsers}
-              chatMemberUsers={chatMemberUsers}
+              ticketAssigneeUsers={effectiveTicketAssigneeUsers}
+              chatMemberUsers={effectiveChatMemberUsers}
               onWorkflowSettingsChange={(patch) => setWorkflowSettings((current) => (current ? { ...current, ...patch } : current))}
             />
 
@@ -781,7 +951,7 @@ export default function SettingsPage() {
             <SettingsRequestTypeOwnersPanel
               canEditWorkflowSettings={canEditWorkflowSettings}
               requestRouteTypes={REQUEST_ROUTE_TYPES}
-              ticketAssigneeUsers={ticketAssigneeUsers}
+              ticketAssigneeUsers={effectiveTicketAssigneeUsers}
               getTypeAssignee={(type) => workflowTypeAssignee(workflowSettings, type)}
               onTypeChange={handleWorkflowTypeChange}
             />

@@ -36,6 +36,8 @@ interface ChatChannelSidebarProps {
 
 export default function ChatChannelSidebar({
   query,
+  statusFilter,
+  kindFilter,
   isManager,
   canCreateChat,
   newChannelName,
@@ -82,7 +84,7 @@ export default function ChatChannelSidebar({
                 key={value}
                 type="button"
                 onClick={() => onStatusFilterChange(value)}
-                className="rounded-lg bg-white px-2 py-2 text-sky-700 transition-colors hover:bg-sky-50"
+                className={`rounded-lg border px-2 py-2 transition-colors ${statusFilter === value ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
               >
                 {label}
               </button>
@@ -100,7 +102,7 @@ export default function ChatChannelSidebar({
                   key={value}
                   type="button"
                   onClick={() => onKindFilterChange(value)}
-                  className="rounded-lg bg-white px-2 py-2 capitalize text-sky-700 transition-colors hover:bg-sky-50"
+                  className={`rounded-lg border px-2 py-2 capitalize transition-colors ${kindFilter === value ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
                 >
                   {value}
                 </button>

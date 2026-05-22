@@ -63,13 +63,13 @@ export default function SettingsOverviewPanel({
   return (
     <>
       <div className="flex flex-col gap-4 overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-sm lg:flex-row lg:items-center lg:justify-between">
-        <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_30%),radial-gradient(circle_at_left,_rgba(163,230,53,0.12),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_56%,_#f8fdf4_100%)] p-5 lg:flex lg:w-full lg:items-center lg:justify-between">
+        <div className="bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_30%),radial-gradient(circle_at_left,_rgba(163,230,53,0.12),_transparent_24%),linear-gradient(135deg,_#f6fdf8_0%,_#ffffff_56%,_#f8fdf4_100%)] p-5 lg:flex lg:w-full lg:items-center lg:justify-between">
         <div>
-          <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-sky-700">
+          <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">
             {canEditWorkflowSettings ? 'Admin Workspace' : 'Settings Workspace'}
           </div>
           <h1 className="mt-3 flex items-center gap-3 text-2xl font-bold tracking-tight text-zinc-900">
-            <Settings2 className="h-7 w-7 text-sky-600" />
+            <Settings2 className="h-7 w-7 text-emerald-600" />
             Settings
           </h1>
           <p className="mt-2 max-w-3xl text-sm text-zinc-600">
@@ -104,7 +104,7 @@ export default function SettingsOverviewPanel({
               key={section.id}
               type="button"
               onClick={() => onSelectSection(section.id)}
-              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-sky-300 bg-sky-100 text-sky-800 shadow-sm' : 'border-zinc-200 bg-white text-sky-700 hover:border-sky-200 hover:bg-sky-50'}`}
+              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
             >
               {section.label}
             </button>

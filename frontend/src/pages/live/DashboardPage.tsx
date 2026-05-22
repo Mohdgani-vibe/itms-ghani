@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, Bell, ClipboardList, LayoutDashboard, MessageSquare, Minus, ShieldAlert, ShieldCheck, Users, CircleDot } from 'lucide-react';
 import { apiRequest } from '../../lib/api';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
 import type { PatchRunReportSummary } from '../../lib/patchReports';
 import { assetPresenceState } from '../../components/users/userDisplayUtils';
@@ -688,12 +689,12 @@ export default function DashboardPage() {
     const segments = portal === 'audit'
       ? [
           { label: 'Open', value: openAlerts, tone: 'bg-amber-400' },
-          { label: 'Acknowledged', value: acknowledgedAlerts, tone: 'bg-sky-500' },
+          { label: 'Acknowledged', value: acknowledgedAlerts, tone: 'bg-emerald-500' },
           { label: 'Resolved', value: resolvedAlerts, tone: 'bg-emerald-500' },
         ]
       : [
           { label: 'Pending', value: pendingRequests, tone: 'bg-amber-400' },
-          { label: 'In Progress', value: inProgressRequests, tone: 'bg-sky-500' },
+          { label: 'In Progress', value: inProgressRequests, tone: 'bg-emerald-500' },
           { label: 'Resolved', value: resolvedRequests, tone: 'bg-emerald-500' },
         ];
     const total = segments.reduce((sum, segment) => sum + segment.value, 0) || 1;
@@ -965,12 +966,12 @@ export default function DashboardPage() {
   const requestMixSummary = portal === 'audit'
     ? [
         { label: 'Open', value: openAlerts, helper: 'Alerts waiting for operator action', tone: 'bg-amber-400' },
-        { label: 'Acknowledged', value: acknowledgedAlerts, helper: 'Alerts under active review', tone: 'bg-sky-500' },
+        { label: 'Acknowledged', value: acknowledgedAlerts, helper: 'Alerts under active review', tone: 'bg-emerald-500' },
         { label: 'Resolved', value: resolvedAlerts, helper: 'Alerts closed successfully', tone: 'bg-emerald-500' },
       ]
     : [
         { label: 'Pending', value: pendingRequests, helper: 'New or waiting for review', tone: 'bg-amber-400' },
-        { label: 'In Progress', value: inProgressRequests, helper: 'Currently handled by IT', tone: 'bg-sky-500' },
+        { label: 'In Progress', value: inProgressRequests, helper: 'Currently handled by IT', tone: 'bg-emerald-500' },
         { label: 'Resolved', value: resolvedRequests, helper: 'Closed successfully', tone: 'bg-emerald-500' },
       ];
 
@@ -985,7 +986,7 @@ export default function DashboardPage() {
     { label: 'My Requests', value: requestsTotal, helper: 'All employee request items', tone: 'bg-brand-600' },
     { label: 'My Assets', value: assetsTotal, helper: 'Assigned devices and inventory', tone: 'bg-amber-400' },
     { label: 'Chat', value: chatTotal, helper: 'Available support channels', tone: 'bg-emerald-500' },
-    { label: 'Announcements', value: announcementsTotal, helper: 'Latest visible company updates', tone: 'bg-zinc-900' },
+    { label: 'Announcements', value: announcementsTotal, helper: 'Latest visible company updates', tone: 'bg-emerald-700' },
   ];
 
   const employeeSnapshotTotal = employeeSnapshot.reduce((sum, item) => sum + item.value, 0) || 1;
@@ -1001,19 +1002,19 @@ export default function DashboardPage() {
       ? [
           { label: 'Alerts', value: alertsTotal, helper: 'Visible alert records', tone: 'bg-amber-400' },
           { label: 'ClamScan', value: clamavAlertsTotal, helper: 'Visible malware scan findings', tone: 'bg-rose-500' },
-          { label: 'Open', value: openAlerts, helper: 'Currently unresolved alerts', tone: 'bg-zinc-900' },
+          { label: 'Open', value: openAlerts, helper: 'Currently unresolved alerts', tone: 'bg-rose-500' },
           { label: 'Devices', value: devicesTotal, helper: 'Visible managed devices', tone: 'bg-brand-600' },
-          { label: 'Users', value: usersTotal, helper: 'Visible directory records', tone: 'bg-sky-500' },
+          { label: 'Users', value: usersTotal, helper: 'Visible directory records', tone: 'bg-emerald-500' },
           { label: 'Announcements', value: announcementsTotal, helper: 'Read-only broadcasts', tone: 'bg-emerald-500' },
         ]
     : [
         { label: 'ClamScan', value: clamavAlertsTotal, helper: 'Visible malware scan findings', tone: 'bg-rose-500' },
         { label: 'Total Users', value: usersTotal, helper: 'Visible user records', tone: 'bg-brand-600' },
-        { label: 'Open Requests', value: pendingRequests + inProgressRequests, helper: 'Pending and active work', tone: 'bg-zinc-900' },
-        { label: 'Gatepasses', value: gatepassTotal, helper: 'Total gatepass records', tone: 'bg-zinc-900' },
+        { label: 'Open Requests', value: pendingRequests + inProgressRequests, helper: 'Pending and active work', tone: 'bg-amber-500' },
+        { label: 'Gatepasses', value: gatepassTotal, helper: 'Total gatepass records', tone: 'bg-emerald-700' },
         { label: 'Chat Channels', value: chatTotal, helper: 'Latest visible chat channels', tone: 'bg-emerald-500' },
         { label: 'Announcements', value: announcementsTotal, helper: 'Broadcast items visible now', tone: 'bg-amber-400' },
-        { label: 'Users', value: usersTotal, helper: 'Directory records shown now', tone: 'bg-sky-500' },
+        { label: 'Users', value: usersTotal, helper: 'Directory records shown now', tone: 'bg-emerald-500' },
       ];
 
   const dashboardSnapshotTotal = dashboardSnapshot.reduce((sum, item) => sum + item.value, 0) || 1;
@@ -1056,7 +1057,7 @@ export default function DashboardPage() {
         {
           title: 'User Sign-Ins',
           description: 'Sign-ins recorded this week',
-          series: [{ label: 'Users', tone: 'bg-sky-500', points: usersWeeklyTrend }],
+          series: [{ label: 'Users', tone: 'bg-emerald-500', points: usersWeeklyTrend }],
         },
         {
           title: 'New Users',
@@ -1087,12 +1088,12 @@ export default function DashboardPage() {
       {
         title: 'Gatepass Activity',
         description: 'Gatepasses recorded this week',
-        series: [{ label: 'Gatepasses', tone: 'bg-zinc-900', points: gatepassesWeeklyTrend }],
+        series: [{ label: 'Gatepasses', tone: 'bg-emerald-700', points: gatepassesWeeklyTrend }],
       },
       {
         title: 'User Sign-Ins',
         description: 'Sign-ins recorded this week',
-        series: [{ label: 'Users', tone: 'bg-sky-500', points: usersWeeklyTrend }],
+        series: [{ label: 'Users', tone: 'bg-emerald-500', points: usersWeeklyTrend }],
       },
       {
         title: 'New Users',
@@ -1153,10 +1154,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 bg-zinc-50/60 px-4 py-6 xl:px-6">
       {showChartsOnly ? (
-        <section className="overflow-hidden rounded-[32px] border border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.10),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#f6fbf7_100%)] p-6 shadow-sm lg:p-7">
+        <section className="overflow-hidden rounded-[32px] border border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(110,231,183,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.12),_transparent_24%),linear-gradient(135deg,_#f4fbf6_0%,_#ffffff_58%,_#f6fbf7_100%)] p-6 shadow-sm lg:p-7">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
+              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
                 {portalLabel} Workspace
               </div>
               <h1 className="mt-4 text-3xl font-black tracking-[-0.04em] text-zinc-950 sm:text-4xl">Welcome {welcomeName}</h1>
@@ -1168,13 +1169,13 @@ export default function DashboardPage() {
                 <div className="mt-2 text-lg font-black text-zinc-950">{portalLabel}</div>
                 <div className="mt-1 text-sm text-zinc-500">Live dashboard view</div>
               </div>
-              <div className="rounded-[24px] border border-zinc-900 bg-zinc-950 px-4 py-4 text-white shadow-sm">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-200">Focus</div>
+              <div className="rounded-[24px] border border-emerald-700 bg-emerald-800 px-4 py-4 text-white shadow-sm">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-100">Focus</div>
                 <div className="mt-2 text-lg font-black">Operational Pulse</div>
                 <div className="mt-1 text-sm text-zinc-300">Charts-only summary</div>
               </div>
-              <div className="rounded-[24px] border border-sky-100 bg-sky-50/90 px-4 py-4 shadow-sm">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Snapshot</div>
+              <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/90 px-4 py-4 shadow-sm">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Snapshot</div>
                 <div className="mt-2 text-sm font-semibold leading-6 text-zinc-900">Total systems, active users, and offline visibility in one view.</div>
               </div>
             </div>
@@ -1182,17 +1183,17 @@ export default function DashboardPage() {
         </section>
       ) : null}
 
-      {!showChartsOnly ? <section className="relative overflow-hidden rounded-[32px] border border-sky-100 bg-[linear-gradient(135deg,_#fdfefe_0%,_#f4f9ff_45%,_#eaf3ff_100%)] p-6 shadow-[0_24px_70px_rgba(59,130,246,0.10)] lg:p-8">
+      {!showChartsOnly ? <section className="relative overflow-hidden rounded-[32px] border border-emerald-100 bg-[linear-gradient(135deg,_#fdfefe_0%,_#f4fbf6_45%,_#dcfce7_100%)] p-6 shadow-[0_24px_70px_rgba(16,185,129,0.10)] lg:p-8">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-[38%] bg-[radial-gradient(circle_at_top_right,_rgba(59,130,246,0.22),_transparent_62%)]" />
-        <div className="pointer-events-none absolute left-8 top-8 h-24 w-24 rounded-full bg-sky-200/35 blur-2xl" />
+        <div className="pointer-events-none absolute left-8 top-8 h-24 w-24 rounded-full bg-emerald-200/35 blur-2xl" />
         <div className="relative flex flex-col gap-6 xl:flex-row xl:items-stretch xl:justify-between">
           <div className="max-w-3xl space-y-5">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="inline-flex items-center rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-sky-700 backdrop-blur">
+              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-700 backdrop-blur">
                 <LayoutDashboard className="mr-2 h-3.5 w-3.5" />
                 {portalLabel} Workspace
               </div>
-              <div className="inline-flex items-center rounded-full border border-white/80 bg-slate-950 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white shadow-sm">
+              <div className="inline-flex items-center rounded-full border border-white/80 bg-emerald-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-white shadow-sm">
                 Live {activeNow.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
@@ -1207,13 +1208,13 @@ export default function DashboardPage() {
                 <div className="mt-2 text-lg font-black text-zinc-950">{welcomeName}</div>
                 <div className="mt-1 text-sm text-zinc-500">{portalLabel} portal</div>
               </div>
-              <div className="rounded-[24px] border border-white/80 bg-slate-950 px-4 py-4 text-white shadow-sm">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-200">Request Load</div>
+              <div className="rounded-[24px] border border-emerald-700 bg-emerald-800 px-4 py-4 text-white shadow-sm">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-100">Request Load</div>
                 <div className="mt-2 text-lg font-black">{loading ? '...' : requestChartTotal}</div>
                 <div className="mt-1 text-sm text-slate-300">Active workflow items in this workspace</div>
               </div>
-              <div className="rounded-[24px] border border-sky-100 bg-sky-50/90 px-4 py-4 shadow-sm">
-                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">Workspace Focus</div>
+              <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/90 px-4 py-4 shadow-sm">
+                <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Workspace Focus</div>
                 <div className="mt-2 text-sm font-semibold leading-6 text-zinc-900">{snapshotDescription}</div>
               </div>
             </div>
@@ -1223,8 +1224,8 @@ export default function DashboardPage() {
                   key={action.label}
                   to={action.href}
                   className={action.tone === 'primary'
-                    ? 'rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800'
-                    : 'rounded-2xl border border-sky-200 bg-white/90 px-5 py-3 text-sm font-bold text-sky-800 shadow-sm transition hover:border-sky-300 hover:bg-sky-50'}
+                    ? `rounded-2xl px-5 py-3 text-sm font-bold shadow-sm transition ${actionButtonStyles.add}`
+                    : 'rounded-2xl border border-emerald-200 bg-white/90 px-5 py-3 text-sm font-bold text-emerald-800 shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50'}
                 >
                   {action.label}
                 </Link>
@@ -1239,7 +1240,7 @@ export default function DashboardPage() {
                   <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Command View</div>
                   <div className="mt-2 text-2xl font-black tracking-tight text-zinc-950">Operational pulse</div>
                 </div>
-                <div className="rounded-full bg-sky-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">Live</div>
+                <div className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">Live</div>
               </div>
               <div className="mt-5 space-y-3">
                 {requestMixSummary.map((segment) => (
@@ -1304,7 +1305,7 @@ export default function DashboardPage() {
                   type="button"
                   onClick={() => setTrendWindowDays(days)}
                   className={trendWindowDays === days
-                    ? 'rounded-full bg-slate-950 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white'
+                    ? 'rounded-full bg-emerald-700 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-white'
                     : 'rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-600'}
                 >
                   {days} days
@@ -1337,7 +1338,7 @@ export default function DashboardPage() {
                       <div className="mt-1 text-xs text-zinc-500">{cardDescription}</div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
-                      <div className="rounded-full bg-slate-950 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
+                      <div className="rounded-full bg-emerald-700 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white">
                         {cardSummary.weeklyTotal} total in {trendWindowLabel}
                       </div>
                       <div className="flex flex-wrap justify-end gap-2">
@@ -1407,7 +1408,7 @@ export default function DashboardPage() {
                               <TrendIcon className="h-3 w-3" />
                               {formatPercentChange(summary.dayOverDayChange)}
                             </div>
-                            <div className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${monthChange == null ? 'bg-zinc-100 text-zinc-500' : monthChange >= 0 ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                            <div className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${monthChange == null ? 'bg-zinc-100 text-zinc-500' : monthChange >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                               {monthChange == null ? <Minus className="h-3 w-3" /> : monthChange >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
                               {formatMonthOverMonthChange(monthChange)}
                             </div>
