@@ -71,13 +71,25 @@ func alertSourceLabelExpr(column string) string {
 	return `CASE
 		WHEN lower(` + column + `) IN ('salt', 'salt_patch', 'patch') THEN 'Patch'
 		WHEN lower(` + column + `) IN ('openscap', 'open_scap', 'hardening') THEN 'OpenSCAP Hardening'
-		WHEN lower(` + column + `) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'ClamAV'
+		WHEN lower(` + column + `) IN ('clamav', 'clam', 'clamwin', 'clamscan') THEN 'ClamScan'
 		WHEN lower(` + column + `) IN ('terminal', 'terminal_session') THEN 'Terminal'
 		ELSE initcap(replace(lower(` + column + `), '_', ' '))
 	END`
 }
 
+func alertClamAVTrendWhereSQL(whereSQL string, sourceExpr string) string {
+	if strings.TrimSpace(whereSQL) == "" {
+		return sourceExpr + ` = 'clamav'`
+	}
+	return whereSQL + ` AND ` + sourceExpr + ` = 'clamav'`
+}
+
 func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID string) {
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
 	page, pageSize, paginate := parsePaginationRequest(c, 20)
 	searchQuery := strings.ToLower(strings.TrimSpace(c.Query("search")))
 	sourceFilter := strings.ToLower(strings.TrimSpace(c.Query("source")))
@@ -99,6 +111,12 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 		whereClauses = append(whereClauses, fmt.Sprintf("al.user_id = $%d::uuid", argIndex))
 		args = append(args, userID)
 		argIndex++
+	} else if claims.Role != "super_admin" {
+		entityArg := argIndex
+		userArg := argIndex + 1
+		whereClauses = append(whereClauses, fmt.Sprintf("(COALESCE(a.entity_id, u.entity_id) = $%d::uuid OR EXISTS (SELECT 1 FROM user_entity_access uea WHERE uea.user_id = $%d::uuid AND uea.entity_id = COALESCE(a.entity_id, u.entity_id)))", entityArg, userArg))
+		args = append(args, claims.EntityID, claims.UserID)
+		argIndex += 2
 	}
 	if sourceFilter != "" && sourceFilter != "all" {
 		whereClauses = append(whereClauses, fmt.Sprintf("%s = $%d", sourceKeyExpr, argIndex))
@@ -153,7 +171,7 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 			"assetTag":     emptyToNil(assetTag),
 			"assetName":    emptyToNil(assetName),
 			"hostname":     emptyToNil(hostname),
-			"deviceId":     firstNonEmpty(assetTag, hostname, assetID),
+			"deviceId":     assetID,
 			"userId":       emptyToNil(alertUserID),
 			"userName":     emptyToNil(alertUserName),
 			"userEmail":    emptyToNil(alertUserEmail),
@@ -219,6 +237,63 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 		return
 	}
 
+	clamavTrendWhereSQL := alertClamAVTrendWhereSQL(whereSQL, sourceKeyExpr)
+	var clamavLast24Hours, clamavLast7Days, clamavLast30Days int
+	if err := server.db.QueryRow(`
+		SELECT
+			COUNT(*) FILTER (WHERE al.created_at >= NOW() - INTERVAL '24 hours'),
+			COUNT(*) FILTER (WHERE al.created_at >= NOW() - INTERVAL '7 days'),
+			COUNT(*) FILTER (WHERE al.created_at >= NOW() - INTERVAL '30 days')
+		`+baseFrom+`
+		WHERE `+clamavTrendWhereSQL,
+		args...,
+	).Scan(&clamavLast24Hours, &clamavLast7Days, &clamavLast30Days); err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	trendRows, err := server.db.Query(`
+		WITH days AS (
+			SELECT generate_series(
+				date_trunc('day', NOW()) - INTERVAL '6 days',
+				date_trunc('day', NOW()),
+				INTERVAL '1 day'
+			) AS bucket_start
+		)
+		SELECT to_char(days.bucket_start, 'YYYY-MM-DD') AS bucket_date,
+			COALESCE(COUNT(al.id), 0) AS bucket_count
+		FROM days
+		LEFT JOIN alerts al
+			ON al.created_at >= days.bucket_start
+			AND al.created_at < days.bucket_start + INTERVAL '1 day'
+		LEFT JOIN assets a ON a.id = al.device_id
+		LEFT JOIN users u ON u.id = al.user_id
+		LEFT JOIN departments ad ON ad.id = a.dept_id
+		LEFT JOIN departments ud ON ud.id = u.dept_id
+		WHERE al.id IS NULL OR (`+clamavTrendWhereSQL+` AND al.created_at >= NOW() - INTERVAL '7 days')
+		GROUP BY days.bucket_start
+		ORDER BY days.bucket_start ASC
+	`, args...)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer trendRows.Close()
+	clamavDailyBuckets := make([]gin.H, 0, 7)
+	for trendRows.Next() {
+		var bucketDate string
+		var bucketCount int
+		if err := trendRows.Scan(&bucketDate, &bucketCount); err != nil {
+			httpx.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		clamavDailyBuckets = append(clamavDailyBuckets, gin.H{"date": bucketDate, "count": bucketCount})
+	}
+	if err := trendRows.Err(); err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"items":    result,
 		"total":    total,
@@ -229,6 +304,12 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 			"acknowledged": acknowledgedCount,
 			"resolved":     resolvedCount,
 			"sourceCounts": sourceSummary,
+			"clamavTrend": gin.H{
+				"last24Hours": clamavLast24Hours,
+				"last7Days":   clamavLast7Days,
+				"last30Days":  clamavLast30Days,
+				"dailyBuckets": clamavDailyBuckets,
+			},
 		},
 	})
 }
