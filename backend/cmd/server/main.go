@@ -69,7 +69,7 @@ func main() {
 		Handler:           router,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		WriteTimeout:      11 * time.Minute,
 		IdleTimeout:       60 * time.Second,
 	}
 

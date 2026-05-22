@@ -228,6 +228,15 @@ What the bootstrap command does:
 
 When the collector includes `security_reports`, the backend recognizes those reports and turns them into asset alerts and user alerts. ClamAV reports are surfaced under the `ClamAV` source, and OpenSCAP hardening reports are surfaced under `OpenSCAP Hardening` in the Alerts page. Both include asset ID, asset tag, hostname, and report detail.
 
+For paginated alert responses, the backend also returns a `summary.clamavTrend` object with these fields:
+
+- `last24Hours`
+- `last7Days`
+- `last30Days`
+- `dailyBuckets` as a 7-day list of `{ date, count }`
+
+The frontend uses that summary to power the dedicated ClamScan dashboard surfaces in the live dashboard and the filtered ClamAV review panel on the Alerts page.
+
 Windows note: the bootstrap will install Chocolatey automatically when needed and then install Salt Minion through Chocolatey. Keep `-SaltMinionUrl` only as an override for locked-down environments that block Chocolatey.
 
 Print the payload without sending it:

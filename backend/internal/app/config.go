@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 const (
 	defaultJWTSecret         = "change-me-in-production"
 	defaultAdminPassword     = "replace-with-a-strong-admin-password"
+	defaultSaltAPIPassword   = "ChangeMe-Salt-API!"
+	defaultWazuhAPIPassword  = "ChangeMe-Wazuh-API-2026!"
 	minimumRecommendedJWTLen = 32
 )
 
@@ -210,6 +213,9 @@ func (config Config) SecurityWarnings() []string {
 	} else if strings.TrimSpace(config.WazuhAPIBaseURL) != "" && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.WazuhAPIBaseURL)), "https://") && strings.TrimSpace(config.WazuhAPICAFile) == "" {
 		warnings = append(warnings, "WAZUH_API_CA_FILE is not set; self-signed internal Wazuh deployments may fail TLS verification unless the CA is trusted by the system")
 	}
+	if strings.TrimSpace(config.SaltAPIBaseURL) != "" && strings.TrimSpace(config.SaltAPIPassword) == defaultSaltAPIPassword {
+		warnings = append(warnings, "SALT_API_PASSWORD is still using the placeholder default; rotate it before exposing Salt API access")
+	}
 	if config.MattermostEnabled {
 		if strings.TrimSpace(config.MattermostBaseURL) == "" || strings.TrimSpace(config.MattermostToken) == "" || strings.TrimSpace(config.MattermostTeam) == "" {
 			warnings = append(warnings, "MATTERMOST_ENABLED is true but MATTERMOST_BASE_URL, MATTERMOST_TOKEN, or MATTERMOST_TEAM is missing; Mattermost chat mirroring will stay disabled")
@@ -217,6 +223,9 @@ func (config Config) SecurityWarnings() []string {
 		if config.isExternalURL(config.MattermostBaseURL) && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.MattermostBaseURL)), "http://") {
 			warnings = append(warnings, "MATTERMOST_BASE_URL is using http:// on a non-local host; use HTTPS in production")
 		}
+	}
+	if strings.TrimSpace(config.WazuhAPIBaseURL) != "" && strings.TrimSpace(config.WazuhAPIPassword) == defaultWazuhAPIPassword {
+		warnings = append(warnings, "WAZUH_API_PASSWORD is still using the placeholder default; rotate it before exposing Wazuh API access")
 	}
 	if config.looksLikeDefaultDatabaseURL() {
 		warnings = append(warnings, "DATABASE_URL appears to use default postgres credentials or sslmode=disable; review database transport security")
@@ -251,8 +260,14 @@ func (config Config) SecurityErrors() []string {
 	if config.WazuhAPIInsecureSkipVerify {
 		errors = append(errors, "WAZUH_API_INSECURE_SKIP_VERIFY must be false when ITMS_ENFORCE_SECURITY=true")
 	}
+	if strings.TrimSpace(config.SaltAPIBaseURL) != "" && strings.TrimSpace(config.SaltAPIPassword) == defaultSaltAPIPassword {
+		errors = append(errors, "SALT_API_PASSWORD must be changed from the placeholder default when Salt API access is configured")
+	}
 	if config.MattermostEnabled && config.isExternalURL(config.MattermostBaseURL) && strings.HasPrefix(strings.ToLower(strings.TrimSpace(config.MattermostBaseURL)), "http://") {
 		errors = append(errors, "MATTERMOST_BASE_URL must use HTTPS for non-local deployments when MATTERMOST_ENABLED=true")
+	}
+	if strings.TrimSpace(config.WazuhAPIBaseURL) != "" && strings.TrimSpace(config.WazuhAPIPassword) == defaultWazuhAPIPassword {
+		errors = append(errors, "WAZUH_API_PASSWORD must be changed from the placeholder default when Wazuh API access is configured")
 	}
 	return errors
 }

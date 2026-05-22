@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS asset_compute_details (
   kernel TEXT,
   last_boot TIMESTAMPTZ,
   last_seen TIMESTAMPTZ,
+  logged_in_users_json JSONB NOT NULL DEFAULT '[]'::jsonb,
   pending_updates INTEGER NOT NULL DEFAULT 0,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

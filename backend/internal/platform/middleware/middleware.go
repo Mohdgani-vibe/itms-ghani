@@ -1,17 +1,17 @@
 package middleware
 
 import (
-	"bytes"
-	"database/sql"
-	"encoding/json"
-	"net/http"
-	"slices"
-	"strings"
+  	"bytes"
+  	"database/sql"
+  	"encoding/json"
+  	"net/http"
+  	"slices"
+  	"strings"
 
-	"github.com/gin-gonic/gin"
+  	"github.com/gin-gonic/gin"
 
-	"itms/backend/internal/platform/authn"
-	"itms/backend/internal/platform/httpx"
+  	"itms/backend/internal/platform/authn"
+  	"itms/backend/internal/platform/httpx"
 )
 
 const (
@@ -28,27 +28,28 @@ type AuditMeta struct {
 	ActorID    string
 	EntityID   string
 	AuthMethod string
+	PersistOnError bool
 }
 
 func CORS(origin string) gin.HandlerFunc {
-	allowedOrigins := make([]string, 0)
-	for _, candidate := range strings.Split(origin, ",") {
-		trimmed := strings.TrimSpace(candidate)
-		if trimmed != "" {
-			allowedOrigins = append(allowedOrigins, trimmed)
-		}
-	}
+	       allowedOrigins := make([]string, 0)
+	       for _, candidate := range strings.Split(origin, ",") {
+		       trimmed := strings.TrimSpace(candidate)
+		       if trimmed != "" {
+			       allowedOrigins = append(allowedOrigins, trimmed)
+		       }
+	       }
 
 	return func(c *gin.Context) {
-		requestOrigin := strings.TrimSpace(c.GetHeader("Origin"))
-		if requestOrigin != "" {
-			if len(allowedOrigins) > 0 && !slices.Contains(allowedOrigins, requestOrigin) {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
-				return
-			}
-			c.Header("Access-Control-Allow-Origin", requestOrigin)
-			c.Header("Vary", "Origin")
-		}
+		       requestOrigin := strings.TrimSpace(c.GetHeader("Origin"))
+		       if requestOrigin != "" {
+			       if len(allowedOrigins) > 0 && !slices.Contains(allowedOrigins, requestOrigin) {
+				       c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
+				       return
+			       }
+			       c.Header("Access-Control-Allow-Origin", requestOrigin)
+			       c.Header("Vary", "Origin")
+		       }
 		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 		if c.Request.Method == http.MethodOptions {
@@ -87,15 +88,15 @@ func Audit(db *sql.DB) gin.HandlerFunc {
 
 		c.Next()
 
-		if c.Writer.Status() >= http.StatusBadRequest {
-			return
-		}
 		value, exists := c.Get(AuditMetaKey)
 		if !exists {
 			return
 		}
 		meta, ok := value.(AuditMeta)
 		if !ok || meta.Action == "" {
+			return
+		}
+		if c.Writer.Status() >= http.StatusBadRequest && !meta.PersistOnError {
 			return
 		}
 

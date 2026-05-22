@@ -1,8 +1,9 @@
 SHELL := /bin/bash
 
 APP_NAME := itms-server
+REPO_ROOT := ..
 
-.PHONY: run run-host build tidy compose-up compose-down smoke-test start
+.PHONY: run run-host build tidy compose-up compose-down smoke-test start teleport-env-check teleport-sync-dry-run teleport-ready teleport-generate-secrets teleport-login teleport-manual-steps teleport-sync teleport-status
 
 run:
 	bash ../scripts/start-itms-backend.sh
@@ -34,3 +35,27 @@ compose-down:
 
 smoke-test:
 	bash ../scripts/smoke-test-itms-api.sh
+
+teleport-env-check:
+	$(MAKE) -C $(REPO_ROOT) teleport-env-check
+
+teleport-sync-dry-run:
+	$(MAKE) -C $(REPO_ROOT) teleport-sync-dry-run
+
+teleport-ready:
+	$(MAKE) -C $(REPO_ROOT) teleport-ready
+
+teleport-generate-secrets:
+	$(MAKE) -C $(REPO_ROOT) teleport-generate-secrets
+
+teleport-login:
+	$(MAKE) -C $(REPO_ROOT) teleport-login
+
+teleport-manual-steps:
+	$(MAKE) -C $(REPO_ROOT) teleport-manual-steps
+
+teleport-sync:
+	$(MAKE) -C $(REPO_ROOT) teleport-sync
+
+teleport-status:
+	$(MAKE) -C $(REPO_ROOT) teleport-status
