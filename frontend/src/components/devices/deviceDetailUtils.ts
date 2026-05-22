@@ -23,7 +23,7 @@ export function severityBadgeClassName(severity: string) {
     case 'warning':
       return 'bg-amber-100 text-amber-700';
     default:
-      return 'bg-sky-100 text-sky-700';
+      return 'bg-emerald-100 text-emerald-700';
   }
 }
 

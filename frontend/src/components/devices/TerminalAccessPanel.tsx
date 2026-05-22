@@ -1,4 +1,5 @@
 import { TerminalSquare } from 'lucide-react';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import type { DeviceTerminalSessionRecord } from './types';
 
 interface TerminalAccessPanelProps {
@@ -28,7 +29,7 @@ export default function TerminalAccessPanel({
     </div>
     <p className="mt-2 text-sm text-zinc-500">Open an SSH terminal for this asset and review recent session history.</p>
     {canOperate ? (
-      <button type="button" onClick={onStartTerminal} disabled={startingTerminal || !canStartTerminal} className="mt-4 w-full rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60">
+      <button type="button" onClick={onStartTerminal} disabled={startingTerminal || !canStartTerminal} className={`mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}>
         {startingTerminal ? 'Opening terminal...' : 'Open SSH Terminal'}
       </button>
     ) : null}

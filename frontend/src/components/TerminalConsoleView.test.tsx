@@ -58,8 +58,11 @@ describe('TerminalConsoleView', () => {
     queueTerminalState({
       target: {
         assetId: 'asset-1',
+        assetName: 'Ops Workstation',
         hostname: 'ops-minion-01',
         assetTag: 'AST-001',
+        departmentName: 'IT Operations',
+        locationName: 'Bangalore HQ',
         minionId: 'minion-01',
         connected: false,
         policy: {
@@ -77,7 +80,13 @@ describe('TerminalConsoleView', () => {
     const markup = renderToStaticMarkup(<TerminalConsoleView minionId="minion-01" />);
 
     expect(markup).toContain('Terminal Console');
+    expect(markup).toContain('Ops Workstation');
     expect(markup).toContain('ops-minion-01');
+    expect(markup).toContain('Asset ID asset-1');
+    expect(markup).toContain('Department');
+    expect(markup).toContain('IT Operations');
+    expect(markup).toContain('Location');
+    expect(markup).toContain('Bangalore HQ');
     expect(markup).toContain('Disconnected');
     expect(markup).toContain('Salt target offline. Execution is disabled until the minion reconnects to the master.');
     expect(markup).toContain('Allowed Tools');
@@ -92,8 +101,11 @@ describe('TerminalConsoleView', () => {
     queueTerminalState({
       target: {
         assetId: 'asset-2',
+        assetName: 'Ops Laptop',
         hostname: 'ops-minion-02',
         assetTag: 'AST-002',
+        departmentName: 'Security',
+        locationName: 'Chennai Office',
         minionId: 'minion-02',
         connected: true,
         policy: {
@@ -120,6 +132,8 @@ describe('TerminalConsoleView', () => {
     const markup = renderToStaticMarkup(<TerminalConsoleView minionId="minion-02" embedded />);
 
     expect(markup).toContain('Connected');
+  expect(markup).toContain('Asset ID asset-2');
+  expect(markup).toContain('Security');
     expect(markup).toContain('ops-minion-02$ hostname');
     expect(markup).toContain('ops-minion-02');
     expect(markup).toContain('exit code: 0');

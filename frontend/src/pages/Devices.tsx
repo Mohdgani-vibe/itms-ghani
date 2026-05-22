@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Filter, HardDrive, RefreshCw, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../lib/api';
+import { actionButtonStyles } from '../lib/buttonStyles';
 import { getStoredSession } from '../lib/session';
 import Pagination from '../components/Pagination';
 
@@ -203,7 +204,7 @@ export default function Devices() {
 
   return (
     <div className="space-y-6">
-      {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">Auditor access is read-only. You can review device inventory, OpenSCAP findings, and ClamScan alerts here, but inventory sync and endpoint actions stay restricted to IT operations.</div> : null}
+      {isAuditor ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">Auditor access is read-only. You can review device inventory, OpenSCAP findings, and ClamScan alerts here, but inventory sync and endpoint actions stay restricted to IT operations.</div> : null}
 
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -218,11 +219,11 @@ export default function Devices() {
             <button
               type="button"
               onClick={() => setShowAdvancedColumns((current) => !current)}
-              className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50"
+              className="inline-flex items-center rounded-md border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50"
             >
               {showAdvancedColumns ? 'Hide More Columns' : 'Show More Columns'}
             </button>
-            <button type="button" className="inline-flex items-center px-4 py-2 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50">
+            <button type="button" className="inline-flex items-center rounded-md border border-emerald-200 bg-white px-4 py-2 text-sm font-medium text-emerald-700 shadow-sm transition hover:bg-emerald-50">
               <Filter className="mr-2 h-4 w-4" />
               {assignmentFilter === 'all' ? 'All Systems' : assignmentFilter === 'assigned' ? 'Assigned Systems' : `Unassigned Systems${unassignedDeviceCount > 0 ? ` (${unassignedDeviceCount})` : ''}`}
             </button>
@@ -240,7 +241,7 @@ export default function Devices() {
             key={option.id}
             type="button"
             onClick={() => setAssignmentFilter(option.id)}
-            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${assignmentFilter === option.id ? 'border-sky-200 bg-sky-50 text-sky-800' : 'border-slate-200 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700'}`}
+            className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${assignmentFilter === option.id ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-emerald-100 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'}`}
           >
             {option.id === 'unassigned' ? `${option.label} (${unassignedDeviceCount})` : option.label}
           </button>
@@ -248,10 +249,10 @@ export default function Devices() {
       </div>
 
       {syncStatus?.enabled ? (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-5 shadow-sm">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
             <div>
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Backend Inventory Sync</div>
+              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Backend Inventory Sync</div>
               <h2 className="mt-2 text-lg font-bold text-slate-900">Daily sync runs on the server</h2>
               <p className="mt-1 text-sm text-slate-600">The backend fetches inventory from the configured source, stores hardware details in PostgreSQL, and this UI reads the synced asset records.</p>
               {!syncStatus.configured ? (
@@ -264,7 +265,7 @@ export default function Devices() {
                   type="button"
                   onClick={() => void handleRunBackendSync()}
                   disabled={runningServerSync || !syncStatus.configured}
-                  className="inline-flex items-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  className={`inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${runningServerSync ? 'animate-spin' : ''}`} />
                   {runningServerSync ? 'Running Backend Sync...' : 'Run Real Backend Sync'}

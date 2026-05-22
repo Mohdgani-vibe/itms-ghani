@@ -9,5 +9,5 @@ export default function TerminalConsole() {
   const embedded = new URLSearchParams(location.search).get('embedded') === '1';
   const prefilledCommand = new URLSearchParams(location.search).get('prefill')?.trim() || '';
 
-  return <TerminalConsoleView minionId={minionId} embedded={embedded} prefilledCommand={prefilledCommand} onBack={embedded ? undefined : () => navigate(-1)} />;
+  return <TerminalConsoleView key={minionId} minionId={minionId} embedded={embedded} prefilledCommand={prefilledCommand} onBack={embedded ? undefined : () => navigate(-1)} />;
 }

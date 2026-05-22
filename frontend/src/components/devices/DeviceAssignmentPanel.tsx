@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface AssignedUserSummary {
   fullName?: string;
   employeeCode?: string;
@@ -103,7 +105,7 @@ export default function DeviceAssignmentPanel({
               type="button"
               onClick={onUnassignAsset}
               disabled={assetActionLoading}
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
+              className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.remove}`}
             >
               {assetActionLoading && pendingAssetActionKind === 'unassign' ? 'Working...' : 'Remove From User'}
             </button>
@@ -112,7 +114,7 @@ export default function DeviceAssignmentPanel({
             type="button"
             onClick={onDeleteAsset}
             disabled={assetActionLoading}
-            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
+            className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.delete}`}
           >
             {assetActionLoading && pendingAssetActionKind === 'delete' ? 'Working...' : 'Delete Asset'}
           </button>

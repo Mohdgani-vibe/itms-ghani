@@ -30,7 +30,7 @@ describe('deviceDetailUtils', () => {
   it('maps severity and alert statuses to the expected labels and classes', () => {
     expect(severityBadgeClassName('critical')).toBe('bg-red-100 text-red-700');
     expect(severityBadgeClassName('warning')).toBe('bg-amber-100 text-amber-700');
-    expect(severityBadgeClassName('low')).toBe('bg-sky-100 text-sky-700');
+    expect(severityBadgeClassName('low')).toBe('bg-emerald-100 text-emerald-700');
 
     expect(alertStatusLabel({ acknowledged: false, resolved: false })).toBe('Open');
     expect(alertStatusLabel({ acknowledged: true, resolved: false })).toBe('Acknowledged');

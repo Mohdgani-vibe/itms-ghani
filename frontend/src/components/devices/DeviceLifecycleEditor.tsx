@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 interface DeviceLifecycleFormState {
   assetTag: string;
   category: string;
@@ -123,7 +125,7 @@ export default function DeviceLifecycleEditor({
           type="button"
           onClick={onSubmit}
           disabled={saving || readOnly}
-          className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-60"
+          className={`rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60 ${actionButtonStyles.save}`}
         >
           {saving ? 'Saving...' : 'Save Lifecycle Details'}
         </button>

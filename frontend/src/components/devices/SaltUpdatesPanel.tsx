@@ -1,5 +1,6 @@
 import { Play } from 'lucide-react';
 
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import { getSaltActionOption, SALT_ACTION_OPTIONS, type SaltActionValue } from '../../lib/salt';
 import type { DevicePatchJobRecord } from './types';
 
@@ -69,12 +70,12 @@ export default function SaltUpdatesPanel({
         ) : null}
       </div>
     ) : (
-      <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-sm text-sky-900">
+      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
         Auditor access is read-only. Salt actions and command inputs are hidden, but recent Salt job history stays visible for verification.
       </div>
     )}
     {canOperate ? (
-      <button type="button" onClick={onRunPatch} disabled={runningPatch || !canOpenPatchConsole} className="mt-4 w-full rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-60">
+      <button type="button" onClick={onRunPatch} disabled={runningPatch || !canOpenPatchConsole} className={`mt-4 w-full rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}>
         {runningPatch ? 'Queueing Salt action...' : patchActionButtonLabel}
       </button>
     ) : null}

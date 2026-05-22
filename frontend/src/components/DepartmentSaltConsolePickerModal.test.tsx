@@ -46,6 +46,7 @@ describe('DepartmentSaltConsolePickerModal', () => {
     expect(markup).toContain('Department Salt Console');
     expect(markup).toContain('Finance Department');
     expect(markup).toContain('0 devices available');
+    expect(markup).toContain('Department Scope');
     expect(markup).toContain('No Salt-enabled systems are available in the current department view.');
   });
 
@@ -83,7 +84,9 @@ describe('DepartmentSaltConsolePickerModal', () => {
     expect(markup).toContain('Ubuntu 24.04');
     expect(markup).toContain('Asha Patel');
     expect(markup).toContain('Finance');
+    expect(markup).toContain('Asset ID device-1');
     expect(markup).toContain('fin-minion-01');
+    expect(markup).toContain('Salt target pending');
     expect(markup).toContain('Opening...');
     expect(markup).toContain('Open Console');
   });

@@ -1113,7 +1113,7 @@ export default function DeviceDetailPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 xl:px-6">
-      {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-900 shadow-sm">Auditor access is read-only. Operational actions are hidden, but device context, OpenSCAP findings, ClamScan findings, and related alert details remain visible for verification.</div> : null}
+      {isAuditor ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-900 shadow-sm">Auditor access is read-only. Operational actions are hidden, but device context, OpenSCAP findings, ClamScan findings, and related alert details remain visible for verification.</div> : null}
 
       <DeviceDetailOverview
         hostname={device.hostname}

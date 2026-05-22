@@ -4,7 +4,7 @@ import { apiRequest } from '../../lib/api';
 import { hasSaltTarget, resolveSaltTarget, saltTargetConnected } from '../../lib/bootstrap';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, createPatchRunRunningEntry, type PatchRunExecutionResponse, type PatchRunReport } from '../../lib/patchReports';
 import { buildSaltActionConsolePrefill, buildSaltActionRequest, isPatchReportableSaltAction, saltActionInputError, saltActionSuccessMessage, type SaltActionValue } from '../../lib/salt';
-import type { EmbeddedConsoleState } from '../EmbeddedConsoleModal';
+import { buildEmbeddedSaltConsoleState, type EmbeddedConsoleState } from '../EmbeddedConsoleModal';
 
 interface DeviceAccessWorkflowDevice {
   id: string;
@@ -96,13 +96,14 @@ export function useDeviceDetailAccessWorkflow({
       return false;
     }
 
-    setEmbeddedConsole({
-      kind: 'salt',
+    setEmbeddedConsole(buildEmbeddedSaltConsoleState({
       title: 'Salt Console',
-      subtitle: `${device.hostname} • ${minionId}`,
+      systemLabel: device.hostname,
+      assetId: device.id,
       minionId,
+      departmentName: device.department?.name,
       prefillCommand: buildSaltActionConsolePrefill(selectedSaltAction, customSaltInput, device.osName),
-    });
+    }));
     return true;
   }, [actionsReadOnly, computeAsset, customSaltInput, device, selectedSaltAction, setEmbeddedConsole, setError, setSuccessMessage]);
 

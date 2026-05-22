@@ -1,3 +1,4 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import type { DeviceAlertRecord } from './types';
 
 function renderAlertTitle(alert: Pick<DeviceAlertRecord, 'source' | 'title'>) {
@@ -47,7 +48,7 @@ export default function DeviceAlertDetailModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-[2px]" onClick={onClose}>
       <div ref={alertDialogRef} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[28px] border border-zinc-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.28)]" role="dialog" aria-modal="true" aria-labelledby="device-alert-detail-title" aria-describedby="device-alert-detail-body" onClick={(event) => event.stopPropagation()}>
-        <div className="border-b border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.12),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#fff8ef_100%)] px-6 py-5">
+        <div className="border-b border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.12),_transparent_24%),linear-gradient(135deg,_#f4fdf7_0%,_#ffffff_58%,_#fff8ef_100%)] px-6 py-5">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -58,11 +59,11 @@ export default function DeviceAlertDetailModal({
             <h2 id="device-alert-detail-title" className="mt-3 text-2xl font-black tracking-tight text-zinc-950">{renderAlertTitle(selectedAlert)}</h2>
             <p id="device-alert-detail-body" className="mt-2 max-w-3xl whitespace-pre-line text-sm text-zinc-600">{selectedAlert.detail || 'No detail provided.'}</p>
           </div>
-          <button ref={alertCloseButtonRef} type="button" onClick={onClose} className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50">Close</button>
+          <button ref={alertCloseButtonRef} type="button" onClick={onClose} className={`rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition ${actionButtonStyles.add}`}>Close</button>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
+          <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-700">
             Device Alert Investigation
           </div>
           <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-600">

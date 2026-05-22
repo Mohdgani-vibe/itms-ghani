@@ -5,18 +5,61 @@ import { createPortal } from 'react-dom';
 import SshTerminalView from './SshTerminalView';
 import TerminalConsoleView from './TerminalConsoleView';
 
+const DEFAULT_SALT_DEPARTMENT_NAME = 'Unassigned department';
+
 export type EmbeddedConsoleState = {
   kind: 'ssh';
   title: string;
   subtitle: string;
   assetId: string;
 } | {
+  kind: 'salt-loading';
+  title: string;
+  subtitle: string;
+  assetId?: string;
+} | {
   kind: 'salt';
   title: string;
   subtitle: string;
+  assetId?: string;
+  departmentName?: string;
   minionId: string;
   prefillCommand?: string;
 };
+
+interface BuildEmbeddedSaltConsoleStateInput {
+  title: string;
+  systemLabel: string;
+  assetId: string;
+  minionId: string;
+  departmentName?: string | null;
+  prefillCommand?: string;
+}
+
+function normalizeSaltDepartmentName(departmentName?: string | null) {
+  return departmentName?.trim() || DEFAULT_SALT_DEPARTMENT_NAME;
+}
+
+export function buildEmbeddedSaltConsoleState({
+  title,
+  systemLabel,
+  assetId,
+  minionId,
+  departmentName,
+  prefillCommand,
+}: BuildEmbeddedSaltConsoleStateInput): Extract<EmbeddedConsoleState, { kind: 'salt' }> {
+  const resolvedDepartmentName = normalizeSaltDepartmentName(departmentName);
+
+  return {
+    kind: 'salt',
+    title,
+    subtitle: `${systemLabel} • ${resolvedDepartmentName} • Asset ID ${assetId}`,
+    assetId,
+    departmentName: resolvedDepartmentName,
+    minionId,
+    prefillCommand,
+  };
+}
 
 interface EmbeddedConsoleModalProps {
   consoleState: EmbeddedConsoleState | null;
@@ -101,16 +144,41 @@ export default function EmbeddedConsoleModal({ consoleState, titleId, closeButto
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <div className="rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-200">
-              {consoleState.kind === 'ssh' ? 'Secure Device Access' : 'Live Salt Command Session'}
+            <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-200">
+              {consoleState.kind === 'ssh' ? 'Secure Device Access' : consoleState.kind === 'salt-loading' ? 'Preparing Salt Target' : 'Live Salt Command Session'}
             </div>
+            {'assetId' in consoleState && consoleState.assetId ? (
+              <div className="rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-200">
+                Asset ID {consoleState.assetId}
+              </div>
+            ) : null}
+            {consoleState.kind === 'salt' && consoleState.departmentName ? (
+              <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-200">
+                Department {consoleState.departmentName}
+              </div>
+            ) : null}
+            {consoleState.kind === 'salt' ? (
+              <div className="rounded-full border border-zinc-700 bg-zinc-950/55 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-300">
+                Salt Target {consoleState.minionId}
+              </div>
+            ) : null}
             <div className="rounded-full border border-zinc-700 bg-zinc-950/55 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-300">
               Embedded Workspace
             </div>
           </div>
         </div>
         <div className="min-h-0 flex-1 bg-[linear-gradient(180deg,_#06080d_0%,_#090d15_100%)] p-1.5 sm:p-2">
-          {consoleState.kind === 'ssh' ? <SshTerminalView assetId={consoleState.assetId} embedded /> : <TerminalConsoleView minionId={consoleState.minionId} prefilledCommand={consoleState.prefillCommand} embedded />}
+          {consoleState.kind === 'ssh' ? <SshTerminalView key={consoleState.assetId} assetId={consoleState.assetId} embedded /> : null}
+          {consoleState.kind === 'salt-loading' ? (
+            <div className="flex h-full min-h-[420px] items-center justify-center rounded-[24px] border border-zinc-800 bg-zinc-950/80 px-6 py-8 text-center shadow-inner">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Loading Salt Target</div>
+                <div className="mt-3 text-lg font-bold text-white">Preparing console session for the selected device.</div>
+                <div className="mt-2 text-sm text-zinc-400">Fetching the latest Salt target details before opening the next console.</div>
+              </div>
+            </div>
+          ) : null}
+          {consoleState.kind === 'salt' ? <TerminalConsoleView key={consoleState.minionId} minionId={consoleState.minionId} prefilledCommand={consoleState.prefillCommand} embedded /> : null}
         </div>
       </div>
     </div>,

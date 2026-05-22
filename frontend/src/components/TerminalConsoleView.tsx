@@ -4,7 +4,6 @@ import { ArrowLeft, MonitorSmartphone, Play, RotateCcw, TerminalSquare } from 'l
 import { apiRequest } from '../lib/api';
 import PatchRunReportModal from './PatchRunReportModal';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, createPatchRunRunningEntry, type PatchRunExecutionResponse, type PatchRunReport } from '../lib/patchReports';
-import { terminalConsoleActionsReadOnly } from './terminalConsoleActions';
 
 const TERMINAL_HISTORY_LIMIT = 12;
 
@@ -23,8 +22,11 @@ interface TerminalPolicy {
 
 interface TerminalTargetResponse {
   assetId: string;
+  assetName?: string | null;
   hostname: string;
   assetTag: string;
+  departmentName?: string | null;
+  locationName?: string | null;
   minionId: string;
   connected: boolean;
   policy?: TerminalPolicy;
@@ -35,10 +37,6 @@ interface TerminalCommandResponse {
   stdout: string;
   stderr: string;
   retcode: number | string;
-}
-
-interface DeviceLifecycleStatusResponse {
-  status?: string | null;
 }
 
 function parsePatchStateCommand(command: string) {
@@ -142,10 +140,21 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
   const [error, setError] = useState('');
   const [patchReport, setPatchReport] = useState<PatchRunReport | null>(null);
   const [targetReloadNonce, setTargetReloadNonce] = useState(0);
-  const [lifecycleLoading, setLifecycleLoading] = useState(false);
-  const [blockedReason, setBlockedReason] = useState('');
   const outputRef = useRef<HTMLDivElement | null>(null);
   const sessionRecordedAssetIdRef = useRef('');
+
+  useEffect(() => {
+    setTarget(null);
+    setLoading(true);
+    setRunning(false);
+    setEntries([]);
+    setHistory([]);
+    setHistoryIndex(-1);
+    setError('');
+    setPatchReport(null);
+    setCommand(prefilledCommand.trim());
+    sessionRecordedAssetIdRef.current = '';
+  }, [minionId, prefilledCommand]);
 
   const refreshTarget = () => {
     setError('');
@@ -188,7 +197,7 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
 
   useEffect(() => {
     const assetId = target?.assetId || '';
-    if (!assetId || blockedReason || lifecycleLoading || sessionRecordedAssetIdRef.current === assetId) {
+    if (!assetId || sessionRecordedAssetIdRef.current === assetId) {
       return;
     }
 
@@ -211,42 +220,6 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
     };
 
     void recordTerminalSession();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [blockedReason, lifecycleLoading, target?.assetId]);
-
-  useEffect(() => {
-    const assetId = target?.assetId || '';
-    if (!assetId) {
-      setLifecycleLoading(false);
-      setBlockedReason('');
-      return;
-    }
-
-    let cancelled = false;
-
-    const loadDeviceStatus = async () => {
-      try {
-        setLifecycleLoading(true);
-        setBlockedReason('');
-        const device = await apiRequest<DeviceLifecycleStatusResponse>(`/api/devices/${encodeURIComponent(assetId)}`);
-        if (!cancelled && terminalConsoleActionsReadOnly(device.status)) {
-          setBlockedReason('This asset is retired. Salt console actions are read-only until the asset returns to an active lifecycle state.');
-        }
-      } catch {
-        if (!cancelled) {
-          setBlockedReason('');
-        }
-      } finally {
-        if (!cancelled) {
-          setLifecycleLoading(false);
-        }
-      }
-    };
-
-    void loadDeviceStatus();
 
     return () => {
       cancelled = true;
@@ -282,6 +255,9 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
   }, [entries]);
 
   const shellPrompt = useMemo(() => `${target?.hostname || minionId}$`, [minionId, target?.hostname]);
+  const targetDepartmentLabel = useMemo(() => (target?.departmentName || '').trim() || 'Unassigned department', [target?.departmentName]);
+  const targetLocationLabel = useMemo(() => (target?.locationName || '').trim() || 'Unknown location', [target?.locationName]);
+  const targetAssetName = useMemo(() => (target?.assetName || '').trim() || (target?.hostname || minionId), [minionId, target?.assetName, target?.hostname]);
   const presetCommands = useMemo(() => target?.policy?.presetCommands ?? [], [target?.policy?.presetCommands]);
   const presetGroups = useMemo(() => target?.policy?.presetGroups ?? [], [target?.policy?.presetGroups]);
   const blockedExamples = useMemo(() => target?.policy?.blockedExamples ?? [], [target?.policy?.blockedExamples]);
@@ -295,15 +271,8 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
 
     return 'This Salt target is linked but not currently connected to the master. You can review presets and history here, but command execution stays disabled until the minion reconnects.';
   }, [loading, target]);
-  const runDisabled = loading || lifecycleLoading || running || !command.trim() || !target?.connected || Boolean(blockedReason);
-  const runButtonLabel = running ? 'Running...' : blockedReason ? 'Read-only' : target?.connected ? 'Run' : 'Unavailable';
-
-  useEffect(() => {
-    if (prefilledCommand.trim()) {
-      setCommand(prefilledCommand.trim());
-      setHistoryIndex(-1);
-    }
-  }, [prefilledCommand]);
+  const runDisabled = loading || running || !command.trim() || !target?.connected;
+  const runButtonLabel = running ? 'Running...' : target?.connected ? 'Run' : 'Unavailable';
 
   const applyHistoryEntry = (nextIndex: number) => {
     if (history.length === 0) {
@@ -329,10 +298,7 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
 
   const runCommand = async () => {
     const trimmedCommand = command.trim();
-    if (!trimmedCommand || !target?.connected || running || blockedReason) {
-      if (blockedReason) {
-        setError(blockedReason);
-      }
+    if (!trimmedCommand || !target?.connected || running) {
       return;
     }
 
@@ -399,37 +365,60 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
     <div className={`${embedded ? 'h-full' : 'min-h-screen'} bg-zinc-950 text-zinc-100`}>
       <div className={`mx-auto flex ${embedded ? 'h-full max-w-none flex-col px-0 py-0' : 'min-h-screen max-w-6xl flex-col px-4 py-5 sm:px-6 lg:px-8'}`}>
         {!embedded ? (
-          <div className="flex items-center justify-between gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/80 px-5 py-4 shadow-sm backdrop-blur">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.24em] text-emerald-400">
-                <TerminalSquare className="h-4 w-4" /> Terminal Console
+          <section className="overflow-hidden rounded-[30px] border border-zinc-800 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.16),_transparent_24%),linear-gradient(135deg,_rgba(9,12,20,0.98)_0%,_rgba(15,23,42,0.98)_52%,_rgba(17,24,39,0.96)_100%)] px-5 py-5 shadow-[0_24px_80px_rgba(0,0,0,0.36)]">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+              <div className="min-w-0 max-w-3xl">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.24em] text-emerald-300">
+                  <TerminalSquare className="h-3.5 w-3.5" /> Terminal Console
+                </div>
+                <h1 className="mt-3 truncate text-3xl font-black tracking-tight text-white">{targetAssetName}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-zinc-300">
+                  <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Host {target?.hostname || minionId}</span>
+                  <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Asset ID {target?.assetId || 'pending'}</span>
+                  <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Asset Tag {target?.assetTag || 'pending'}</span>
+                  <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1">Salt Target {target?.minionId || minionId}</span>
+                  <span className={`rounded-full border px-3 py-1 ${target?.connected ? 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300' : 'border-amber-400/20 bg-amber-400/10 text-amber-300'}`}>{target?.connected ? 'Connected' : 'Disconnected'}</span>
+                </div>
               </div>
-              <h1 className="mt-2 truncate text-2xl font-black text-white">{target?.hostname || minionId}</h1>
-              <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-zinc-400">
-                <span>{target?.assetTag || 'Asset pending'}</span>
-                <span>{target?.minionId || minionId}</span>
-                <span className={target?.connected ? 'text-emerald-400' : 'text-amber-400'}>{target?.connected ? 'Connected' : 'Disconnected'}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={refreshTarget} disabled={loading} className="inline-flex items-center rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-bold text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60">
-                <RotateCcw className="mr-2 h-4 w-4" /> Refresh
-              </button>
-              {onBack ? (
-                <button type="button" onClick={onBack} className="inline-flex items-center rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-bold text-zinc-200 hover:bg-zinc-800">
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              <div className="flex items-center gap-3">
+                <button type="button" onClick={refreshTarget} disabled={loading} className="inline-flex items-center rounded-2xl border border-zinc-700 bg-zinc-950/70 px-4 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60">
+                  <RotateCcw className="mr-2 h-4 w-4" /> Refresh
                 </button>
-              ) : null}
+                {onBack ? (
+                  <button type="button" onClick={onBack} className="inline-flex items-center rounded-2xl border border-zinc-700 bg-white px-4 py-2.5 text-sm font-bold text-zinc-900 transition hover:bg-zinc-100">
+                    <ArrowLeft className="mr-2 h-4 w-4" /> Back
+                  </button>
+                ) : null}
+              </div>
             </div>
-          </div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4 backdrop-blur-sm">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">Department</div>
+                <div className="mt-2 text-lg font-black text-white">{targetDepartmentLabel}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4 backdrop-blur-sm">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">Location</div>
+                <div className="mt-2 text-lg font-black text-white">{targetLocationLabel}</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4 backdrop-blur-sm">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">Session Mode</div>
+                <div className="mt-2 text-lg font-black text-white">Salt terminal</div>
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-white/6 px-4 py-4 backdrop-blur-sm">
+                <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">Execution</div>
+                <div className="mt-2 text-lg font-black text-white">{target?.connected ? 'Commands enabled' : 'Waiting for minion'}</div>
+              </div>
+            </div>
+          </section>
         ) : null}
 
         {embedded ? (
-          <div className="mb-3 rounded-2xl border border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-sm">
+          <div className="mb-3 rounded-[24px] border border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
                 <span className="font-semibold text-white">{target?.hostname || minionId}</span>
-                <span>{target?.assetTag || 'Asset pending'}</span>
+                <span>Asset ID {target?.assetId || 'pending'}</span>
+                <span>{targetDepartmentLabel}</span>
                 <span>{target?.minionId || minionId}</span>
                 <span className={target?.connected ? 'text-emerald-400' : 'text-amber-400'}>{target?.connected ? 'Connected' : loading ? 'Connecting' : 'Disconnected'}</span>
               </div>
@@ -443,11 +432,27 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
 
         <div className={`grid min-h-0 flex-1 gap-5 ${embedded ? 'grid-cols-1' : 'mt-5 lg:grid-cols-[300px_minmax(0,1fr)]'}`}>
           {!embedded ? (
-          <aside className={`min-h-0 overflow-y-auto rounded-2xl border border-zinc-800 bg-zinc-900 shadow-sm ${embedded ? 'p-4' : 'p-5'}`}>
+          <aside className={`min-h-0 overflow-y-auto rounded-[28px] border border-zinc-800 bg-zinc-900 shadow-sm ${embedded ? 'p-4' : 'p-5'}`}>
             <div className="flex items-center gap-2 text-sm font-bold text-white">
               <MonitorSmartphone className="h-4 w-4 text-emerald-400" /> Session
             </div>
             <div className="mt-4 space-y-3 text-sm text-zinc-300">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">System</div>
+                <div className="mt-1">{targetAssetName}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Asset ID</div>
+                <div className="mt-1">{target?.assetId || 'Pending'}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Department</div>
+                <div className="mt-1">{targetDepartmentLabel}</div>
+              </div>
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Location</div>
+                <div className="mt-1">{targetLocationLabel}</div>
+              </div>
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Mode</div>
                 <div className="mt-1">Salt-backed command console</div>
@@ -539,10 +544,9 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
               </div>
             ) : null}
             <div ref={outputRef} className={`flex-1 space-y-4 overflow-auto bg-[#09090b] font-mono text-sm ${embedded ? 'min-h-[420px] px-4 py-4' : 'min-h-[320px] px-5 py-5'}`}>
-              {loading || lifecycleLoading ? <div className="text-zinc-400">Loading terminal target...</div> : null}
-              {blockedReason ? <div className="rounded-xl border border-amber-900/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">{blockedReason}</div> : null}
+              {loading ? <div className="text-zinc-400">Loading terminal target...</div> : null}
               {connectionMessage ? <div className="rounded-xl border border-amber-900/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">Salt target offline. Execution is disabled until the minion reconnects to the master.</div> : null}
-              {!loading && !lifecycleLoading && !blockedReason && entries.length === 0 ? <div className="text-zinc-500">Run a command to start this terminal session.</div> : null}
+              {!loading && entries.length === 0 ? <div className="text-zinc-500">Run a command to start this terminal session.</div> : null}
               {entries.map((entry) => (
                 <div key={entry.id} className="space-y-2 rounded-xl border border-zinc-800 bg-zinc-950/70 p-4">
                   <div className="text-emerald-400">{shellPrompt} {entry.command}</div>
@@ -585,8 +589,8 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
                       applyHistoryEntry(historyIndex - 1);
                     }
                   }}
-                  disabled={loading || lifecycleLoading || running || !target?.connected || Boolean(blockedReason)}
-                  placeholder={blockedReason ? 'Retired assets are read-only' : target?.connected ? 'Enter a command' : 'Target is not connected'}
+                  disabled={loading || running || !target?.connected}
+                  placeholder={target?.connected ? 'Enter a command' : 'Target is not connected'}
                   className="min-w-0 flex-1 rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-sm text-zinc-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:opacity-60"
                 />
                 <button type="button" onClick={() => void runCommand()} disabled={runDisabled} className={`inline-flex items-center rounded-xl px-4 py-3 text-sm font-bold ${target?.connected ? 'bg-emerald-500 text-zinc-950 hover:bg-emerald-400' : 'bg-zinc-800 text-zinc-400'} disabled:opacity-60`}>
