@@ -310,6 +310,60 @@ func TestRouterGetTerminalTargetAllowsInScopeITTeam(t *testing.T) {
 	}
 }
 
+func TestRouterSaltWorkspaceReturnsWorkspacePayload(t *testing.T) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		t.Fatalf("sqlmock.New: %v", err)
+	}
+	defer db.Close()
+
+	config := app.Config{
+		FrontendOrigin: "http://localhost:5173",
+		JWTSecret:      "test-secret-with-sufficient-length-123",
+		JWTTTL:         time.Hour,
+	}
+	router := NewRouter(db, config, nil)
+	manager := authn.NewManager(config.JWTSecret, config.JWTTTL)
+	token := issueRouterTestToken(t, manager, "it_team", "user-1", "entity-1")
+	recorder := httptest.NewRecorder()
+	request := newAuthorizedRequest(http.MethodGet, "/api/salt/workspace", token, "")
+
+	mock.ExpectQuery(`SELECT a\.id,\s*COALESCE\(a\.asset_tag, ''\),\s*COALESCE\(NULLIF\(a\.hostname, ''\), a\.asset_tag\)`).
+		WithArgs("entity-1", "user-1").
+		WillReturnRows(sqlmock.NewRows([]string{
+			"id", "asset_tag", "hostname", "name", "category", "os_name", "last_seen", "status", "cost", "salt_minion_id", "owner_name", "department_name", "location_name", "open_alerts", "pending_updates",
+		}).AddRow("asset-1", "AST-SALT-1", "workstation-01", "Admin Laptop", "laptop", "Ubuntu 24.04", "2026-05-15T09:00:00Z", "active", "50000", "minion-1", "Alex Kumar", "IT Operations", "Bangalore HQ", 3, 5))
+	mock.ExpectQuery(`SELECT h\.id, COALESCE\(a\.hostname, a\.asset_tag\), h\.detail, h\.created_at`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "scope", "detail", "created_at"}).AddRow("job-1", "workstation-01", []byte(`{"status":"queued"}`), time.Date(2026, 5, 15, 9, 5, 0, 0, time.UTC)))
+	mock.ExpectQuery(`SELECT r\.id::text, r\.scope_label, r\.requested_at, r\.completed_at, r\.success_count, r\.failed_count, r\.row_count, COALESCE\(u\.full_name, ''\)`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "scope_label", "requested_at", "completed_at", "success_count", "failed_count", "row_count", "requested_by"}).AddRow("report-1", "Finance rollout", time.Date(2026, 5, 15, 8, 55, 0, 0, time.UTC), time.Date(2026, 5, 15, 9, 1, 0, 0, time.UTC), 8, 1, 9, "Alex Kumar"))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "salt workspace payload")
+
+	var body map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	assets, ok := body["assets"].([]any)
+	if !ok || len(assets) != 1 {
+		t.Fatalf("assets = %v, want one asset", body["assets"])
+	}
+	summary, ok := body["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary = %T, want object", body["summary"])
+	}
+	if summary["totalAssets"] != float64(1) {
+		t.Fatalf("summary.totalAssets = %v, want 1", summary["totalAssets"])
+	}
+	if _, ok := body["executionPolicy"].(map[string]any); !ok {
+		t.Fatalf("executionPolicy = %T, want object", body["executionPolicy"])
+	}
+	if _, ok := body["presets"].([]any); !ok {
+		t.Fatalf("presets = %T, want array", body["presets"])
+	}
+}
+
 func TestRouterExecuteTerminalCommandBlocksShellPipeline(t *testing.T) {
 	db, mock, err := sqlmock.New()
 	if err != nil {

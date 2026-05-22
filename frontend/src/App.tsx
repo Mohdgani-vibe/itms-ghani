@@ -19,6 +19,7 @@ const Inventory = lazy(() => import('./pages/Inventory'));
 const Gatepass = lazy(() => import('./pages/Gatepass'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Alerts = lazy(() => import('./pages/Alerts'));
+const SaltStackWorkspace = lazy(() => import('./pages/SaltStackWorkspace'));
 const Announcements = lazy(() => import('./pages/Announcements'));
 const MyAssetsPage = lazy(() => import('./pages/live/MyAssetsPage'));
 const MyRequestsPage = lazy(() => import('./pages/live/MyRequestsPage'));
@@ -143,6 +144,7 @@ function App() {
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="alerts" element={<Alerts />} />
+            <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueuePage />} />
@@ -161,6 +163,7 @@ function App() {
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="alerts" element={<Alerts />} />
+            <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="gatepass" element={<Gatepass />} />
@@ -179,6 +182,7 @@ function App() {
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="inventory" element={<Inventory />} />
             <Route path="alerts" element={<Alerts />} />
+            <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueuePage />} />

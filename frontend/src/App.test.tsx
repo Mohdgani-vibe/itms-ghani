@@ -31,6 +31,7 @@ vi.mock('./pages/Inventory', () => ({ default: () => <div>inventory-page</div> }
 vi.mock('./pages/Gatepass', () => ({ default: () => <div>gatepass-page</div> }));
 vi.mock('./pages/Chat', () => ({ default: () => <div>chat-page</div> }));
 vi.mock('./pages/Alerts', () => ({ default: () => <div>alerts-page</div> }));
+vi.mock('./pages/SaltStackWorkspace', () => ({ default: () => <div>salt-workspace-page</div> }));
 vi.mock('./pages/Announcements', () => ({ default: () => <div>announcements-page</div> }));
 vi.mock('./pages/live/MyAssetsPage', () => ({ default: () => <div>my-assets-page</div> }));
 vi.mock('./pages/live/MyRequestsPage', () => ({ default: () => <div>my-requests-page</div> }));

@@ -849,6 +849,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/patch/reports/:id", server.getPatchRunReport)
 			protected.POST("/patch/reports", server.createPatchRunReport)
 			protected.POST("/patch/run", server.patchRunCompat)
+			protected.GET("/salt/workspace", server.saltWorkspace)
 			protected.GET("/ssh/assets/:id", server.getSSHTarget)
 			protected.POST("/ssh/session", server.createSSHSession)
 			protected.GET("/terminal/session", server.listTerminalSessionsCompat)

@@ -88,9 +88,10 @@ describe('TopNav', () => {
     expect(markup).toContain('Users');
     expect(markup).toContain('Patch');
     expect(markup).toContain('Alerts');
+    expect(markup).toContain('Salt Center');
     expect(markup).toContain('Requests');
     expect(markup).toContain('View Settings');
-    expect(markup).toContain('portal-nav-link-active');
+    expect(markup).toContain('aria-current="page"');
     expect(markup).toContain('placeholder="Search..."');
     expect(markup).toContain('AK');
   });
@@ -146,6 +147,7 @@ describe('TopNav', () => {
 
     expect(markup).toContain('Users');
     expect(markup).toContain('Announcements');
+    expect(markup).toContain('Salt Center');
     expect(markup).not.toContain('placeholder="Search..."');
     expect(markup).not.toContain('Notifications');
     expect(markup).not.toContain('My Profile');
