@@ -1,5 +1,6 @@
 import { Clock, RefreshCw, ShieldAlert, ShieldCheck, TerminalSquare } from 'lucide-react';
 
+import { actionButtonStyles } from '../../lib/buttonStyles';
 import { PATCH_DEVICE_READ_ONLY_REASON, patchDeviceActionsReadOnly } from './patchDeviceActions';
 
 interface PatchDeviceRowProps {
@@ -34,7 +35,7 @@ export default function PatchDeviceRow({
   const actionsReadOnly = patchDeviceActionsReadOnly(deviceStatus);
 
   return (
-    <tr className="transition-colors hover:bg-sky-50/40">
+    <tr className="transition-colors hover:bg-emerald-50/40">
       <td className="px-6 py-4 whitespace-nowrap">
         <button type="button" onClick={onOpenDevice} className="text-sm font-bold text-slate-900 transition hover:text-brand-700">{hostname}</button>
         <div className="mt-1 text-xs text-slate-500">{osName} • {userFullName || 'Unassigned'}</div>
@@ -61,7 +62,7 @@ export default function PatchDeviceRow({
             type="button"
             onClick={onRunPatch}
             disabled={!canOperate || isOpeningConsole || actionsReadOnly}
-            className="inline-flex items-center justify-center rounded-xl border border-slate-900 bg-slate-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800 disabled:opacity-60"
+            className={`inline-flex items-center justify-center rounded-xl px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
           >
             <RefreshCw className="mr-1.5 h-4 w-4" /> {isOpeningConsole ? 'Opening...' : 'Run Patch'}
           </button>

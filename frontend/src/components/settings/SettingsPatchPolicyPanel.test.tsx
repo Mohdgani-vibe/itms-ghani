@@ -36,6 +36,7 @@ describe('SettingsPatchPolicyPanel', () => {
     expect(markup).toContain('IT');
     expect(markup).toContain('Finance');
     expect(markup).toContain('Standard (default)');
+    expect(markup).not.toContain('value="standard">Standard</option>');
   });
 
   it('renders the empty department fallback and disabled controls', () => {

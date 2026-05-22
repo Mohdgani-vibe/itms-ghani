@@ -18,8 +18,8 @@ describe('PatchListHeader', () => {
       />,
     );
 
-    expect(markup).toContain('Patch Operations');
-    expect(markup).toContain('Deployment &amp; Devices');
+    expect(markup).toContain('Patch Device Runway');
+    expect(markup).toContain('Patch devices with more signal and less admin clutter.');
     expect(markup).toContain('Finance');
     expect(markup).toContain('>18<');
     expect(markup).toContain('Active Control');

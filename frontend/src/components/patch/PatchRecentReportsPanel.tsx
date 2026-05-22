@@ -1,5 +1,7 @@
 import { Download, FolderOpen, Funnel, Search } from 'lucide-react';
 
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 type PatchRunReportDateRange = 'all' | '7d' | '30d' | '90d';
 type PatchRunReportSort = 'newest' | 'oldest' | 'most-failures' | 'most-successes';
 
@@ -56,10 +58,10 @@ export default function PatchRecentReportsPanel({
   onDownloadReport,
 }: PatchRecentReportsPanelProps) {
   return (
-    <section className="rounded-[24px] border border-slate-200 bg-white/90 p-5 shadow-sm">
+    <section className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fafc_100%)] p-5 shadow-sm">
       <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">Recent Reports</div>
       <h2 className="mt-2 text-lg font-black text-slate-950">Saved patch runs</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-600">Filter recent execution history, reopen a report modal, or export the same run as CSV.</p>
+      <p className="mt-2 text-sm leading-6 text-slate-600">Keep recent execution history close to the device queue without turning this page into a full archive screen.</p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         <label className="text-xs font-medium text-slate-500">
           Department
@@ -143,7 +145,7 @@ export default function PatchRecentReportsPanel({
                 type="button"
                 onClick={() => onOpenReport(reportItem.id)}
                 disabled={openingReportId === reportItem.id}
-                className="inline-flex items-center text-sm font-bold text-brand-700 hover:text-brand-900 disabled:opacity-60"
+                className={`inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.save}`}
               >
                 <FolderOpen className="mr-1.5 h-4 w-4" />
                 {openingReportId === reportItem.id ? 'Opening...' : 'Open report'}
@@ -152,7 +154,7 @@ export default function PatchRecentReportsPanel({
                 type="button"
                 onClick={() => onDownloadReport(reportItem.id)}
                 disabled={downloadingReportId === reportItem.id}
-                className="inline-flex items-center text-sm font-bold text-slate-700 hover:text-slate-900 disabled:opacity-60"
+                className={`inline-flex items-center rounded-xl px-3 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
               >
                 <Download className="mr-1.5 h-4 w-4" />
                 {downloadingReportId === reportItem.id ? 'Downloading...' : 'Download CSV'}

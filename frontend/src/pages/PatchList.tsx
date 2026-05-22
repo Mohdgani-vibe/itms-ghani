@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Play } from 'lucide-react';
+import { Play, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react';
 import { apiRequest } from '../lib/api';
 import PatchDepartmentFilterPanel from '../components/patch/PatchDepartmentFilterPanel';
 import PatchDeviceRow from '../components/patch/PatchDeviceRow';
@@ -10,7 +10,7 @@ import PatchListFeedback from '../components/patch/PatchListFeedback';
 import PatchListHeader from '../components/patch/PatchListHeader';
 import PatchRecentReportsPanel from '../components/patch/PatchRecentReportsPanel';
 import DepartmentSaltConsolePickerModal, { type DepartmentConsoleDevice } from '../components/DepartmentSaltConsolePickerModal';
-import EmbeddedConsoleModal, { type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
+import EmbeddedConsoleModal, { buildEmbeddedSaltConsoleState, type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
 import PatchRunReportModal from '../components/PatchRunReportModal';
 import Pagination from '../components/Pagination';
 import { resolveSaltTarget, type BootstrapDeviceLike } from '../lib/bootstrap';
@@ -106,6 +106,12 @@ export function formatPatchDepartmentSystemsLabel(selectedDepartment: string) {
   return selectedDepartment === 'all' ? 'Current Systems' : `${selectedDepartment} Systems`;
 }
 
+export function formatPatchDepartmentConsoleTitle(selectedDepartment: string) {
+  return selectedDepartment === 'all'
+    ? 'Choose a system from all departments'
+    : `Choose a system from ${selectedDepartment}`;
+}
+
 export function selectActionablePatchDevices(devices: PatchDevice[]) {
   return devices.filter((device) => !patchDeviceActionsReadOnly(device.status));
 }
@@ -130,18 +136,6 @@ export function normalizePatchDepartmentOptions(departments?: LookupOption[]) {
   return ['all', ...Array.from(new Set((departments || []).map((department) => department.name).filter(Boolean))).sort()];
 }
 
-export function derivePatchPermissions(role: string | null | undefined) {
-  const canOperate = ['super_admin', 'it_team'].includes((role || '').toLowerCase());
-  return {
-    canOperate,
-    canViewReports: canOperate,
-  };
-}
-
-export function formatPatchDepartmentConsoleTitle(selectedDepartment: string) {
-  return selectedDepartment === 'all' ? 'Choose a system from all departments' : `Choose a system from ${selectedDepartment}`;
-}
-
 export function summarizePatchRunRows(rows: PatchRunReport['rows']) {
   return {
     successCount: rows.filter((entry) => entry.status === 'success').length,
@@ -161,6 +155,15 @@ export function selectVisiblePatchReports<T>(sortedRecentReports: T[], showAllRe
 
 export function selectDepartmentSystems(devices: PatchDevice[]) {
   return devices.slice(0, 8);
+}
+
+export function derivePatchPermissions(role?: string | null) {
+  const normalizedRole = (role || '').trim().toLowerCase();
+  const canOperate = normalizedRole === 'super_admin' || normalizedRole === 'it_team';
+  return {
+    canOperate,
+    canViewReports: canOperate,
+  };
 }
 
 export default function PatchList() {
@@ -436,13 +439,14 @@ export default function PatchList() {
         return;
       }
 
-      setEmbeddedConsole({
-        kind: 'salt',
+      setEmbeddedConsole(buildEmbeddedSaltConsoleState({
         title: 'Salt Console',
-        subtitle: `${detail.hostname || device.hostname} • ${minionId}`,
+        systemLabel: detail.hostname || device.hostname,
+        assetId: device.id,
         minionId,
+        departmentName: device.department?.name,
         prefillCommand: prefilledCommand || buildSaltActionConsolePrefill('system-update', '', detail.osName || device.osName),
-      });
+      }));
       setSuccessMessage(`Salt console opened for ${detail.hostname || device.hostname}.`);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Failed to open Salt console');
@@ -524,13 +528,14 @@ export default function PatchList() {
     setOpeningConsoleDeviceId(device.id);
     setError('');
     setDepartmentConsolePickerOpen(false);
-    setEmbeddedConsole({
-      kind: 'salt',
+    setEmbeddedConsole(buildEmbeddedSaltConsoleState({
       title: 'Department Salt Console',
-      subtitle: `${device.hostname} • ${device.minionId}`,
+      systemLabel: device.hostname,
+      assetId: device.id,
       minionId: device.minionId,
+      departmentName: device.department?.name,
       prefillCommand: '',
-    });
+    }));
     setSuccessMessage(`Salt console opened for ${device.hostname} from the current department view.`);
     setOpeningConsoleDeviceId('');
   };
@@ -581,6 +586,37 @@ export default function PatchList() {
           Auditor access is view-only on patch operations. You can review device status, but patch runs, Salt console actions, and report history are disabled.
         </div>
       ) : null}
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Scope</span>
+            <Wrench className="h-4 w-4 text-brand-600" />
+          </div>
+          <div className="mt-3 text-2xl font-black text-slate-950">{selectedDepartment === 'all' ? 'All departments' : selectedDepartment}</div>
+        </div>
+        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Actionable</span>
+            <ShieldCheck className="h-4 w-4 text-brand-600" />
+          </div>
+          <div className="mt-3 text-2xl font-black text-slate-950">{actionableDeviceCount}</div>
+        </div>
+        <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-rose-700">Review blocked</span>
+            <ShieldAlert className="h-4 w-4 text-rose-700" />
+          </div>
+          <div className="mt-3 text-2xl font-black text-rose-950">{Math.max(totalDevices - actionableDeviceCount, 0)}</div>
+        </div>
+        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Saved reports</span>
+            <Play className="h-4 w-4 text-brand-600" />
+          </div>
+          <div className="mt-3 text-2xl font-black text-slate-950">{recentReports.length}</div>
+        </div>
+      </section>
 
       <div className={`grid gap-4 ${canViewReports ? 'lg:grid-cols-[minmax(0,1fr)_240px_320px]' : 'lg:grid-cols-[minmax(0,1fr)_240px]'}`}>
         <PatchDepartmentRunPanel

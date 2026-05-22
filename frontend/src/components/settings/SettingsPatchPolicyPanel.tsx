@@ -40,10 +40,12 @@ export default function SettingsPatchPolicyPanel({
   onWorkflowSettingsChange,
   onDepartmentRingChange,
 }: SettingsPatchPolicyPanelProps) {
+  const normalizedAllowedRings = workflowSettings.patchAllowedRings.map((ring) => ring.trim().toLowerCase());
+
   const toggleAllowedRing = (ring: string) => {
-    const next = workflowSettings.patchAllowedRings.includes(ring)
-      ? workflowSettings.patchAllowedRings.filter((value) => value !== ring)
-      : [...workflowSettings.patchAllowedRings, ring];
+    const next = normalizedAllowedRings.includes(ring)
+      ? normalizedAllowedRings.filter((value) => value !== ring)
+      : [...normalizedAllowedRings, ring];
     onWorkflowSettingsChange({ patchAllowedRings: next });
   };
 
@@ -100,7 +102,7 @@ export default function SettingsPatchPolicyPanel({
         <p className="mt-1 text-xs text-zinc-500">Select which rollout rings can run patches now. Leave all unchecked to allow every ring.</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {PATCH_RING_OPTIONS.map((option) => {
-            const active = workflowSettings.patchAllowedRings.includes(option.value);
+            const active = normalizedAllowedRings.includes(option.value);
             return (
               <button
                 key={option.value}
@@ -133,7 +135,7 @@ export default function SettingsPatchPolicyPanel({
                   className="mt-3 w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm font-medium text-zinc-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                 >
                   <option value="">Standard (default)</option>
-                  {PATCH_RING_OPTIONS.map((option) => (
+                  {PATCH_RING_OPTIONS.filter((option) => option.value !== 'standard').map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
