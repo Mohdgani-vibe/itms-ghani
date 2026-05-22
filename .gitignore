@@ -41,3 +41,21 @@ backend/reset_instance_data
 backend/sync_default_admin_password
 backend/server
 scripts/__pycache__/
+
+# Local runtime and diagnostic artifacts
+.run/
+cookie.txt
+cookies.txt
+token.txt
+git_status_output.txt
+output.txt
+backend/cookies.txt
+backend/device_compat_test_diff.txt
+backend/diff_output.txt
+backend/full_test_output.txt
+backend/headers.txt
+backend/response.txt
+backend/router_diff.txt
+backend/test_output.txt
+backend/tname
+backend/workflow_settings_diff.txt
