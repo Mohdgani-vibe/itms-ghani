@@ -25,9 +25,6 @@
     "noUncheckedSideEffectImports": true
   },
   "include": [
-    "src/main.tsx",
-    "src/App.tsx",
-    "src/index.css",
-    "src/itms/**/*"
+    "src/**/*"
   ]
 }
