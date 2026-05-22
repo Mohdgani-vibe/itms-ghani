@@ -27,4 +27,12 @@ describe('isGatepassPending', () => {
       hasReceiverSignedUpload: false,
     })).toBe(false);
   });
+
+  it('treats closed records as archived after upload', () => {
+    expect(isGatepassPending({
+      status: 'closed',
+      receiverSignedAt: '2026-05-03T10:00:00Z',
+      hasReceiverSignedUpload: true,
+    })).toBe(false);
+  });
 });

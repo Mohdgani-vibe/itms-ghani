@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { actionButtonStyles } from '../../lib/buttonStyles';
 
 interface RecentGatepassCard {
   id: string;
@@ -11,7 +12,8 @@ interface RecentGatepassCard {
 }
 
 interface GatepassReportsSectionProps {
-  recentGatepasses: RecentGatepassCard[];
+  barcodeGatepasses: RecentGatepassCard[];
+  reportGatepasses: RecentGatepassCard[];
   total: number;
   pending: number;
   archived: number;
@@ -22,7 +24,8 @@ interface GatepassReportsSectionProps {
 }
 
 export default function GatepassReportsSection({
-  recentGatepasses,
+  barcodeGatepasses,
+  reportGatepasses,
   total,
   pending,
   archived,
@@ -41,7 +44,7 @@ export default function GatepassReportsSection({
             <div className="mt-2 text-sm text-zinc-500">Use these larger barcode cards to verify movement records quickly from reports.</div>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            {recentGatepasses.map((gatepass) => (
+            {barcodeGatepasses.map((gatepass) => (
               <div key={`scan-station-${gatepass.id}`} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
                 <div className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">{gatepass.status}</div>
                 <div className="mt-2 text-sm font-semibold text-zinc-900">{gatepass.displayNumber}</div>
@@ -79,9 +82,9 @@ export default function GatepassReportsSection({
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="rounded-xl bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
-              {recentGatepasses.length} recent reports ready
+              {reportGatepasses.length} reports ready
             </div>
-            <button type="button" onClick={onDownloadCsv} className="rounded-lg border border-zinc-200 bg-white px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] text-zinc-700 hover:bg-zinc-50">
+            <button type="button" onClick={onDownloadCsv} className={`rounded-lg px-4 py-3 text-xs font-bold uppercase tracking-[0.18em] transition ${actionButtonStyles.add}`}>
               Export CSV
             </button>
           </div>
@@ -99,7 +102,7 @@ export default function GatepassReportsSection({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-200 bg-white">
-              {recentGatepasses.map((gatepass) => (
+              {reportGatepasses.map((gatepass) => (
                 <tr key={`report-row-${gatepass.id}`}>
                   <td className="px-4 py-4 align-top">
                     <div className="break-words font-semibold text-zinc-900">{gatepass.displayNumber}</div>
@@ -110,10 +113,10 @@ export default function GatepassReportsSection({
                   <td className="hidden px-4 py-4 align-top text-sm text-zinc-700 lg:table-cell whitespace-nowrap">{gatepass.issueDate || '-'}</td>
                   <td className="px-4 py-4 align-top">
                     <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap">
-                      <button type="button" onClick={() => onViewReport(gatepass.id)} className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 hover:bg-sky-100">
+                      <button type="button" onClick={() => onViewReport(gatepass.id)} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${actionButtonStyles.add}`}>
                         View
                       </button>
-                      <button type="button" onClick={() => onDownloadReport(gatepass.id)} className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50">
+                      <button type="button" onClick={() => onDownloadReport(gatepass.id)} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${actionButtonStyles.add}`}>
                         Download
                       </button>
                     </div>

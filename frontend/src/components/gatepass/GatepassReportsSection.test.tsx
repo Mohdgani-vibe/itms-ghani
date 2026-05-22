@@ -7,7 +7,18 @@ describe('GatepassReportsSection', () => {
   it('renders barcode cards, report totals, and report table actions', () => {
     const markup = renderToStaticMarkup(
       <GatepassReportsSection
-        recentGatepasses={[
+        barcodeGatepasses={[
+          {
+            id: 'gp-1',
+            status: 'approved',
+            displayNumber: 'GP-2026-001',
+            subjectLabel: 'Laptop dispatch',
+            employeeName: 'Nina Employee',
+            assetRef: 'LT-1001',
+            issueDate: '08 May 2026',
+          },
+        ]}
+        reportGatepasses={[
           {
             id: 'gp-1',
             status: 'approved',
@@ -35,7 +46,7 @@ describe('GatepassReportsSection', () => {
     expect(markup).toContain('2');
     expect(markup).toContain('16');
     expect(markup).toContain('Gatepass report register');
-    expect(markup).toContain('1 recent reports ready');
+    expect(markup).toContain('1 reports ready');
     expect(markup).toContain('Nina Employee');
     expect(markup).toContain('LT-1001');
     expect(markup).toContain('08 May 2026');

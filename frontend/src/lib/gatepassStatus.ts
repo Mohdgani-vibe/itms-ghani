@@ -15,7 +15,7 @@ export function isGatepassPending(record: GatepassPendingRecord) {
     return !record.receiverSignedAt || !record.securitySignedAt || !record.hasReceiverSignedUpload;
   }
 
-  if (normalized === 'completed' || normalized === 'resolved' || normalized === 'rejected' || normalized === 'cancelled') {
+  if (normalized === 'completed' || normalized === 'closed' || normalized === 'resolved' || normalized === 'rejected' || normalized === 'cancelled') {
     return false;
   }
 

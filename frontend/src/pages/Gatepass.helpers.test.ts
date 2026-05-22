@@ -5,6 +5,7 @@ import {
   draftGatepassNumber,
   escapeHtml,
   fieldDisplayValue,
+  formatGatepassValidationMessage,
   formatDisplayDate,
   formatIssueTime,
   formatStatusLabel,
@@ -75,6 +76,26 @@ describe('Gatepass helpers', () => {
       assetDescription: 'Asset description is required',
       purpose: 'Purpose is required',
     });
+  });
+
+  it('formats missing required gatepass fields into an actionable summary', () => {
+    expect(formatGatepassValidationMessage({
+      employeeName: 'Employee name is required',
+      employeeCode: 'Employee ID is required',
+      assetRef: 'Asset tag or ID is required',
+    } as never, 'generating the gatepass')).toBe(
+      'Complete the required gatepass fields before generating the gatepass: Employee name, Employee ID, Asset tag or ID.',
+    );
+
+    expect(formatGatepassValidationMessage({
+      originBranch: 'From branch is required',
+      recipientBranch: 'Receiver branch is required',
+      issueDate: 'Issue date is required',
+      employeeName: 'Employee name is required',
+      employeeCode: 'Employee ID is required',
+    } as never, 'previewing the draft')).toBe(
+      'Complete the required gatepass fields before previewing the draft: From branch, Receiver branch, Issue date, Employee name, and 1 more.',
+    );
   });
 
   it('builds gatepass numbering and status labels from the current date', () => {

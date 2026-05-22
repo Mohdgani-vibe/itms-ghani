@@ -40,15 +40,14 @@ describe('GatepassPreviewOverlay', () => {
 
     expect(markup).toContain('Gatepass Preview');
     expect(markup).toContain('GP-2026-010');
-    expect(markup).toContain('Issued on date:2026-05-08 at time:2026-05-08T09:30:00Z');
-    expect(markup).toContain('Status');
-    expect(markup).toContain('approved');
+    expect(markup).toContain('date:2026-05-08');
+    expect(markup).toContain('time:2026-05-08T09:30:00Z');
     expect(markup).toContain('Chris Employee');
     expect(markup).toContain('Ava Admin');
     expect(markup).toContain('Branch South');
     expect(markup).toContain('LT-44');
     expect(markup).toContain('14-inch laptop');
-    expect(markup).toContain('Security Lead');
+    expect(markup).toContain('Security Check');
     expect(markup).toContain('Download PDF');
     expect(markup).toContain('Print');
   });

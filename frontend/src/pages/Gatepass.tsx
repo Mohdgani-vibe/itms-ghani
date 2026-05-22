@@ -154,6 +154,23 @@ type GatepassFormErrors = Partial<Record<keyof GatepassForm, string>>;
 
 type GatepassSection = 'create' | 'pending' | 'records' | 'reports';
 const DEFAULT_PURPOSE = 'Work from home';
+const gatepassFieldLabels: Record<keyof GatepassForm, string> = {
+  originBranch: 'From branch',
+  recipientBranch: 'Receiver branch',
+  issueDate: 'Issue date',
+  employeeUserId: 'Employee user',
+  employeeName: 'Employee name',
+  employeeCode: 'Employee ID',
+  departmentName: 'Department',
+  approverName: 'Approver name',
+  contactNumber: 'Contact number',
+  assetRef: 'Asset tag or ID',
+  assetType: 'Asset type',
+  serialNumber: 'Serial number',
+  expectedReturn: 'Expected return',
+  assetDescription: 'Asset description',
+  purpose: 'Purpose',
+};
 
 export function todayDate() {
   return new Date().toISOString().slice(0, 10);
@@ -219,6 +236,22 @@ export function validateGatepassForm(form: GatepassForm): GatepassFormErrors {
   }
 
   return errors;
+}
+
+export function formatGatepassValidationMessage(errors: GatepassFormErrors, action: string) {
+  const labels = (Object.keys(gatepassFieldLabels) as Array<keyof GatepassForm>)
+    .filter((key) => errors[key])
+    .map((key) => gatepassFieldLabels[key]);
+
+  if (labels.length === 0) {
+    return `Complete the required gatepass fields before ${action}.`;
+  }
+
+  if (labels.length <= 4) {
+    return `Complete the required gatepass fields before ${action}: ${labels.join(', ')}.`;
+  }
+
+  return `Complete the required gatepass fields before ${action}: ${labels.slice(0, 4).join(', ')}, and ${labels.length - 4} more.`;
 }
 
 export function hasDisplayValue(value?: string) {
@@ -1301,7 +1334,7 @@ export default function Gatepass() {
     const errors = validateGatepassForm(form);
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) {
-      setError('Complete the required gatepass fields before previewing the draft.');
+      setError(formatGatepassValidationMessage(errors, 'previewing the draft'));
       return;
     }
     setError('');
@@ -1327,7 +1360,7 @@ export default function Gatepass() {
     const errors = validateGatepassForm(form);
     setFormErrors(errors);
     if (Object.keys(errors).length > 0) {
-      setError('Complete the required gatepass fields before generating the gatepass.');
+      setError(formatGatepassValidationMessage(errors, 'generating the gatepass'));
       return;
     }
     try {
@@ -1440,7 +1473,16 @@ export default function Gatepass() {
         <div className="min-w-0 space-y-5">
         {activeSection === 'reports' ? (
           <GatepassReportsSection
-            recentGatepasses={recentGatepasses.map((gatepass) => ({
+              barcodeGatepasses={recentGatepasses.map((gatepass) => ({
+                id: gatepass.id,
+                status: gatepass.status,
+                displayNumber: gatepassDisplayNumber(gatepass),
+                employeeName: gatepass.employeeName,
+                assetRef: gatepass.assetRef,
+                issueDate: gatepass.issueDate,
+                subjectLabel: gatepass.employeeName || gatepass.assetRef || 'Gatepass record',
+              }))}
+              reportGatepasses={recentGatepasses.map((gatepass) => ({
               id: gatepass.id,
               status: gatepass.status,
               displayNumber: gatepassDisplayNumber(gatepass),

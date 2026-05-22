@@ -1,3 +1,5 @@
+import { actionButtonStyles } from '../../lib/buttonStyles';
+
 const PURPOSE_OPTIONS = [
   'Work from home',
   'Branch transfer',
@@ -7,8 +9,8 @@ const PURPOSE_OPTIONS = [
   'Other',
 ] as const;
 
-const formControlClassName = 'w-full rounded-xl border border-blue-100 bg-white px-4 py-3.5 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100';
-const formTextareaClassName = 'w-full rounded-xl border border-blue-100 bg-white px-4 py-3.5 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100';
+const formControlClassName = 'w-full rounded-xl border border-emerald-100 bg-white px-3 py-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100';
+const formTextareaClassName = 'w-full rounded-xl border border-emerald-100 bg-white px-3 py-3 text-sm text-zinc-950 shadow-sm outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100';
 
 interface LookupOption {
   id: string;
@@ -111,7 +113,7 @@ export default function GatepassCreateForm({
   onOpenPreview,
 }: GatepassCreateFormProps) {
   return (
-    <form onSubmit={onSubmit} className="space-y-5 rounded-[28px] border border-blue-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f3f9ff_100%)] p-6 shadow-sm">
+    <form onSubmit={onSubmit} className="space-y-4 rounded-[28px] border border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f4fbf6_100%)] p-5 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-950">Draft New Gatepass</h2>
@@ -119,17 +121,17 @@ export default function GatepassCreateForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 bg-white text-xs font-bold text-zinc-900">01</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white text-xs font-bold text-zinc-900">01</div>
           <div>
             <div className="text-sm font-bold text-zinc-950">Dispatch Details</div>
             <div className="mt-0.5 text-xs text-zinc-600">Set the branch and issue date for this movement pass.</div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-          <div className="md:col-span-1 xl:col-span-6">
+        <div className="mt-4 grid gap-4 xl:grid-cols-12">
+          <div className="xl:col-span-6">
             <label>
               <FieldLabel label="From Branch" required />
             </label>
@@ -139,7 +141,7 @@ export default function GatepassCreateForm({
             <FieldError message={formErrors.originBranch} />
           </div>
 
-          <div className="md:col-span-1 xl:col-span-6">
+          <div className="xl:col-span-6">
             <label>
               <FieldLabel label="Receiver Branch" required />
             </label>
@@ -151,17 +153,17 @@ export default function GatepassCreateForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 bg-white text-xs font-bold text-zinc-900">02</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white text-xs font-bold text-zinc-900">02</div>
           <div>
             <div className="text-sm font-bold text-zinc-950">Recipient Details</div>
             <div className="mt-0.5 text-xs text-zinc-600">Identify who is taking the asset and who approves the movement.</div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-          <div className="md:col-span-2 xl:col-span-5">
+        <div className="mt-4 grid gap-3 xl:grid-cols-10">
+          <div className="xl:col-span-4">
             <label>
               <FieldLabel label="Employee Name" required />
             </label>
@@ -194,14 +196,14 @@ export default function GatepassCreateForm({
             ) : null}
             <FieldError message={formErrors.employeeName} />
           </div>
-          <div className="md:col-span-1 xl:col-span-3">
+          <div className="xl:col-span-3">
             <label>
               <FieldLabel label="Employee ID" required />
             </label>
             <input value={form.employeeCode} onChange={(event) => onFieldChange('employeeCode', event.target.value)} className={formControlClassName} placeholder="Employee code" />
             <FieldError message={formErrors.employeeCode} />
           </div>
-          <div className="md:col-span-1 xl:col-span-4">
+          <div className="xl:col-span-3">
             <label>
               <FieldLabel label="Department" required />
             </label>
@@ -211,14 +213,14 @@ export default function GatepassCreateForm({
             </select>
             <FieldError message={formErrors.departmentName} />
           </div>
-          <div className="md:col-span-1 xl:col-span-6">
+          <div className="xl:col-span-5">
             <label>
               <FieldLabel label="Approver Name" required />
             </label>
             <input value={form.approverName} onChange={(event) => onFieldChange('approverName', event.target.value)} className={formControlClassName} placeholder="Approver name" />
             <FieldError message={formErrors.approverName} />
           </div>
-          <div className="md:col-span-1 xl:col-span-6">
+          <div className="xl:col-span-5">
             <label>
               <FieldLabel label="Contact Number" />
             </label>
@@ -228,17 +230,17 @@ export default function GatepassCreateForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-100 bg-blue-50/70 p-5 shadow-sm">
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
         <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-blue-200 bg-white text-xs font-bold text-zinc-900">03</div>
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald-200 bg-white text-xs font-bold text-zinc-900">03</div>
           <div>
             <div className="text-sm font-bold text-zinc-950">Asset Details</div>
             <div className="mt-0.5 text-xs text-zinc-600">Choose the asset, complete the hardware details, and set the movement dates.</div>
           </div>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-12">
-          <div className="md:col-span-2 xl:col-span-5">
+        <div className="mt-4 grid gap-3 xl:grid-cols-10">
+          <div className="xl:col-span-4">
             <label>
               <FieldLabel label="Asset Tag / ID" required />
             </label>
@@ -259,19 +261,19 @@ export default function GatepassCreateForm({
             </p>
             <FieldError message={formErrors.assetRef} />
           </div>
-          <div className="md:col-span-1 xl:col-span-3">
+          <div className="xl:col-span-2">
             <label>
               <FieldLabel label="Asset Type" />
             </label>
             <input value={form.assetType} onChange={(event) => onFieldChange('assetType', event.target.value)} className={formControlClassName} placeholder="Workstation" />
           </div>
-          <div className="md:col-span-1 xl:col-span-4">
+          <div className="xl:col-span-4">
             <label>
               <FieldLabel label="Serial Number" />
             </label>
             <input value={form.serialNumber} onChange={(event) => onFieldChange('serialNumber', event.target.value)} className={formControlClassName} placeholder="Serial or hostname" />
           </div>
-          <div className="md:col-span-1 xl:col-span-4">
+          <div className="xl:col-span-3">
             <label>
               <FieldLabel label="Purpose" required />
             </label>
@@ -280,7 +282,7 @@ export default function GatepassCreateForm({
             </select>
             <FieldError message={formErrors.purpose} />
           </div>
-          <div className="md:col-span-1 xl:col-span-4">
+          <div className="xl:col-span-2">
             <label>
               <FieldLabel label="Issue Date" required />
             </label>
@@ -288,7 +290,7 @@ export default function GatepassCreateForm({
             <p className="mt-1.5 text-[11px] text-zinc-600">Displays as {formatDisplayDate(form.issueDate)}.</p>
             <FieldError message={formErrors.issueDate} />
           </div>
-          <div className="md:col-span-2 xl:col-span-4">
+          <div className="xl:col-span-2">
             <label>
               <FieldLabel label="Expected Return" />
             </label>
@@ -296,29 +298,29 @@ export default function GatepassCreateForm({
           </div>
         </div>
 
-        <div className="mt-4">
+        <div>
           <div className="flex items-center justify-between gap-3">
             <label>
               <FieldLabel label="Asset Description" required />
             </label>
             {assetDescriptionLocked ? <button type="button" onClick={onUnlockAssetDescription} className="text-[11px] font-semibold text-zinc-900 hover:text-zinc-700">Unlock Edit</button> : null}
           </div>
-          <textarea value={form.assetDescription} readOnly={assetDescriptionLocked} onChange={(event) => onFieldChange('assetDescription', event.target.value)} rows={3} className={`${formTextareaClassName} ${assetDescriptionLocked ? 'border-blue-100 bg-blue-50 text-zinc-900 focus:border-blue-100 focus:ring-0' : ''}`} placeholder="Describe the asset being moved" />
+          <textarea value={form.assetDescription} readOnly={assetDescriptionLocked} onChange={(event) => onFieldChange('assetDescription', event.target.value)} rows={3} className={`${formTextareaClassName} ${assetDescriptionLocked ? 'border-emerald-100 bg-emerald-50 text-zinc-900 focus:border-emerald-100 focus:ring-0' : ''}`} placeholder="Describe the asset being moved" />
           {assetDescriptionLocked ? <p className="mt-1.5 text-[11px] text-zinc-600">Description came from the matched inventory record. Unlock edit if you need to override it.</p> : null}
           <FieldError message={formErrors.assetDescription} />
         </div>
       </div>
 
-      <div className="rounded-2xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
+      <div className="rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-sm">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <button type="button" onClick={onReset} className="self-start rounded-lg px-2 py-1 text-sm font-semibold text-zinc-900 hover:bg-blue-50 hover:text-zinc-700">
+          <button type="button" onClick={onReset} className="self-start rounded-lg px-2 py-1 text-sm font-semibold text-zinc-900 hover:bg-emerald-50 hover:text-emerald-800">
             Clear Form
           </button>
-          <div className="grid w-full gap-2.5 md:w-auto md:min-w-[420px] md:grid-cols-2">
-            <button type="button" onClick={onOpenPreview} className="w-full rounded-lg border border-blue-100 bg-white px-4 py-2 text-sm font-bold text-zinc-900 hover:bg-blue-50">
+          <div className="grid w-full gap-2.5 md:w-auto md:min-w-[360px] md:grid-cols-2">
+            <button type="button" onClick={onOpenPreview} className={`w-full rounded-lg px-4 py-2 text-sm font-bold transition ${actionButtonStyles.save}`}>
               Preview Draft
             </button>
-            <button type="submit" disabled={submitting} className="w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-bold text-white hover:bg-brand-700 disabled:opacity-60">
+            <button type="submit" disabled={submitting} className={`w-full rounded-lg px-4 py-2 text-sm font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}>
               {submitting ? 'Generating...' : 'Generate Official Gatepass'}
             </button>
           </div>
