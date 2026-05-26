@@ -1,5 +1,3 @@
-import { actionButtonStyles } from '../../lib/buttonStyles';
-
 interface DeviceLifecycleFormState {
   assetTag: string;
   category: string;
@@ -17,10 +15,6 @@ interface DeviceLifecycleEditorProps {
   onFieldChange: (field: keyof DeviceLifecycleFormState, value: string) => void;
   onSubmit: () => void;
   onCancel: () => void;
-}
-
-export function deviceLifecycleActionsReadOnly(canOperate: boolean, deviceStatus?: string | null) {
-  return !canOperate || (deviceStatus || '').trim().toLowerCase() === 'retired';
 }
 
 export default function DeviceLifecycleEditor({
@@ -125,7 +119,7 @@ export default function DeviceLifecycleEditor({
           type="button"
           onClick={onSubmit}
           disabled={saving || readOnly}
-          className={`rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60 ${actionButtonStyles.save}`}
+          className="rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-semibold text-sky-800 hover:bg-sky-100 disabled:opacity-60"
         >
           {saving ? 'Saving...' : 'Save Lifecycle Details'}
         </button>

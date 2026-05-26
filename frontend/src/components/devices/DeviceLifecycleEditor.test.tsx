@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import DeviceLifecycleEditor, { deviceLifecycleActionsReadOnly } from './DeviceLifecycleEditor';
+import DeviceLifecycleEditor from './DeviceLifecycleEditor';
+import { deviceLifecycleActionsReadOnly } from './deviceLifecycleEditorUtils';
 
 describe('DeviceLifecycleEditor', () => {
   it('renders lifecycle metadata fields including cost', () => {
