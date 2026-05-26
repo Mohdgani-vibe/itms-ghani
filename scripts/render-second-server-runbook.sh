@@ -9,6 +9,8 @@ SERVER_NAME=""
 ADMIN_EMAIL="admin@zerodha.com"
 ADMIN_PASSWORD="replace-with-a-strong-admin-password"
 JWT_SECRET="replace-with-a-random-secret-of-at-least-32-characters"
+ADMIN_PASSWORD_FILE=""
+JWT_SECRET_FILE=""
 
 usage() {
   cat <<'EOF'
@@ -20,7 +22,10 @@ Options:
   --server-name NAME     Hostname or public endpoint for nginx and smoke tests
   --admin-email EMAIL    Seeded admin email (default: admin@zerodha.com)
   --admin-password PASS  Seeded admin password placeholder or real value
+  --admin-password-file FILE
+                        Read seeded admin password from FILE
   --jwt-secret VALUE     JWT secret placeholder or real value
+  --jwt-secret-file FILE Read JWT secret from FILE
   --output PATH          Write rendered output to PATH instead of stdout
   --help                 Show this message
 EOF
@@ -31,6 +36,22 @@ require_command() {
     echo "Missing required command: $1" >&2
     exit 1
   fi
+}
+
+read_value_file() {
+  local file_path="$1"
+
+  if [[ ! -f "$file_path" ]]; then
+    echo "Value file not found: $file_path" >&2
+    exit 1
+  fi
+
+  python3 - "$file_path" <<'PY'
+from pathlib import Path
+import sys
+
+print(Path(sys.argv[1]).read_text().rstrip("\r\n"), end="")
+PY
 }
 
 while [[ $# -gt 0 ]]; do
@@ -51,8 +72,16 @@ while [[ $# -gt 0 ]]; do
       ADMIN_PASSWORD="${2:-}"
       shift 2
       ;;
+    --admin-password-file)
+      ADMIN_PASSWORD_FILE="${2:-}"
+      shift 2
+      ;;
     --jwt-secret)
       JWT_SECRET="${2:-}"
+      shift 2
+      ;;
+    --jwt-secret-file)
+      JWT_SECRET_FILE="${2:-}"
       shift 2
       ;;
     --output)
@@ -88,32 +117,35 @@ fi
 
 require_command python3
 
-rendered_content="$(python3 - "$TEMPLATE_PATH" "$SERVER_IP" "$SERVER_NAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$JWT_SECRET" <<'PY'
+if [[ -n "$ADMIN_PASSWORD_FILE" ]]; then
+  ADMIN_PASSWORD="$(read_value_file "$ADMIN_PASSWORD_FILE")"
+fi
+
+if [[ -n "$JWT_SECRET_FILE" ]]; then
+  JWT_SECRET="$(read_value_file "$JWT_SECRET_FILE")"
+fi
+
+rendered_content="$(printf '%s\n' "$SERVER_IP" "$SERVER_NAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$JWT_SECRET" | python3 -c '
 from pathlib import Path
 import sys
 
 template_path = Path(sys.argv[1])
-server_ip = sys.argv[2]
-server_name = sys.argv[3]
-admin_email = sys.argv[4]
-admin_password = sys.argv[5]
-jwt_secret = sys.argv[6]
+server_ip, server_name, admin_email, admin_password, jwt_secret = [line.rstrip("\n") for line in sys.stdin.readlines()]
 
 text = template_path.read_text()
 replacements = {
-    'YOUR_SERVER_NAME_OR_IP': server_name,
-    'YOUR_SERVER_IP': server_ip,
-    'admin@zerodha.com': admin_email,
-    'replace-with-a-strong-admin-password': admin_password,
-    'replace-with-a-random-secret-of-at-least-32-characters': jwt_secret,
+    "YOUR_SERVER_NAME_OR_IP": server_name,
+    "YOUR_SERVER_IP": server_ip,
+    "admin@zerodha.com": admin_email,
+    "replace-with-a-strong-admin-password": admin_password,
+    "replace-with-a-random-secret-of-at-least-32-characters": jwt_secret,
 }
 
 for old, new in replacements.items():
     text = text.replace(old, new)
 
-print(text, end='')
-PY
-)"
+print(text, end="")
+' "$TEMPLATE_PATH")"
 
 if [[ -n "$OUTPUT_PATH" ]]; then
   printf '%s' "$rendered_content" > "$OUTPUT_PATH"

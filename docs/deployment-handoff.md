@@ -43,12 +43,16 @@ To render the fillable runbook with real values instead of editing placeholders 
 
 ```bash
 cd /home/itteam/itms
+printf '%s\n' 'replace-with-a-strong-admin-password' > /tmp/itms-admin-password.txt
+printf '%s\n' 'replace-with-a-random-secret-of-at-least-32-characters' > /tmp/itms-jwt-secret.txt
+chmod 600 /tmp/itms-admin-password.txt /tmp/itms-jwt-secret.txt
 bash scripts/render-second-server-runbook.sh \
 	--server-ip YOUR_SERVER_IP \
 	--server-name YOUR_SERVER_NAME_OR_IP \
-	--admin-password 'replace-with-a-strong-admin-password' \
-	--jwt-secret 'replace-with-a-random-secret-of-at-least-32-characters' \
+	--admin-password-file /tmp/itms-admin-password.txt \
+	--jwt-secret-file /tmp/itms-jwt-secret.txt \
 	--output docs/second-server-runbook.generated.md
+rm -f /tmp/itms-admin-password.txt /tmp/itms-jwt-secret.txt
 ```
 
 Base packages that must exist before the repo scripts can do the rest:
