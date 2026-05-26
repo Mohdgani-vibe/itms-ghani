@@ -1,4 +1,4 @@
-import { Suspense, lazy, type ComponentType, type ReactElement, useEffect, useState } from 'react';
+import { Suspense, lazy, type ReactElement, useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import NavigationMetrics from './components/NavigationMetrics';
 import { getPreferredPortalPath, getStoredSession } from './lib/session';
@@ -9,7 +9,7 @@ const Login = lazy(() => import('./pages/Login'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPage = lazy(() => import('./pages/live/DashboardPage'));
 const UsersPage = lazy(() => import('./pages/live/UsersPage'));
-const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage') as Promise<{ default: ComponentType<any> }>);
+const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
 const DeviceDetailPage = lazy(() => import('./pages/live/DeviceDetailPage'));
 const SettingsPage = lazy(() => import('./pages/live/SettingsPage'));
