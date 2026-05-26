@@ -7,6 +7,8 @@ BACKEND_SECRETS_FILE="${BACKEND_SECRETS_FILE:-$(dirname "$BACKEND_ENV_FILE")/.en
 BACKEND_URL="${BACKEND_URL:-http://127.0.0.1:3001}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
+ADMIN_PASSWORD_FILE=""
+PROMPT_ADMIN_PASSWORD=0
 INGEST_TOKEN="${INGEST_TOKEN:-}"
 HOSTNAME_MATCH="${HOSTNAME_MATCH:-$(hostname -s)}"
 ASSET_ID="${ASSET_ID:-}"
@@ -29,7 +31,8 @@ Usage:
 Options:
   --backend-url URL          Backend base URL, default: http://127.0.0.1:3001
   --admin-email EMAIL        Admin login email, default: DEFAULT_ADMIN_EMAIL from backend env files
-  --admin-password PASS      Admin login password, default: DEFAULT_ADMIN_PASSWORD from backend env files
+  --admin-password-file FILE Read admin login password from FILE
+  --prompt-admin-password    Prompt for admin login password without echo
   --token TOKEN              Inventory ingest token, default: INVENTORY_INGEST_TOKEN from backend env files
   --hostname NAME            Hostname to match in ITMS, default: current short hostname
   --asset-id UUID            Skip asset discovery and use this asset id
@@ -61,6 +64,41 @@ require_command() {
   fi
 }
 
+read_value_file() {
+  local file_path="$1"
+
+  if [[ ! -f "$file_path" ]]; then
+    echo "Value file not found: $file_path" >&2
+    exit 1
+  fi
+
+  python3 - "$file_path" <<'PY'
+from pathlib import Path
+import sys
+
+print(Path(sys.argv[1]).read_text().rstrip("\r\n"), end="")
+PY
+}
+
+read_secret_prompt() {
+  local prompt_label="$1"
+  local value
+
+  if [[ -t 0 || -t 1 ]]; then
+    read -r -s -p "${prompt_label}: " value
+    printf '\n' >&2
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if ! IFS= read -r value; then
+    echo "Cannot read ${prompt_label} from stdin" >&2
+    exit 1
+  fi
+
+  printf '%s' "$value"
+}
+
 load_env_defaults() {
   if [[ -f "$REPO_ROOT/scripts/load-itms-backend-env.sh" ]]; then
     # shellcheck disable=SC1090
@@ -82,9 +120,13 @@ parse_args() {
         ADMIN_EMAIL="${2:-}"
         shift 2
         ;;
-      --admin-password)
-        ADMIN_PASSWORD="${2:-}"
+      --admin-password-file)
+        ADMIN_PASSWORD_FILE="${2:-}"
         shift 2
+        ;;
+      --prompt-admin-password)
+        PROMPT_ADMIN_PASSWORD=1
+        shift
         ;;
       --token)
         INGEST_TOKEN="${2:-}"
@@ -145,6 +187,17 @@ parse_args() {
         ;;
     esac
   done
+}
+
+resolve_admin_password() {
+  if [[ -n "$ADMIN_PASSWORD_FILE" ]]; then
+    ADMIN_PASSWORD="$(read_value_file "$ADMIN_PASSWORD_FILE")"
+    return 0
+  fi
+
+  if [[ "$PROMPT_ADMIN_PASSWORD" -eq 1 ]]; then
+    ADMIN_PASSWORD="$(read_secret_prompt "Admin password")"
+  fi
 }
 
 api_get() {
@@ -358,6 +411,7 @@ verify_openscap() {
 main() {
   load_env_defaults
   parse_args "$@"
+  resolve_admin_password
 
   require_command curl
   require_command jq
@@ -367,7 +421,7 @@ main() {
     require_command oscap
   fi
   if [[ -z "$ADMIN_EMAIL" || -z "$ADMIN_PASSWORD" ]]; then
-    echo 'Missing admin credentials. Set backend/.env or pass --admin-email/--admin-password.' >&2
+    echo 'Missing admin credentials. Set backend env files, pass --admin-email with --admin-password-file, or use --prompt-admin-password.' >&2
     exit 1
   fi
   if [[ -z "$INGEST_TOKEN" ]]; then
