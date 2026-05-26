@@ -19,6 +19,7 @@ Related documentation:
 
 - Hardening and security change summary: `docs/release-hardening-summary-2026-04-22.md`
 - Stakeholder-facing release note: `docs/release-note-2026-04-22.md`
+- Fillable second-server rollout checklist: `docs/second-server-runbook-template.md`
 
 ## Update Existing Server
 
