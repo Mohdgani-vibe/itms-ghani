@@ -10,6 +10,8 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 ADMIN_PASSWORD_FILE=""
 PROMPT_ADMIN_PASSWORD=0
 INGEST_TOKEN="${INGEST_TOKEN:-}"
+INGEST_TOKEN_FILE=""
+PROMPT_INGEST_TOKEN=0
 HOSTNAME_MATCH="${HOSTNAME_MATCH:-$(hostname -s)}"
 ASSET_ID="${ASSET_ID:-}"
 WAZUH_AGENT_ID="${WAZUH_AGENT_ID:-}"
@@ -33,7 +35,8 @@ Options:
   --admin-email EMAIL        Admin login email, default: DEFAULT_ADMIN_EMAIL from backend env files
   --admin-password-file FILE Read admin login password from FILE
   --prompt-admin-password    Prompt for admin login password without echo
-  --token TOKEN              Inventory ingest token, default: INVENTORY_INGEST_TOKEN from backend env files
+  --token-file FILE          Read inventory ingest token from FILE
+  --prompt-token             Prompt for inventory ingest token without echo
   --hostname NAME            Hostname to match in ITMS, default: current short hostname
   --asset-id UUID            Skip asset discovery and use this asset id
   --wazuh-agent-id ID        Wazuh agent id to report through the collector
@@ -128,9 +131,13 @@ parse_args() {
         PROMPT_ADMIN_PASSWORD=1
         shift
         ;;
-      --token)
-        INGEST_TOKEN="${2:-}"
+      --token-file)
+        INGEST_TOKEN_FILE="${2:-}"
         shift 2
+        ;;
+      --prompt-token)
+        PROMPT_INGEST_TOKEN=1
+        shift
         ;;
       --hostname)
         HOSTNAME_MATCH="${2:-}"
@@ -197,6 +204,17 @@ resolve_admin_password() {
 
   if [[ "$PROMPT_ADMIN_PASSWORD" -eq 1 ]]; then
     ADMIN_PASSWORD="$(read_secret_prompt "Admin password")"
+  fi
+}
+
+resolve_ingest_token() {
+  if [[ -n "$INGEST_TOKEN_FILE" ]]; then
+    INGEST_TOKEN="$(read_value_file "$INGEST_TOKEN_FILE")"
+    return 0
+  fi
+
+  if [[ "$PROMPT_INGEST_TOKEN" -eq 1 ]]; then
+    INGEST_TOKEN="$(read_secret_prompt "Inventory ingest token")"
   fi
 }
 
@@ -412,6 +430,7 @@ main() {
   load_env_defaults
   parse_args "$@"
   resolve_admin_password
+  resolve_ingest_token
 
   require_command curl
   require_command jq
@@ -425,7 +444,7 @@ main() {
     exit 1
   fi
   if [[ -z "$INGEST_TOKEN" ]]; then
-    echo 'Missing ingest token. Set backend/.env or pass --token.' >&2
+    echo 'Missing ingest token. Set backend env files, pass --token-file, or use --prompt-token.' >&2
     exit 1
   fi
 

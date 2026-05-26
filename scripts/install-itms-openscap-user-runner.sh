@@ -239,7 +239,6 @@ set -e
 if [[ -n "\${ITMS_SERVER_URL:-}" && -n "\${ITMS_INGEST_TOKEN:-}" && -f "$COLLECTOR_TARGET" ]]; then
   /usr/bin/python3 "$COLLECTOR_TARGET" \
     --server-url "\$ITMS_SERVER_URL" \
-    --token "\$ITMS_INGEST_TOKEN" \
     --no-software-scan \
     --include-openscap-report \
     --openscap-results-dir "\$RESULTS_DIR" || true
