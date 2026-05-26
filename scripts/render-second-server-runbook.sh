@@ -23,12 +23,10 @@ Options:
   --server-ip IP         Required server IP used in backend and integration steps
   --server-name NAME     Hostname or public endpoint for nginx and smoke tests
   --admin-email EMAIL    Seeded admin email (default: admin@zerodha.com)
-  --admin-password PASS  Seeded admin password placeholder or real value
   --admin-password-file FILE
                         Read seeded admin password from FILE
   --prompt-admin-password
                         Prompt for seeded admin password without echo
-  --jwt-secret VALUE     JWT secret placeholder or real value
   --jwt-secret-file FILE Read JWT secret from FILE
   --prompt-jwt-secret    Prompt for JWT secret without echo
   --output PATH          Write rendered output to PATH instead of stdout
@@ -92,10 +90,6 @@ while [[ $# -gt 0 ]]; do
       ADMIN_EMAIL="${2:-}"
       shift 2
       ;;
-    --admin-password)
-      ADMIN_PASSWORD="${2:-}"
-      shift 2
-      ;;
     --admin-password-file)
       ADMIN_PASSWORD_FILE="${2:-}"
       shift 2
@@ -103,10 +97,6 @@ while [[ $# -gt 0 ]]; do
     --prompt-admin-password)
       PROMPT_ADMIN_PASSWORD=1
       shift
-      ;;
-    --jwt-secret)
-      JWT_SECRET="${2:-}"
-      shift 2
       ;;
     --jwt-secret-file)
       JWT_SECRET_FILE="${2:-}"
