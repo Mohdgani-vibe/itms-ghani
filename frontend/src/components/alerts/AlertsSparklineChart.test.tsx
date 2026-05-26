@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import { AlertsSparklineChart, normalizeSparklineValues, sparklinePath } from './AlertsSparklineChart';
+import { AlertsSparklineChart } from './AlertsSparklineChart';
+import { normalizeSparklineValues, sparklinePath } from './alertsSparklineChartUtils';
 
 describe('AlertsSparklineChart', () => {
   it('filters non-finite values before building the path', () => {
