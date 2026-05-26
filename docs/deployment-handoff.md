@@ -3,7 +3,7 @@
 Current validated branch and commit:
 
 - Branch: `main`
-- Commit: `840f22782ed9051c89f804428c8b68ca3a0c9498`
+- Commit: `3bf969dc405101f24f11bec9389b57142bb3136c`
 - Remote: `https://github.com/Mohdgani-vibe/zerodha-itms.git`
 
 Validated on this server:
