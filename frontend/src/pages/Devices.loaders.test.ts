@@ -8,7 +8,7 @@ vi.mock('../lib/api', () => ({
   apiRequest: devicesLoaderMocks.apiRequestMock,
 }));
 
-import { loadInventoryData, loadUnassignedDeviceCount } from './Devices';
+import { loadInventoryData, loadUnassignedDeviceCount } from './devicesUtils';
 
 describe('Devices loaders', () => {
   beforeEach(() => {

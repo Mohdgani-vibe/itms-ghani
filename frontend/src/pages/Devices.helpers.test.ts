@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCurrency, formatDateTime } from './Devices';
+import { formatCurrency, formatDateTime } from './devicesUtils';
 
 describe('Devices helpers', () => {
   it('formats timestamps with graceful fallbacks', () => {
