@@ -1,10 +1,16 @@
 # Deployment Handoff
 
-Current validated branch and commit:
+Current validated branch:
 
 - Branch: `main`
-- Commit: `95942b668e36defb6bc10adf87d2845cae773683`
 - Remote: `https://github.com/Mohdgani-vibe/zerodha-itms.git`
+
+Resolve the exact current commit directly from the repo when needed:
+
+```bash
+cd /home/itteam/itms
+git rev-parse HEAD
+```
 
 Validated on this server:
 
