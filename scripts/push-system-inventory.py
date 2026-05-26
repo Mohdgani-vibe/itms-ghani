@@ -1047,7 +1047,6 @@ def post_payload(endpoint, token, payload, timeout):
 def parse_args():
     parser = argparse.ArgumentParser(description="Collect hardware and OS details from a Linux system and push them to the ITMS backend.")
     parser.add_argument("--server-url", default=os.getenv("ITMS_SERVER_URL", "http://localhost:3001"), help="Backend base URL or full ingest endpoint")
-    parser.add_argument("--token", default=os.getenv("ITMS_INGEST_TOKEN", ""), help="Inventory ingest token configured on the backend")
     parser.add_argument("--token-file", default="", help="Read the inventory ingest token from FILE")
     parser.add_argument("--prompt-token", action="store_true", help="Prompt for the inventory ingest token without echo")
     parser.add_argument("--asset-tag", default=os.getenv("ITMS_ASSET_TAG", ""), help="Asset tag to report. Defaults to hostname plus a stable device suffix")
@@ -1083,13 +1082,15 @@ def parse_args():
 
 def main():
     args = parse_args()
-    token = (args.token or "").strip()
+    token = ""
     if args.token_file:
         token = read_value_file(args.token_file)
     elif args.prompt_token:
         token = read_secret_prompt("Inventory ingest token")
-    elif not token:
-        token = env_file_value("ITMS_INGEST_TOKEN")
+    else:
+        token = (os.getenv("ITMS_INGEST_TOKEN", "") or "").strip()
+        if not token:
+            token = env_file_value("ITMS_INGEST_TOKEN")
 
     payload = build_asset_payload(args)
 

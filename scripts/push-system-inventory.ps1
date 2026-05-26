@@ -1,6 +1,5 @@
 param(
     [string]$ServerUrl = $env:ITMS_SERVER_URL,
-    [string]$Token = $env:ITMS_INGEST_TOKEN,
     [string]$TokenFile,
     [switch]$PromptToken,
     [string]$AssetTag = $env:ITMS_ASSET_TAG,
@@ -99,7 +98,7 @@ function Resolve-IngestToken {
     if ($PromptToken) {
         return (Read-SecretPrompt -Label 'Inventory ingest token')
     }
-    return (Resolve-ConfiguredValue -ExplicitValue $Token -ConfigKey 'ITMS_INGEST_TOKEN')
+    return (Resolve-ConfiguredValue -ExplicitValue $env:ITMS_INGEST_TOKEN -ConfigKey 'ITMS_INGEST_TOKEN')
 }
 
 $script:ServerUrl = Resolve-ConfiguredValue -ExplicitValue $ServerUrl -ConfigKey 'ITMS_SERVER_URL'
