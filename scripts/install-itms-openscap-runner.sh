@@ -15,6 +15,8 @@ PROFILE="xccdf_org.ssgproject.content_profile_standard"
 SCAN_HOURS="24"
 SERVER_URL=""
 INGEST_TOKEN=""
+INGEST_TOKEN_FILE=""
+PROMPT_INGEST_TOKEN=0
 COLLECTOR_URL=""
 OPENSCAP_DATASTREAM=""
 CONTENT_RELEASE="${OPENSCAP_CONTENT_RELEASE:-v0.1.80}"
@@ -23,11 +25,12 @@ INCLUDE_INGEST=1
 usage() {
   cat <<'EOF'
 Usage:
-  sudo scripts/install-itms-openscap-runner.sh --server-url http://127.0.0.1:3001 --token <inventory_ingest_token> [options]
+  sudo scripts/install-itms-openscap-runner.sh --server-url http://127.0.0.1:3001 --token-file /path/to/inventory-ingest-token [options]
 
 Options:
   --server-url URL          Backend base URL used for inventory ingest
-  --token TOKEN             Inventory ingest token
+  --token-file FILE         Read the inventory ingest token from FILE
+  --prompt-token            Prompt for the inventory ingest token without echo
   --openscap-profile ID     OpenSCAP profile id, default: xccdf_org.ssgproject.content_profile_standard
   --openscap-datastream PATH
                             Existing datastream path; if omitted, the helper downloads distro-matched content
@@ -58,6 +61,41 @@ require_command() {
   fi
 }
 
+read_value_file() {
+  local file_path="$1"
+
+  if [[ ! -f "$file_path" ]]; then
+    echo "Value file not found: $file_path" >&2
+    exit 1
+  fi
+
+  python3 - "$file_path" <<'PY'
+from pathlib import Path
+import sys
+
+print(Path(sys.argv[1]).read_text().rstrip("\r\n"), end="")
+PY
+}
+
+read_secret_prompt() {
+  local prompt_label="$1"
+  local value
+
+  if [[ -t 0 || -t 1 ]]; then
+    read -r -s -p "${prompt_label}: " value
+    printf '\n' >&2
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if ! IFS= read -r value; then
+    echo "Cannot read ${prompt_label} from stdin" >&2
+    exit 1
+  fi
+
+  printf '%s' "$value"
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -65,9 +103,13 @@ parse_args() {
         SERVER_URL="${2:-}"
         shift 2
         ;;
-      --token)
-        INGEST_TOKEN="${2:-}"
+      --token-file)
+        INGEST_TOKEN_FILE="${2:-}"
         shift 2
+        ;;
+      --prompt-token)
+        PROMPT_INGEST_TOKEN=1
+        shift
         ;;
       --openscap-profile)
         PROFILE="${2:-}"
@@ -104,6 +146,12 @@ parse_args() {
         ;;
     esac
   done
+
+  if [[ -n "$INGEST_TOKEN_FILE" ]]; then
+    INGEST_TOKEN="$(read_value_file "$INGEST_TOKEN_FILE")"
+  elif [[ "$PROMPT_INGEST_TOKEN" -eq 1 ]]; then
+    INGEST_TOKEN="$(read_secret_prompt "Inventory ingest token")"
+  fi
 }
 
 install_collector() {
@@ -244,7 +292,7 @@ main() {
   require_command unzip
 
   if [[ "$INCLUDE_INGEST" -eq 1 && ( -z "$SERVER_URL" || -z "$INGEST_TOKEN" ) ]]; then
-    echo '--server-url and --token are required unless --no-ingest is used.' >&2
+    echo '--server-url and either --token-file or --prompt-token are required unless --no-ingest is used.' >&2
     exit 1
   fi
 

@@ -237,7 +237,7 @@ Move from pilot to larger rings only when all of these are true:
 ```bash
 sudo ./scripts/install-itms-agent.sh \
   --server-url http://itms.example.com \
-  --token <inventory_ingest_token> \
+  --token-file /root/itms-ingest-token \
   --salt-master YOUR_SERVER_IP \
   --assigned-to-name "Employee Name" \
   --assigned-to-email employee@example.com \
@@ -245,6 +245,8 @@ sudo ./scripts/install-itms-agent.sh \
   --department-name "IT Operations" \
   --require-salt
 ```
+
+Use a protected file such as `/root/itms-ingest-token` or run the installer with `--prompt-token` instead of placing the ingest token directly on the command line.
 
 ### Windows bootstrap
 

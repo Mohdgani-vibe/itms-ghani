@@ -164,13 +164,15 @@ Ubuntu or Debian:
 ```bash
 sudo ./scripts/install-itms-agent.sh \
   --server-url http://itms.example.com:3001 \
-  --token "$INVENTORY_INGEST_TOKEN" \
+  --token-file /root/itms-ingest-token \
   --category laptop \
   --assigned-to-email employee@example.com \
   --use-hardinfo-fallback \
   --salt-master salt-master.example.com \
   --wazuh-manager wazuh-manager.example.com
 ```
+
+For interactive runs, you can replace `--token-file /root/itms-ingest-token` with `--prompt-token`. Prefer one of those two options over putting the ingest token directly on the command line.
 
 Use `--use-hardinfo-fallback` only on Linux endpoints where you want `hardinfo` installed and used as a fallback source for display details. The richer CPU, RAM, storage, GPU, MAC address, and last boot fields are collected automatically even without that flag.
 

@@ -12,6 +12,10 @@ ROTATE_SALT=1
 ROTATE_WAZUH=1
 SALT_API_PASSWORD="${SALT_API_PASSWORD:-}"
 WAZUH_API_PASSWORD="${WAZUH_API_PASSWORD:-}"
+SALT_API_PASSWORD_FILE=""
+WAZUH_API_PASSWORD_FILE=""
+PROMPT_SALT_PASSWORD=0
+PROMPT_WAZUH_PASSWORD=0
 
 usage() {
   cat <<'EOF'
@@ -22,8 +26,12 @@ Options:
   --check-only             Report placeholder integration secrets and exit non-zero if any remain
   --skip-salt              Skip Salt API rotation/checks
   --skip-wazuh             Skip Wazuh API rotation/checks
-  --salt-password VALUE    Use a specific Salt API password instead of generating one
-  --wazuh-password VALUE   Use a specific Wazuh API password instead of generating one
+  --salt-password-file FILE
+                           Read the Salt API password from FILE
+  --prompt-salt-password   Prompt for the Salt API password without echo
+  --wazuh-password-file FILE
+                           Read the Wazuh API password from FILE
+  --prompt-wazuh-password  Prompt for the Wazuh API password without echo
   --help                   Show this message
 
 Notes:
@@ -43,6 +51,37 @@ fail() {
 
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
+}
+
+read_value_file() {
+  local file_path="$1"
+
+  [[ -f "$file_path" ]] || fail "Value file not found: $file_path"
+
+  python3 - "$file_path" <<'PY'
+from pathlib import Path
+import sys
+
+print(Path(sys.argv[1]).read_text().rstrip("\r\n"), end="")
+PY
+}
+
+read_secret_prompt() {
+  local prompt_label="$1"
+  local value
+
+  if [[ -t 0 || -t 1 ]]; then
+    read -r -s -p "${prompt_label}: " value
+    printf '\n' >&2
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if ! IFS= read -r value; then
+    fail "Cannot read ${prompt_label} from stdin"
+  fi
+
+  printf '%s' "$value"
 }
 
 wait_for_local_tcp_port() {
@@ -107,13 +146,21 @@ parse_args() {
         ROTATE_WAZUH=0
         shift
         ;;
-      --salt-password)
-        SALT_API_PASSWORD="${2:-}"
+      --salt-password-file)
+        SALT_API_PASSWORD_FILE="${2:-}"
         shift 2
         ;;
-      --wazuh-password)
-        WAZUH_API_PASSWORD="${2:-}"
+      --prompt-salt-password)
+        PROMPT_SALT_PASSWORD=1
+        shift
+        ;;
+      --wazuh-password-file)
+        WAZUH_API_PASSWORD_FILE="${2:-}"
         shift 2
+        ;;
+      --prompt-wazuh-password)
+        PROMPT_WAZUH_PASSWORD=1
+        shift
         ;;
       --help|-h)
         usage
@@ -124,6 +171,20 @@ parse_args() {
         ;;
     esac
   done
+}
+
+resolve_supplied_passwords() {
+  if [[ -n "$SALT_API_PASSWORD_FILE" ]]; then
+    SALT_API_PASSWORD="$(read_value_file "$SALT_API_PASSWORD_FILE")"
+  elif [[ "$PROMPT_SALT_PASSWORD" -eq 1 ]]; then
+    SALT_API_PASSWORD="$(read_secret_prompt "Salt API password")"
+  fi
+
+  if [[ -n "$WAZUH_API_PASSWORD_FILE" ]]; then
+    WAZUH_API_PASSWORD="$(read_value_file "$WAZUH_API_PASSWORD_FILE")"
+  elif [[ "$PROMPT_WAZUH_PASSWORD" -eq 1 ]]; then
+    WAZUH_API_PASSWORD="$(read_secret_prompt "Wazuh API password")"
+  fi
 }
 
 env_value() {
@@ -425,6 +486,7 @@ PY
 
 main() {
   parse_args "$@"
+  resolve_supplied_passwords
 
   [[ -f "$BACKEND_ENV_FILE" ]] || fail "Backend env file not found: $BACKEND_ENV_FILE"
   require_command python3
