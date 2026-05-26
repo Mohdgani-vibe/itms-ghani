@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildChatChannelsUrl, buildChatMessagesUrl, deriveChatChannelActionPermissions, deriveChatPermissions, filterAvailableTeammates, filterBackupOwnerCandidates, filterEligibleChatTeammates, filterOwnerCandidates, findActiveChatChannel, hasOlderChatMessages, resolveChatMemberName, selectNextActiveChatChannelId } from './Chat';
+import { buildChatChannelsUrl, buildChatMessagesUrl, deriveChatChannelActionPermissions, deriveChatPermissions, filterAvailableTeammates, filterBackupOwnerCandidates, filterEligibleChatTeammates, filterOwnerCandidates, findActiveChatChannel, hasOlderChatMessages, resolveChatMemberName, selectNextActiveChatChannelId } from './chatUtils';
 
 describe('Chat helpers', () => {
   it('derives manager and auditor permissions correctly', () => {
