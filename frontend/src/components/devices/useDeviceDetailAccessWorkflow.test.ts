@@ -30,10 +30,10 @@ vi.mock('../EmbeddedConsoleModal', () => ({
 
 import { useDeviceDetailAccessWorkflow, deviceDetailAccessActionsReadOnly } from './useDeviceDetailAccessWorkflow';
 
-let capturedWorkflow: { handleOpenMainSaltConsole: () => void } | null = null;
+type CapturedWorkflow = Pick<ReturnType<typeof useDeviceDetailAccessWorkflow>, 'handleOpenMainSaltConsole'>;
 
-function WorkflowHarness() {
-  capturedWorkflow = useDeviceDetailAccessWorkflow({
+function WorkflowHarness({ onCapture }: { onCapture: (workflow: CapturedWorkflow) => void }) {
+  const workflow = useDeviceDetailAccessWorkflow({
     device: {
       id: 'asset-9',
       hostname: 'ops-terminal-09',
@@ -57,6 +57,8 @@ function WorkflowHarness() {
     refreshSidebarData: vi.fn(async () => {}),
   });
 
+  onCapture({ handleOpenMainSaltConsole: workflow.handleOpenMainSaltConsole });
+
   return null;
 }
 
@@ -75,15 +77,19 @@ describe('deviceDetailAccessActionsReadOnly', () => {
 describe('useDeviceDetailAccessWorkflow', () => {
   it('opens the Salt console with shared asset and department context', () => {
     embeddedConsoleSetter.mockReset();
-    capturedWorkflow = null;
+    let capturedWorkflow: CapturedWorkflow | null = null;
 
-    renderToStaticMarkup(createElement(WorkflowHarness));
+    renderToStaticMarkup(createElement(WorkflowHarness, {
+      onCapture: (workflow) => {
+        capturedWorkflow = workflow;
+      },
+    }));
 
     if (!capturedWorkflow) {
       throw new Error('workflow was not captured');
     }
 
-    (capturedWorkflow as { handleOpenMainSaltConsole: () => void }).handleOpenMainSaltConsole();
+    capturedWorkflow.handleOpenMainSaltConsole();
 
     expect(embeddedConsoleSetter).toHaveBeenCalledWith({
       kind: 'salt',
