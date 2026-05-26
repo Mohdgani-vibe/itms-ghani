@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatAnnouncementTimestamp, getVisibleAudiences } from './Announcements';
+import { formatAnnouncementTimestamp, getVisibleAudiences } from './announcementsUtils';
 
 describe('Announcements helpers', () => {
   it('formats valid timestamps and falls back for invalid values', () => {
