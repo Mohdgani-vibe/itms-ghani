@@ -11,6 +11,8 @@ ADMIN_PASSWORD="replace-with-a-strong-admin-password"
 JWT_SECRET="replace-with-a-random-secret-of-at-least-32-characters"
 ADMIN_PASSWORD_FILE=""
 JWT_SECRET_FILE=""
+PROMPT_ADMIN_PASSWORD=0
+PROMPT_JWT_SECRET=0
 
 usage() {
   cat <<'EOF'
@@ -24,8 +26,11 @@ Options:
   --admin-password PASS  Seeded admin password placeholder or real value
   --admin-password-file FILE
                         Read seeded admin password from FILE
+  --prompt-admin-password
+                        Prompt for seeded admin password without echo
   --jwt-secret VALUE     JWT secret placeholder or real value
   --jwt-secret-file FILE Read JWT secret from FILE
+  --prompt-jwt-secret    Prompt for JWT secret without echo
   --output PATH          Write rendered output to PATH instead of stdout
   --help                 Show this message
 EOF
@@ -54,6 +59,25 @@ print(Path(sys.argv[1]).read_text().rstrip("\r\n"), end="")
 PY
 }
 
+read_secret_prompt() {
+  local prompt_label="$1"
+  local value
+
+  if [[ -t 0 || -t 1 ]]; then
+    read -r -s -p "${prompt_label}: " value
+    printf '\n' >&2
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if ! IFS= read -r value; then
+    echo "Cannot read ${prompt_label} from stdin" >&2
+    exit 1
+  fi
+
+  printf '%s' "$value"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --server-ip)
@@ -76,6 +100,10 @@ while [[ $# -gt 0 ]]; do
       ADMIN_PASSWORD_FILE="${2:-}"
       shift 2
       ;;
+    --prompt-admin-password)
+      PROMPT_ADMIN_PASSWORD=1
+      shift
+      ;;
     --jwt-secret)
       JWT_SECRET="${2:-}"
       shift 2
@@ -83,6 +111,10 @@ while [[ $# -gt 0 ]]; do
     --jwt-secret-file)
       JWT_SECRET_FILE="${2:-}"
       shift 2
+      ;;
+    --prompt-jwt-secret)
+      PROMPT_JWT_SECRET=1
+      shift
       ;;
     --output)
       OUTPUT_PATH="${2:-}"
@@ -119,10 +151,14 @@ require_command python3
 
 if [[ -n "$ADMIN_PASSWORD_FILE" ]]; then
   ADMIN_PASSWORD="$(read_value_file "$ADMIN_PASSWORD_FILE")"
+elif [[ "$PROMPT_ADMIN_PASSWORD" -eq 1 ]]; then
+  ADMIN_PASSWORD="$(read_secret_prompt "Seeded admin password")"
 fi
 
 if [[ -n "$JWT_SECRET_FILE" ]]; then
   JWT_SECRET="$(read_value_file "$JWT_SECRET_FILE")"
+elif [[ "$PROMPT_JWT_SECRET" -eq 1 ]]; then
+  JWT_SECRET="$(read_secret_prompt "JWT secret")"
 fi
 
 rendered_content="$(printf '%s\n' "$SERVER_IP" "$SERVER_NAME" "$ADMIN_EMAIL" "$ADMIN_PASSWORD" "$JWT_SECRET" | python3 -c '
