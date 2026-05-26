@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import getpass
 import json
 import os
 import shlex
@@ -23,6 +24,31 @@ def fail(message):
 
 def shell_quote(value):
     return shlex.quote(str(value or ""))
+
+
+def read_value_file(path):
+    file_path = Path(path).expanduser()
+    if not file_path.is_file():
+        fail(f"Value file not found: {file_path}")
+    return file_path.read_text(encoding="utf-8").rstrip("\r\n")
+
+
+def read_secret_prompt(label):
+    if sys.stdin.isatty() or sys.stderr.isatty():
+        return getpass.getpass(f"{label}: ").strip()
+
+    value = sys.stdin.readline()
+    if not value:
+        fail(f"Cannot read {label} from stdin.")
+    return value.rstrip("\r\n")
+
+
+def resolve_secret(explicit_value, file_path, prompt, label):
+    if file_path:
+        return read_value_file(file_path)
+    if prompt:
+        return read_secret_prompt(label)
+    return (explicit_value or "").strip()
 
 
 def api_request(base_url, path, token, method="GET", payload=None, timeout=30):
@@ -60,7 +86,7 @@ def sanitize_host(value):
     return value
 
 
-def build_linux_bootstrap_command(server_url, asset, ingest_token, salt_master, wazuh_manager):
+def build_linux_bootstrap_command(server_url, asset, salt_master, wazuh_manager):
     installer_url = urllib.parse.urljoin(server_url.rstrip("/") + "/", "installers/install-itms-agent.sh")
     command_parts = [
         "curl -fsSL",
@@ -68,8 +94,7 @@ def build_linux_bootstrap_command(server_url, asset, ingest_token, salt_master, 
         "| sudo bash -s --",
         "--server-url",
         shell_quote(server_url),
-        "--token",
-        shell_quote(ingest_token),
+        "--prompt-token",
         "--category",
         shell_quote(asset.get("category") or "laptop"),
     ]
@@ -86,15 +111,13 @@ def build_linux_bootstrap_command(server_url, asset, ingest_token, salt_master, 
 
 def run_ssh_inventory(host, ssh_user, ssh_key_path, server_url, ingest_token, script_path, timeout):
     known_hosts_path = os.getenv("ITMS_SSH_KNOWN_HOSTS", "").strip()
-    remote_command = [
-        "python3",
-        "-",
-        "--server-url",
-        server_url,
-        "--token",
-        ingest_token,
-    ]
+    remote_command = ["python3", "-", "--server-url", server_url]
+    bootstrap = (
+        "import os\n"
+        f"os.environ['ITMS_INGEST_TOKEN'] = {ingest_token!r}\n"
+    ).encode("utf-8")
     with open(script_path, "rb") as handle:
+        remote_script = bootstrap + handle.read()
         ssh_command = [
             "ssh",
             "-o",
@@ -117,22 +140,27 @@ def run_ssh_inventory(host, ssh_user, ssh_key_path, server_url, ingest_token, sc
         ])
         result = subprocess.run(
             ssh_command,
-            stdin=handle,
+            input=remote_script,
             capture_output=True,
-            text=True,
+            text=False,
             timeout=timeout + 20,
             check=False,
         )
-    return result.returncode == 0, (result.stdout or result.stderr).strip()
+    stdout = (result.stdout or b"").decode("utf-8", errors="replace")
+    stderr = (result.stderr or b"").decode("utf-8", errors="replace")
+    return result.returncode == 0, (stdout or stderr).strip()
 
 
 def main():
     parser = argparse.ArgumentParser(description="Refresh inventory for all laptop/desktop/workstation assets using Salt or SSH.")
     parser.add_argument("--server-url", default=os.getenv("ITMS_SERVER_URL", "http://YOUR_SERVER_IP"))
-    parser.add_argument("--token", default=os.getenv("ITMS_TOKEN", ""))
+    parser.add_argument("--token-file", default="")
+    parser.add_argument("--prompt-token", action="store_true")
     parser.add_argument("--email", default=os.getenv("ITMS_EMAIL", ""))
-    parser.add_argument("--password", default=os.getenv("ITMS_PASSWORD", ""))
-    parser.add_argument("--ingest-token", default=os.getenv("ITMS_INGEST_TOKEN", ""))
+    parser.add_argument("--password-file", default="")
+    parser.add_argument("--prompt-password", action="store_true")
+    parser.add_argument("--ingest-token-file", default="")
+    parser.add_argument("--prompt-ingest-token", action="store_true")
     parser.add_argument("--ssh-user", default=os.getenv("ITMS_SSH_USER", "itteam"))
     parser.add_argument("--ssh-key", default=os.getenv("ITMS_SSH_KEY", "/home/itteam/.ssh/id_ed25519"))
     parser.add_argument("--ssh-known-hosts", default=os.getenv("ITMS_SSH_KNOWN_HOSTS", ""))
@@ -144,14 +172,18 @@ def main():
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
-    if not args.token and (not args.email or not args.password):
-        fail("Provide --token or set both --email and --password for API authentication.")
-    if not args.ingest_token:
-        fail("Provide --ingest-token or set ITMS_INGEST_TOKEN before running this script.")
+    auth_token = resolve_secret(os.getenv("ITMS_TOKEN", ""), args.token_file, args.prompt_token, "API auth token")
+    password = resolve_secret(os.getenv("ITMS_PASSWORD", ""), args.password_file, args.prompt_password, "API password")
+    ingest_token = resolve_secret(os.getenv("ITMS_INGEST_TOKEN", ""), args.ingest_token_file, args.prompt_ingest_token, "Inventory ingest token")
+
+    if not auth_token and (not args.email or not password):
+        fail("Provide an API auth token via ITMS_TOKEN, --token-file, or --prompt-token, or set both --email and a password via env/file/prompt.")
+    if not ingest_token:
+        fail("Provide an ingest token via ITMS_INGEST_TOKEN, --ingest-token-file, or --prompt-ingest-token before running this script.")
     if args.ssh_known_hosts:
         os.environ["ITMS_SSH_KNOWN_HOSTS"] = args.ssh_known_hosts
 
-    token = args.token or login(args.server_url, args.email, args.password, args.api_timeout)
+    token = auth_token or login(args.server_url, args.email, password, args.api_timeout)
     categories = {item.strip().lower() for item in args.categories.split(",") if item.strip()}
     local_script = str((Path(__file__).resolve().parent / "push-system-inventory.py"))
 
@@ -193,7 +225,6 @@ def main():
                 preview["bootstrap_command"] = build_linux_bootstrap_command(
                     args.server_url,
                     asset,
-                    args.ingest_token,
                     args.salt_master,
                     args.wazuh_manager,
                 )
@@ -222,7 +253,7 @@ def main():
 
         refreshed = False
         for host in host_candidates:
-            ok, output = run_ssh_inventory(host, args.ssh_user, args.ssh_key, args.server_url, args.ingest_token, local_script, args.timeout)
+            ok, output = run_ssh_inventory(host, args.ssh_user, args.ssh_key, args.server_url, ingest_token, local_script, args.timeout)
             if ok:
                 results.append({"asset_tag": asset_tag, "status": "completed", "method": "ssh", "host": host, "output": output})
                 refreshed = True
@@ -237,7 +268,6 @@ def main():
                 "bootstrap_command": build_linux_bootstrap_command(
                     args.server_url,
                     asset,
-                    args.ingest_token,
                     args.salt_master,
                     args.wazuh_manager,
                 ),
