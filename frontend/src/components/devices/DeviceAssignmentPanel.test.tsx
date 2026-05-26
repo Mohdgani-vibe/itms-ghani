@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import DeviceAssignmentPanel, { deviceAssignmentActionsReadOnly } from './DeviceAssignmentPanel';
+import DeviceAssignmentPanel from './DeviceAssignmentPanel';
+import { deviceAssignmentActionsReadOnly } from './deviceAssignmentPanelUtils';
 
 describe('DeviceAssignmentPanel', () => {
   it('fails closed for inactive assigned users', () => {

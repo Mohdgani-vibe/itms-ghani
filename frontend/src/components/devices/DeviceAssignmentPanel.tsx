@@ -1,5 +1,7 @@
 import { actionButtonStyles } from '../../lib/buttonStyles';
 
+import { deviceAssignmentActionsReadOnly } from './deviceAssignmentPanelUtils';
+
 interface AssignedUserSummary {
   fullName?: string;
   employeeCode?: string;
@@ -49,10 +51,6 @@ interface DeviceAssignmentPanelProps {
   onAssignmentSearchQueryChange: (value: string) => void;
   onSelectedAssignmentUserIdChange: (value: string) => void;
   onAssignDevice: () => void;
-}
-
-export function deviceAssignmentActionsReadOnly(canOperate: boolean, deviceStatus?: string | null, assignedUserStatus?: string | null) {
-  return !canOperate || (deviceStatus || '').trim().toLowerCase() === 'retired' || assignedUserStatus === 'inactive';
 }
 
 export default function DeviceAssignmentPanel({
