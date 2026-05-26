@@ -3,7 +3,7 @@
 Current validated branch and commit:
 
 - Branch: `main`
-- Commit: `059bc08e1c9f1db66258fb3565b8fca7409f4497`
+- Commit: `840f22782ed9051c89f804428c8b68ca3a0c9498`
 - Remote: `https://github.com/Mohdgani-vibe/zerodha-itms.git`
 
 Validated on this server:
@@ -58,6 +58,80 @@ sed -i 's|^PUBLIC_SERVER_URL=.*|PUBLIC_SERVER_URL=http://YOUR_SERVER_IP|' backen
 sed -i 's|^FRONTEND_ORIGIN=.*|FRONTEND_ORIGIN=http://YOUR_SERVER_IP,http://localhost:4175,http://127.0.0.1:4175|' backend/.env
 sed -i 's|^GOOGLE_REDIRECT_URL=.*|GOOGLE_REDIRECT_URL=http://YOUR_SERVER_IP/api/auth/google/callback|' backend/.env
 ```
+
+Copy-paste template for `backend/.env` on a second server:
+
+```bash
+cat > backend/.env <<'EOF'
+BACKEND_ADDR=:3001
+ITMS_ENFORCE_SECURITY=false
+FRONTEND_ORIGIN=http://YOUR_SERVER_IP,http://localhost:4175,http://127.0.0.1:4175
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/itms?sslmode=disable
+MIGRATION_DIR=db/postgres_migrations
+INVENTORY_SYNC_ENABLED=false
+INVENTORY_SYNC_SOURCE_TYPE=json
+INVENTORY_SYNC_SOURCE_URL=
+INVENTORY_SYNC_SOURCE_TOKEN=
+INVENTORY_INGEST_TOKEN=
+INVENTORY_SYNC_INTERVAL=24h
+INVENTORY_SYNC_RUN_ON_STARTUP=false
+INVENTORY_SYNC_DEFAULT_ENTITY_ID=
+INVENTORY_SYNC_DEFAULT_DEPT_ID=
+INVENTORY_SYNC_DEFAULT_LOCATION_ID=
+PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
+SALT_MASTER_HOST=
+WAZUH_MANAGER_HOST=
+JWT_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+JWT_TTL=24h
+SALT_API_BASE_URL=
+SALT_API_TOKEN=
+SALT_API_USERNAME=
+SALT_API_PASSWORD=
+SALT_API_EAUTH=pam
+SALT_TARGET_TYPE=glob
+SSH_TERMINAL_USERNAME=
+SSH_TERMINAL_PRIVATE_KEY_PATH=
+SSH_TERMINAL_PRIVATE_KEY=
+SSH_TERMINAL_CERTIFICATE_PATH=
+SSH_TERMINAL_KNOWN_HOSTS_PATH=
+SSH_TERMINAL_HOST_OVERRIDES=
+SSH_TERMINAL_STRICT_HOST_KEY=true
+SSH_TERMINAL_PORT=22
+SALT_AGENT_INSTALL_STATE=itms_agent.install
+SALT_AGENT_INSTALL_UBUNTU_STATE=itms_agent.ubuntu
+SALT_AGENT_INSTALL_WINDOWS_STATE=itms_agent.windows
+SALT_INVENTORY_REFRESH_STATE=itms_inventory.refresh
+SALT_INVENTORY_REFRESH_UBUNTU_STATE=itms_inventory.ubuntu
+SALT_INVENTORY_REFRESH_WINDOWS_STATE=itms_inventory.windows
+WAZUH_API_BASE_URL=
+WAZUH_API_USERNAME=
+WAZUH_API_PASSWORD=
+WAZUH_API_CA_FILE=
+WAZUH_API_INSECURE_SKIP_VERIFY=false
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URL=http://YOUR_SERVER_IP/api/auth/google/callback
+GOOGLE_HOSTED_DOMAIN=zerodha.com
+DEFAULT_ADMIN_EMAIL=admin@zerodha.com
+DEFAULT_ADMIN_PASSWORD=replace-with-a-strong-admin-password
+DEFAULT_ADMIN_NAME=ITMS Admin
+EOF
+```
+
+Copy-paste template for `backend/.env.secrets`:
+
+```bash
+cat > backend/.env.secrets <<'EOF'
+JWT_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+DEFAULT_ADMIN_PASSWORD=replace-with-a-strong-admin-password
+EOF
+```
+
+Notes for those templates:
+
+- Keep `JWT_SECRET` and `DEFAULT_ADMIN_PASSWORD` in `backend/.env.secrets` as the effective values. Docker Compose loads `.env.secrets` after `.env`.
+- If Google SSO is not being used on the second server yet, leave `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` empty.
+- Leave the Salt, SSH terminal, and Wazuh settings empty until that server is actually wired to those services, or run `scripts/install-itms-server-integrations.sh` to populate the Salt and Wazuh values automatically.
 
 Start backend plus Postgres. This installer handles Docker Engine, Buildx, and the Compose plugin automatically on Ubuntu:
 
