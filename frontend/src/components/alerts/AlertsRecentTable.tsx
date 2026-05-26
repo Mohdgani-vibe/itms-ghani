@@ -1,5 +1,7 @@
 import type { AlertsListRecord } from './types';
 
+import { selectRecentAlert } from './alertsRecentTableUtils';
+
 interface AlertsRecentTableProps {
   alerts: AlertsListRecord[];
   onSelectAlert?: (alert: AlertsListRecord, alerts: AlertsListRecord[]) => void;
@@ -35,14 +37,6 @@ function renderSeverityLabel(alert: AlertsListRecord) {
     return 'low';
   }
   return severity;
-}
-
-export function selectRecentAlert(
-  alert: AlertsListRecord,
-  _alerts: AlertsListRecord[],
-  onSelectAlert?: (alert: AlertsListRecord, alerts: AlertsListRecord[]) => void,
-) {
-  onSelectAlert?.(alert, [alert]);
 }
 
 export function AlertsRecentTable({

@@ -2,7 +2,8 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { vi } from 'vitest';
 
-import { AlertsRecentTable, selectRecentAlert } from './AlertsRecentTable';
+import { AlertsRecentTable } from './AlertsRecentTable';
+import { selectRecentAlert } from './alertsRecentTableUtils';
 
 const alerts = [
   {
