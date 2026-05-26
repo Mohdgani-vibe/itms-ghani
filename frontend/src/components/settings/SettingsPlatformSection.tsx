@@ -1,6 +1,5 @@
 interface InstallAgentConfig {
   publicServerUrl: string;
-  inventoryIngestToken: string;
   saltMasterHost: string;
   saltApiBaseUrl?: string;
   wazuhManagerHost: string;

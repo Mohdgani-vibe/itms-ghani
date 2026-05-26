@@ -19,7 +19,6 @@ const VALID_PATCH_RINGS = new Set(['pilot', 'standard', 'broad', 'critical']);
 
 interface InstallAgentConfig {
   publicServerUrl: string;
-  inventoryIngestToken: string;
   saltMasterHost: string;
   saltApiBaseUrl?: string;
   wazuhManagerHost: string;

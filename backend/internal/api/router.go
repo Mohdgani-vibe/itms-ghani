@@ -2686,7 +2686,6 @@ func (server *apiServer) getInstallConfig(c *gin.Context) {
 
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"publicServerUrl":      serverURL,
-		"inventoryIngestToken": strings.TrimSpace(server.config.InventoryIngestToken),
 		"saltMasterHost":       saltMasterHost,
 		"wazuhManagerHost":     wazuhManagerHost,
 		"saltApiConfigured":    saltAvailable,

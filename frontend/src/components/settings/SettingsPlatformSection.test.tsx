@@ -9,7 +9,6 @@ describe('SettingsPlatformSection', () => {
       <SettingsPlatformSection
         installConfig={{
           publicServerUrl: 'https://portal.example.com',
-          inventoryIngestToken: 'token',
           saltMasterHost: 'salt-master.internal',
           saltApiBaseUrl: 'https://salt.example.com',
           wazuhManagerHost: 'wazuh.internal',

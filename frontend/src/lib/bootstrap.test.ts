@@ -45,7 +45,6 @@ describe('bootstrap', () => {
     };
     const config = {
       publicServerUrl: 'https://itms.example.com',
-      inventoryIngestToken: 'token-123',
       saltMasterHost: 'salt.internal',
       wazuhManagerHost: 'wazuh.internal',
       saltApiConfigured: true,

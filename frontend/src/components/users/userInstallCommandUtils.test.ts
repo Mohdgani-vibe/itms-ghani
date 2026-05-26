@@ -12,7 +12,6 @@ describe('userInstallCommandUtils', () => {
     const command = buildLinuxBootstrapCommand(
       {
         publicServerUrl: 'https://itms.example.com',
-        inventoryIngestToken: 'token-123',
         saltMasterHost: 'salt.internal',
         wazuhManagerHost: 'wazuh.internal',
         saltApiConfigured: true,
@@ -41,7 +40,6 @@ describe('userInstallCommandUtils', () => {
     const command = buildWindowsBootstrapCommand(
       {
         publicServerUrl: 'https://itms.example.com',
-        inventoryIngestToken: 'token-123',
         saltMasterHost: 'salt.internal',
         wazuhManagerHost: 'wazuh.internal',
         saltApiConfigured: true,

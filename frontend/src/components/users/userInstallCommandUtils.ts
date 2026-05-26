@@ -2,7 +2,6 @@ import type { UserRecord } from './userDirectoryUtils';
 
 export interface InstallAgentConfig {
   publicServerUrl: string;
-  inventoryIngestToken: string;
   saltMasterHost: string;
   saltApiBaseUrl?: string;
   wazuhManagerHost: string;

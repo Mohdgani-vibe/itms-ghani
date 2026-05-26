@@ -10,9 +10,9 @@ describe('UserInstallWorkspace', () => {
         selectedUser={{ id: 'user-1', fullName: 'Chris Employee', employeeCode: 'EMP-101' }}
         installConfig={{
           publicServerUrl: 'https://portal.example.com',
-          inventoryIngestToken: 'token',
           saltApiBaseUrl: 'https://salt.example.com',
           saltApiConfigured: true,
+          portalInstallReady: true,
           sshConfigured: true,
           sshAuthMode: 'certificate',
           wazuhApiConfigured: false,

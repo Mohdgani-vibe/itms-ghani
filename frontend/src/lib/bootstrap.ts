@@ -54,7 +54,6 @@ interface InstallAgentConfigLike {
   portalInstallReady: boolean;
   sshConfigured?: boolean;
   publicServerUrl?: string;
-  inventoryIngestToken?: string;
   saltMasterHost?: string;
   wazuhManagerHost?: string;
   linuxInstallerUrl?: string;

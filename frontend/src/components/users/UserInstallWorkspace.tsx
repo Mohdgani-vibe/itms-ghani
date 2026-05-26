@@ -8,9 +8,9 @@ interface SelectedUserSummary {
 
 interface InstallAgentConfig {
   publicServerUrl: string;
-  inventoryIngestToken: string;
   saltApiBaseUrl?: string;
   saltApiConfigured: boolean;
+  portalInstallReady?: boolean;
   sshConfigured?: boolean;
   sshAuthMode?: string;
   wazuhApiConfigured: boolean;
@@ -221,7 +221,7 @@ export default function UserInstallWorkspace({
         </div>
         <div className="rounded-xl bg-zinc-50 px-4 py-3">
           <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inventory token</div>
-          <div className="mt-2 text-sm font-semibold text-zinc-900">{installConfig?.inventoryIngestToken ? 'Ready' : installConfigLoading ? 'Loading...' : 'Missing'}</div>
+          <div className="mt-2 text-sm font-semibold text-zinc-900">{installConfig?.portalInstallReady ? 'Ready' : installConfigLoading ? 'Loading...' : 'Missing'}</div>
         </div>
         <div className="rounded-xl bg-zinc-50 px-4 py-3 md:col-span-2">
           <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">SSH Terminal Auth</div>

@@ -305,7 +305,6 @@ describe('SettingsPage helpers', () => {
       publicServerUrl: 'https://itms.example',
       linuxInstallerUrl: 'https://itms.example/linux.sh',
       windowsInstallerUrl: 'https://itms.example/windows.ps1',
-      inventoryIngestToken: 'token-123',
       saltMasterHost: 'salt.internal',
       wazuhManagerHost: 'wazuh.internal',
     };
