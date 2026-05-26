@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { MonitorSmartphone, Lock, Eye, EyeOff } from 'lucide-react';
 import { apiRequest, resetAuthRedirectState } from '../lib/api';
 import { getPreferredPortalPath, getShortName, normalizeAuthUser, normalizeLoginIdentifier, setStoredSession } from '../lib/session';
+import { normalizeAuthErrorMessage } from './loginUtils';
 
 interface LoginResponse {
   token: string;
@@ -43,23 +44,6 @@ declare global {
 }
 
 let googleScriptPromise: Promise<void> | null = null;
-
-export function normalizeAuthErrorMessage(message: string) {
-  const normalized = message.trim().toLowerCase();
-  if (
-    normalized === 'authentication failed'
-    || normalized === 'wrong password'
-    || normalized === 'unregistered email'
-    || normalized === 'user is inactive'
-    || normalized === 'only @zerodha.com email addresses are allowed'
-    || normalized === 'invalid google token'
-    || normalized === 'google token email mismatch'
-    || normalized === 'non-zerodha domain is not allowed'
-  ) {
-    return 'Sign-in failed. Check your email or employee ID and password, or contact IT if you need access help.';
-  }
-  return message;
-}
 
 function loadGoogleScript() {
   if (googleScriptPromise) {

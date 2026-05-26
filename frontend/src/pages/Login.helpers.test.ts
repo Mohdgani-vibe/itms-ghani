@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { normalizeAuthErrorMessage } from './Login';
+import { normalizeAuthErrorMessage } from './loginUtils';
 
 describe('Login helpers', () => {
   it('maps known authentication failures to the shared support message', () => {
