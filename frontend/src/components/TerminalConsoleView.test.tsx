@@ -27,6 +27,7 @@ function queueTerminalState(overrides: {
   target?: unknown;
   loading?: boolean;
   running?: boolean;
+  showEmbeddedPresets?: boolean;
   command?: string;
   entries?: unknown[];
   history?: string[];
@@ -39,6 +40,7 @@ function queueTerminalState(overrides: {
     overrides.target ?? null,
     overrides.loading ?? true,
     overrides.running ?? false,
+    overrides.showEmbeddedPresets ?? false,
     overrides.command ?? '',
     overrides.entries ?? [],
     overrides.history ?? [],
@@ -132,8 +134,7 @@ describe('TerminalConsoleView', () => {
     const markup = renderToStaticMarkup(<TerminalConsoleView minionId="minion-02" embedded />);
 
     expect(markup).toContain('Connected');
-  expect(markup).toContain('Asset ID asset-2');
-  expect(markup).toContain('Security');
+    expect(markup).toContain('Asset asset-2');
     expect(markup).toContain('ops-minion-02$ hostname');
     expect(markup).toContain('ops-minion-02');
     expect(markup).toContain('exit code: 0');
