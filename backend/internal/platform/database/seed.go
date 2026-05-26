@@ -112,6 +112,19 @@ func seedDepartments(db *sql.DB) error {
 		{"ZBL", "Risk Management", "RISK", "Operational risk controls and incident governance"},
 		{"ZBL", "Compliance", "COMP", "Regulatory compliance monitoring and internal policy adherence"},
 		{"ZBL", "Facilities & Admin", "ADMIN", "Facilities, workplace services, and administrative operations"},
+		{"ZBL", "Accounts", "ACCOUNTS", "Accounting, finance controls, and reconciliation operations"},
+		{"ZBL", "BOCO", "BOCO", "Business operations coordination and workflow management"},
+		{"ZBL", "HR", "HR", "Hiring, onboarding, people support, and HR operations"},
+		{"ZBL", "IT Team", "ITTEAM", "Endpoint management, infrastructure, and internal IT support"},
+		{"ZBL", "Mutual Funds", "MFUNDS", "Mutual fund operations, servicing, and support"},
+		{"ZBL", "Quality", "QUALITY", "Quality reviews, training alignment, and process assurance"},
+		{"ZBL", "Sales-ACOP", "SACOP", "Sales and ACOP workflows, enablement, and support"},
+		{"ZBL", "Account Opening", "ACOPEN", "Account opening workflow management and onboarding support"},
+		{"ZBL", "Process", "PROCESS", "Operational process ownership and execution support"},
+		{"ZBL", "Business Analysis (ZTeam)", "BAZTEAM", "Business analysis, requirements intake, and ZTeam coordination"},
+		{"ZBL", "Varsity", "VARSITY", "Varsity content, learning support, and program coordination"},
+		{"ZBL", "Tech Support", "TECHSUP", "Technical troubleshooting, endpoint support, and issue resolution"},
+		{"ZBL", "Institutional Broking Support", "IBSUP", "Institutional broking support and service operations"},
 	}
 
 	for _, department := range departments {
