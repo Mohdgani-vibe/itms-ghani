@@ -240,15 +240,16 @@ EOF
     fi
     systemctl restart wazuh-manager
   elif [[ -f /var/ossec/api/configuration/security/rbac.db ]]; then
-    /var/ossec/framework/python/bin/python3 - <<EOF
+    WAZUH_API_PASSWORD="$WAZUH_API_PASSWORD" /var/ossec/framework/python/bin/python3 - <<'EOF'
 import asyncio
+  import os
 from wazuh.security import update_user
 from wazuh.core.cluster import utils as cluster_utils
 
 async def main():
     response = await cluster_utils.forward_function(
         update_user,
-        f_kwargs={'user_id': '1', 'password': ${WAZUH_API_PASSWORD@Q}},
+      f_kwargs={'user_id': '1', 'password': os.environ['WAZUH_API_PASSWORD']},
         request_type='local_master',
     )
     if isinstance(response, Exception):
