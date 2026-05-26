@@ -84,13 +84,15 @@ describe('AlertsDetailPane', () => {
   it('renders alert investigation details with related findings', () => {
     const markup = renderPane(alertRecord);
 
-    expect(markup).toContain('Alert Investigation');
+    expect(markup).toContain('Full Details');
     expect(markup).toContain('Malware signature triggered');
     expect(markup).toContain('Selected Asset');
     expect(markup).toContain('IT-001');
     expect(markup).toContain('70,436 scanned');
-    expect(markup).toContain('Asset Findings');
-    expect(markup).toContain('Wazuh integrity change');
+    expect(markup).toContain('Known viruses: 3627837');
+    expect(markup).toContain('Paths: /home,/etc,/opt');
+    expect(markup).toContain('Affected Asset');
+    expect(markup).not.toContain('Asset Findings');
   });
 
   it('renders the empty state when no alert is selected', () => {

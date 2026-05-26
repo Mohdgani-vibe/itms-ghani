@@ -86,7 +86,7 @@ export function AlertsRecentTable({
               tabIndex={onSelectAlert ? 0 : undefined}
               onClick={handleSelect}
               onKeyDown={handleKeyDown}
-              className={`border-l-4 ${renderSeverityBorderClassName(alert)} ${onSelectAlert ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-inset' : ''} hover:bg-zinc-50/80`}
+              className={`border-l-4 ${renderSeverityBorderClassName(alert)} ${onSelectAlert ? 'cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300 focus-visible:ring-inset' : ''} hover:bg-zinc-50/80`}
             >
               <td onClick={handleSelect} className="px-5 py-4 font-bold text-zinc-900">{alert.id}</td>
               <td onClick={handleSelect} className="px-5 py-4">

@@ -47,11 +47,12 @@ export function AlertsFeedPane({
   renderAlertAsset,
 }: AlertsFeedPaneProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white/95 shadow-sm lg:max-h-[calc(100vh-15rem)] lg:min-h-[42rem] lg:overflow-hidden">
-      <div className="border-b border-emerald-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f4fdf7_100%)] px-5 py-4">
+    <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/95 shadow-[0_18px_40px_rgba(15,23,42,0.08)] lg:max-h-[calc(100vh-15rem)] lg:min-h-[42rem] lg:overflow-hidden">
+      <div className="border-b border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#eef7ff_100%)] px-5 py-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <div className="text-sm font-bold text-zinc-900">Alert Feed</div>
+            <div className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Live queue</div>
+            <div className="mt-2 text-sm font-black text-zinc-900">Alert Feed</div>
             <div className="mt-1 text-xs text-zinc-500">{readOnlyReview ? 'Review incidents by source and inspect the selected asset from the detail panel.' : 'Review incidents by source, inspect the selected asset, and act from the panel on the right.'}</div>
           </div>
           <div className="hidden items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500 md:flex">
@@ -62,8 +63,8 @@ export function AlertsFeedPane({
       </div>
 
       <div className="space-y-3 p-4 md:p-5 lg:max-h-[calc(100vh-24rem)] lg:overflow-y-auto">
-        {loading ? <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6 text-sm text-zinc-500 shadow-sm">Loading alerts...</div> : null}
-        {!loading && alerts.length === 0 ? <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-6 text-sm text-zinc-500 shadow-sm">No alerts found.</div> : null}
+        {loading ? <div className="rounded-[24px] border border-slate-200 bg-sky-50/40 p-6 text-sm text-zinc-500 shadow-sm">Loading alerts...</div> : null}
+        {!loading && alerts.length === 0 ? <div className="rounded-[24px] border border-slate-200 bg-sky-50/40 p-6 text-sm text-zinc-500 shadow-sm">No alerts found.</div> : null}
         {alerts.map((alert) => {
           const isActive = selectedAlertId === alert.id;
           const clamavFacts = parseClamAVAlertFacts(alert);
@@ -72,7 +73,7 @@ export function AlertsFeedPane({
             <article
               key={alert.id}
               onClick={() => onSelectAlert(alert, alerts)}
-              className={`cursor-pointer rounded-2xl border px-4 py-4 shadow-sm transition ${isActive ? 'border-emerald-300 bg-emerald-50/80 shadow-md ring-1 ring-emerald-100' : 'border-emerald-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/40 hover:shadow-md'}`}
+              className={`cursor-pointer rounded-[24px] border px-4 py-4 shadow-sm transition ${isActive ? 'border-sky-300 bg-sky-50/80 shadow-md ring-1 ring-sky-100' : 'border-slate-200 bg-white hover:border-sky-200 hover:bg-sky-50/40 hover:shadow-md'}`}
             >
               <div className="flex items-start gap-3">
                 <span className={`mt-2 h-2.5 w-2.5 shrink-0 rounded-full ${renderSeverityDotClassName(alert)}`} />
@@ -80,7 +81,7 @@ export function AlertsFeedPane({
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="truncate text-base font-semibold text-zinc-950">{renderSystemName(alert)}</h2>
+                          <h2 className="truncate text-base font-black text-zinc-950">{renderSystemName(alert)}</h2>
                         <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${renderAlertStatusClassName(alert)}`}>{renderAlertStatusLabel(alert)}</span>
                       </div>
                         <div className="mt-1 text-sm font-medium text-zinc-700">{alert.title}</div>

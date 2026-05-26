@@ -45,8 +45,6 @@ describe('AlertsDashboardSourceGrid', () => {
         ]}
         formatNumber={(value) => String(value ?? 0)}
         onOpenSource={() => {}}
-        onOpenConsole={() => {}}
-        onInvestigate={() => {}}
       />,
     );
 
@@ -58,9 +56,9 @@ describe('AlertsDashboardSourceGrid', () => {
     expect(markup).toContain('>4<');
     expect(markup).toContain('>7<');
     expect(markup).toContain('Threats');
-    expect(markup).toContain('Last scan 5/8/2026, 8:00:00 AM');
+    expect(markup).toContain('Last scan');
+    expect(markup).toContain('5/8/2026, 8:00:00 AM');
     expect(markup).toContain('Risk 72');
-    expect(markup).toContain('Open Console');
-    expect(markup).toContain('Investigate');
+    expect(markup).toContain('View Alerts');
   });
 });

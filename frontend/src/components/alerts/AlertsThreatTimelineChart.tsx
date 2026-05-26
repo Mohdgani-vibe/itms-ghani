@@ -2,11 +2,12 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
+
+import { AlertsMeasuredChart } from './AlertsMeasuredChart';
 
 interface ThreatTimelineChartProps {
   points: Array<{ label: string; count: number }>;
@@ -24,16 +25,25 @@ function chartContainerStyle(height: number) {
   return { width: '100%', height, minWidth: 240 } as const;
 }
 
+function normalizeTimelinePoints(points: Array<{ label: string; count: number }>) {
+  return points.map((point) => ({
+    label: point.label,
+    count: Number.isFinite(point.count) ? point.count : 0,
+  }));
+}
+
 function timelineBarWidth(value: number, maxValue: number) {
   return Math.max(8, (value / Math.max(maxValue, 1)) * 100);
 }
 
 export function AlertsThreatTimelineChart({ points, activeLabel, onSelectPoint }: ThreatTimelineChartProps) {
+  const normalizedPoints = normalizeTimelinePoints(points);
+
   if (isServerRender) {
-    const maxValue = Math.max(...points.map((point) => point.count), 1);
+    const maxValue = Math.max(...normalizedPoints.map((point) => point.count), 1);
     return (
       <div className="space-y-3">
-        {points.map((point) => (
+        {normalizedPoints.map((point) => (
           <button
             key={point.label}
             type="button"
@@ -55,8 +65,9 @@ export function AlertsThreatTimelineChart({ points, activeLabel, onSelectPoint }
 
   return (
     <div className="h-72 w-full" style={chartContainerStyle(288)}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={points} margin={{ top: 10, right: 12, bottom: 0, left: -18 }}>
+      <AlertsMeasuredChart height={288} minWidth={240}>
+        {({ width, height }) => (
+        <AreaChart width={width} height={height} data={normalizedPoints} margin={{ top: 10, right: 12, bottom: 0, left: -18 }}>
           <defs>
             <linearGradient id="alerts-threat-fill" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.42} />
@@ -104,7 +115,8 @@ export function AlertsThreatTimelineChart({ points, activeLabel, onSelectPoint }
             }}
           />
         </AreaChart>
-      </ResponsiveContainer>
+        )}
+      </AlertsMeasuredChart>
     </div>
   );
 }

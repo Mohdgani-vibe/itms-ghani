@@ -49,7 +49,7 @@ describe('AlertsDetailActionsPanel', () => {
       />,
     );
 
-    expect(markup).toContain('Terminal Access');
+    expect(markup).toContain('Terminal session unavailable');
     expect(markup).toContain('disabled');
     expect(markup).toContain('SSH terminal sessions are unavailable until the server SSH username and private key are configured.');
   });

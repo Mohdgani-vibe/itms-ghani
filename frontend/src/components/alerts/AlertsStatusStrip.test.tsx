@@ -18,7 +18,7 @@ describe('AlertsStatusStrip', () => {
       />,
     );
 
-    expect(markup).toContain('Refresh Alerts');
+    expect(markup).toContain('Refresh');
     expect(markup).toContain('animate-spin');
     expect(markup).toContain('Failed to load alerts');
     expect(markup).toContain('bg-rose-50');

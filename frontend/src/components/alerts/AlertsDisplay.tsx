@@ -183,7 +183,7 @@ export function renderSeverityClassName(alert: AlertsListRecord) {
     return 'bg-amber-100 text-amber-700';
   }
   if (severity === 'info' || severity === 'low') {
-    return 'bg-emerald-100 text-emerald-700';
+    return 'bg-blue-100 text-blue-700';
   }
   return 'bg-zinc-100 text-zinc-700';
 }
@@ -196,7 +196,7 @@ export function renderSeverityDotClassName(alert: AlertsListRecord) {
   if (severity === 'medium' || severity === 'warning') {
     return 'bg-amber-500';
   }
-  return 'bg-emerald-500';
+  return 'bg-blue-500';
 }
 
 export function renderAlertStatusLabel(alert: AlertsListRecord) {
@@ -211,7 +211,7 @@ export function renderAlertStatusLabel(alert: AlertsListRecord) {
 
 export function renderAlertStatusClassName(alert: AlertsListRecord) {
   if (alert.resolved) {
-    return 'bg-emerald-100 text-emerald-700';
+    return 'bg-blue-100 text-blue-700';
   }
   if (alert.acknowledged) {
     return 'bg-amber-100 text-amber-700';
@@ -264,13 +264,13 @@ export function renderSourceLabel(value: string) {
 export function renderSourceBadgeClassName(value: string) {
   const source = value.toLowerCase();
   if (source === 'wazuh') {
-    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    return 'bg-blue-100 text-blue-700 border-blue-200';
   }
   if (source === 'openscap') {
     return 'bg-violet-100 text-violet-700 border-violet-200';
   }
   if (source === 'clamav') {
-    return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    return 'bg-blue-100 text-blue-700 border-blue-200';
   }
   if (source === 'patch') {
     return 'bg-amber-100 text-amber-700 border-amber-200';

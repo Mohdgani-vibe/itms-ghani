@@ -3,11 +3,12 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
+
+import { AlertsMeasuredChart } from './AlertsMeasuredChart';
 
 interface QueueHealthChartProps {
   items: Array<{ label: string; openCount: number; staleSystems: number; errorSystems: number }>;
@@ -25,11 +26,15 @@ function chartContainerStyle(height: number) {
   return { width: '100%', height, minWidth: 240 } as const;
 }
 
+function sanitizeMetricValue(value: number) {
+  return Number.isFinite(value) ? value : 0;
+}
+
 export function AlertsQueueHealthChart({ items, activeSelection, onSelectBar }: QueueHealthChartProps) {
   const chartRows = items.flatMap((item) => ([
-    { label: item.label, metric: 'Open', value: item.openCount, fill: '#0ea5e9' },
-    { label: item.label, metric: 'Offline', value: item.staleSystems, fill: '#f59e0b' },
-    { label: item.label, metric: 'Errors', value: item.errorSystems, fill: '#f43f5e' },
+    { label: item.label, metric: 'Open', value: sanitizeMetricValue(item.openCount), fill: '#0ea5e9' },
+    { label: item.label, metric: 'Offline', value: sanitizeMetricValue(item.staleSystems), fill: '#f59e0b' },
+    { label: item.label, metric: 'Errors', value: sanitizeMetricValue(item.errorSystems), fill: '#f43f5e' },
   ]));
 
   if (isServerRender) {
@@ -61,8 +66,9 @@ export function AlertsQueueHealthChart({ items, activeSelection, onSelectBar }: 
 
   return (
     <div className="h-80 w-full" style={chartContainerStyle(320)}>
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={chartRows} margin={{ top: 10, right: 12, bottom: 0, left: -18 }}>
+      <AlertsMeasuredChart height={320} minWidth={240}>
+        {({ width, height }) => (
+        <BarChart width={width} height={height} data={chartRows} margin={{ top: 10, right: 12, bottom: 0, left: -18 }}>
           <CartesianGrid vertical={false} stroke="#e4e4e7" strokeDasharray="4 4" />
           <XAxis dataKey="label" tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#71717a' }} />
           <YAxis allowDecimals={false} tickLine={false} axisLine={false} tick={{ fontSize: 12, fill: '#71717a' }} />
@@ -89,7 +95,8 @@ export function AlertsQueueHealthChart({ items, activeSelection, onSelectBar }: 
             ))}
           </Bar>
         </BarChart>
-      </ResponsiveContainer>
+        )}
+      </AlertsMeasuredChart>
     </div>
   );
 }

@@ -46,13 +46,13 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 		{ label: 'Critical', key: 'critical', value: alerts.filter((alert) => severityBucket(alert.severity) === 'critical').length, tone: 'bg-rose-600' },
 		{ label: 'High', key: 'high', value: alerts.filter((alert) => severityBucket(alert.severity) === 'high').length, tone: 'bg-orange-500' },
 		{ label: 'Medium', key: 'medium', value: alerts.filter((alert) => severityBucket(alert.severity) === 'medium').length, tone: 'bg-amber-400' },
-		{ label: 'Low / Clean', key: 'low', value: alerts.filter((alert) => severityBucket(alert.severity) === 'low').length, tone: 'bg-emerald-500' },
+		{ label: 'Low / Clean', key: 'low', value: alerts.filter((alert) => severityBucket(alert.severity) === 'low').length, tone: 'bg-blue-500' },
 	];
 	const severityTotal = severitySummary.reduce((sum, item) => sum + item.value, 0) || 1;
 	const responseSummary = [
 		{ label: 'Open', value: openCount, tone: 'border-rose-200 bg-rose-50 text-rose-700' },
-		{ label: 'Acknowledged', value: acknowledgedCount, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
-		{ label: 'Resolved', value: resolvedCount, tone: 'border-emerald-200 bg-emerald-50 text-emerald-700' },
+		{ label: 'Acknowledged', value: acknowledgedCount, tone: 'border-blue-200 bg-blue-50 text-blue-700' },
+		{ label: 'Resolved', value: resolvedCount, tone: 'border-blue-200 bg-blue-50 text-blue-700' },
 	];
 	const latestFindings = alerts.slice(0, 3);
 	const trendSummary = [
@@ -63,11 +63,11 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 	const trendMax = Math.max(1, ...(trend?.dailyBuckets ?? []).map((bucket) => bucket.count));
 
 	return (
-		<section className="overflow-hidden rounded-[24px] border border-rose-200 bg-white shadow-sm">
-			<div className="bg-[radial-gradient(circle_at_top_left,_rgba(244,63,94,0.16),_transparent_32%),linear-gradient(135deg,_#fff7f7_0%,_#ffffff_55%,_#fff1f2_100%)] px-5 py-5">
+		<section className="overflow-hidden rounded-[24px] border border-blue-200 bg-white shadow-sm">
+			<div className="bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.16),_transparent_32%),linear-gradient(135deg,_#f7fbff_0%,_#ffffff_55%,_#eef4ff_100%)] px-5 py-5">
 				<div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
 					<div className="max-w-3xl">
-						<div className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-rose-700">
+						<div className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-blue-700">
 							<ShieldAlert className="mr-2 h-3.5 w-3.5" />
 							ClamScan Focus
 						</div>
@@ -82,7 +82,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 					<div className="grid grid-cols-2 gap-3 xl:min-w-[440px] xl:grid-cols-4">
 						<div className="rounded-2xl border border-white/90 bg-white/90 px-4 py-4 shadow-sm">
 							<div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-								<ShieldAlert className="h-3.5 w-3.5 text-rose-600" />
+								<ShieldAlert className="h-3.5 w-3.5 text-blue-600" />
 								Total Findings
 							</div>
 							<div className="mt-2 text-3xl font-black text-zinc-950">{alerts.length}</div>
@@ -103,7 +103,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 						</div>
 						<div className="rounded-2xl border border-white/90 bg-white/90 px-4 py-4 shadow-sm">
 							<div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-								<CircleCheckBig className="h-3.5 w-3.5 text-emerald-600" />
+								<CircleCheckBig className="h-3.5 w-3.5 text-blue-600" />
 								Clean Signals
 							</div>
 							<div className="mt-2 text-3xl font-black text-zinc-950">{cleanCount}</div>
@@ -111,7 +111,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 					</div>
 				</div>
 
-				<div className="mt-5 rounded-[22px] border border-rose-100 bg-white/80 p-4 shadow-sm">
+				<div className="mt-5 rounded-[22px] border border-blue-100 bg-white/80 p-4 shadow-sm">
 					<div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
 						<div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
 							<div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Severity Mix</div>
@@ -183,7 +183,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 							<div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">Latest Findings</div>
 							<p className="mt-1 text-sm text-zinc-600">Open one of the latest ClamScan records directly from this filtered queue.</p>
 						</div>
-						<Link to={`${basePath}/alerts?source=clamav`} className="inline-flex items-center rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-100">
+						<Link to={`${basePath}/alerts?source=clamav`} className="inline-flex items-center rounded-2xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-100">
 							Open Full ClamScan Queue
 							<ArrowRight className="ml-2 h-4 w-4" />
 						</Link>
@@ -194,7 +194,7 @@ export function ClamScanSummaryPanel({ alerts, basePath, trend, readOnlyReview =
 								key={alert.id}
 								type="button"
 								onClick={() => onSelectAlert(alert)}
-								className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-rose-300 hover:bg-rose-50/40"
+								className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-50/40"
 							>
 								<div className="flex items-start justify-between gap-3">
 									<div className="min-w-0">

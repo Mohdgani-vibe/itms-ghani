@@ -39,7 +39,7 @@ function statusLabel(alert: AlertsListRecord) {
 
 function statusClassName(alert: AlertsListRecord) {
   if (alert.resolved) {
-    return 'bg-emerald-100 text-emerald-700';
+    return 'bg-sky-100 text-sky-700';
   }
   if (alert.acknowledged) {
     return 'bg-amber-100 text-amber-700';
@@ -177,10 +177,10 @@ export function AlertsSourceWorkspacePanel({
   };
 
   return (
-    <section className={`overflow-hidden rounded-[28px] border shadow-sm backdrop-blur ${darkMode ? 'border-white/10 bg-slate-950/80 text-white' : 'border-zinc-200 bg-white/95'}`}>
+    <section className={`overflow-hidden rounded-[32px] border shadow-[0_24px_60px_rgba(15,23,42,0.12)] backdrop-blur ${darkMode ? 'border-white/10 bg-slate-950/80 text-white' : 'border-zinc-200 bg-white/95'}`}>
       <div className="grid gap-0 lg:grid-cols-[280px_minmax(0,1fr)]">
         <aside className={`border-b p-4 lg:border-b-0 lg:border-r ${darkMode ? 'border-white/10 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.08),_transparent_24%),linear-gradient(180deg,_#08111f_0%,_#0f172a_100%)]' : 'border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.10),_transparent_24%),linear-gradient(180deg,_#f7fbff_0%,_#fdfefe_100%)]'}`}>
-          <div className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-white/80 bg-white/90'}`}>
+          <div className={`rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-white/80 bg-white/90'}`}>
             <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] ${darkMode ? 'bg-sky-500/15 text-sky-200 ring-1 ring-sky-400/20' : 'bg-sky-50 text-sky-700 ring-1 ring-sky-100'}`}>
               {renderSourceIcon(source, 'h-3.5 w-3.5')}
               {sourceLabel}
@@ -205,7 +205,7 @@ export function AlertsSourceWorkspacePanel({
                   key={item.key}
                   type="button"
                   onClick={() => onActiveViewChange(item.key)}
-                  className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition ${workspaceNavClassName(activeView === item.key, darkMode)}`}
+                  className={`flex w-full items-center justify-between rounded-[24px] border px-4 py-3 text-left transition ${workspaceNavClassName(activeView === item.key, darkMode)}`}
                 >
                   <span className="inline-flex items-center gap-2 text-sm font-bold">
                     <Icon className="h-4 w-4" />
@@ -219,31 +219,31 @@ export function AlertsSourceWorkspacePanel({
         </aside>
 
         <div className={`${darkMode ? 'bg-[linear-gradient(180deg,_#0b1220_0%,_#111827_100%)]' : 'bg-[linear-gradient(180deg,_#ffffff_0%,_#f9fbff_100%)]'} p-4 md:p-5`}>
-          {loading ? <div className={`rounded-2xl border p-6 text-sm shadow-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-300' : 'border-sky-100 bg-sky-50/70 text-zinc-500'}`}>Loading {sourceLabel} data...</div> : null}
+          {loading ? <div className={`rounded-[24px] border p-6 text-sm shadow-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-300' : 'border-sky-100 bg-sky-50/70 text-zinc-500'}`}>Loading {sourceLabel} data...</div> : null}
 
           {!loading && !error && activeView === 'dashboard' ? (
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                <div className={`rounded-2xl border px-4 py-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/60'}`}>
+                <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/60'}`}>
                   <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>Systems Scanned</div>
                   <div className={`mt-2 text-3xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedModuleCard?.totalSystemsScanned ?? 0}</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>Departments</div>
                   <div className={`mt-2 text-3xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{departments.length}</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{labels.clean}</div>
                   <div className={`mt-2 text-3xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedModuleCard?.cleanSystemsCount ?? 0}</div>
                 </div>
-                <div className={`rounded-2xl border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`rounded-[24px] border px-4 py-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{labels.error}</div>
                   <div className={`mt-2 text-3xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedModuleCard?.errorSystemsCount ?? 0}</div>
                 </div>
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-                <div className={`space-y-3 rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/40'}`}>
+                <div className={`space-y-3 rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/40'}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className={`text-sm font-black uppercase tracking-[0.16em] ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>Departments</h3>
@@ -260,7 +260,7 @@ export function AlertsSourceWorkspacePanel({
                           onSelectDepartment(entry.name);
                           onActiveViewChange('department');
                         }}
-                        className={`flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left shadow-sm transition ${darkMode ? 'bg-slate-950/50 hover:bg-slate-900' : 'bg-white hover:bg-sky-50'}`}
+                        className={`flex w-full items-center justify-between rounded-[24px] px-4 py-3 text-left shadow-sm transition ${darkMode ? 'bg-slate-950/50 hover:bg-slate-900' : 'bg-white hover:bg-sky-50'}`}
                       >
                         <span>
                           <span className={`block text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{entry.name}</span>
@@ -274,7 +274,7 @@ export function AlertsSourceWorkspacePanel({
                   </div>
                 </div>
 
-                <div className={`space-y-3 rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`space-y-3 rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <h3 className={`text-sm font-black uppercase tracking-[0.16em] ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>Latest systems</h3>
@@ -288,7 +288,7 @@ export function AlertsSourceWorkspacePanel({
                         key={system.key}
                         type="button"
                         onClick={() => openAlert(system)}
-                        className={`flex w-full items-start justify-between rounded-2xl border px-4 py-3 text-left transition ${systemCardClassName(system.key === selectedSystem?.key, darkMode)}`}
+                        className={`flex w-full items-start justify-between rounded-[24px] border px-4 py-3 text-left transition ${systemCardClassName(system.key === selectedSystem?.key, darkMode)}`}
                       >
                         <span>
                           <span className={`block text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{system.hostname || system.assetTag || system.assetId}</span>
@@ -307,7 +307,7 @@ export function AlertsSourceWorkspacePanel({
 
           {!loading && !error && activeView === 'department' ? (
             <div className="space-y-4">
-              <div className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+              <div className={`rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                 <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                   <div>
                     <h3 className={`text-lg font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedDepartment || 'All Departments'} systems for {sourceLabel}.</h3>
@@ -345,7 +345,7 @@ export function AlertsSourceWorkspacePanel({
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-                <div className={`space-y-3 rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`space-y-3 rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className="flex flex-col gap-3 md:flex-row md:items-center">
                     <div className="relative min-w-0 flex-1">
                       <Search className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${darkMode ? 'text-slate-400' : 'text-zinc-400'}`} />
@@ -375,7 +375,7 @@ export function AlertsSourceWorkspacePanel({
                           key={system.key}
                           type="button"
                           onClick={() => onSelectSystemKey(system.key)}
-                          className={`flex w-full items-start justify-between rounded-2xl border px-4 py-3 text-left transition ${systemCardClassName(active, darkMode)}`}
+                          className={`flex w-full items-start justify-between rounded-[24px] border px-4 py-3 text-left transition ${systemCardClassName(active, darkMode)}`}
                         >
                           <span>
                             <span className={`block text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{system.hostname || system.assetTag || system.assetId}</span>
@@ -387,11 +387,11 @@ export function AlertsSourceWorkspacePanel({
                         </button>
                       );
                     })}
-                    {systems.length === 0 ? <div className={`rounded-2xl border px-4 py-6 text-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-400' : 'border-sky-100 bg-sky-50/50 text-zinc-500'}`}>No systems match the current filters.</div> : null}
+                    {systems.length === 0 ? <div className={`rounded-[24px] border px-4 py-6 text-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-400' : 'border-sky-100 bg-sky-50/50 text-zinc-500'}`}>No systems match the current filters.</div> : null}
                   </div>
                 </div>
 
-                <div className={`space-y-3 rounded-2xl border p-4 ${darkMode ? 'border-sky-400/20 bg-white/5' : 'border-sky-100 bg-white'}`}>
+                <div className={`space-y-3 rounded-[24px] border p-4 ${darkMode ? 'border-sky-400/20 bg-white/5' : 'border-sky-100 bg-white'}`}>
                   {selectedSystem ? (
                     <>
                       <div className="flex items-start justify-between gap-3">
@@ -403,17 +403,17 @@ export function AlertsSourceWorkspacePanel({
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-2">
-                        <div className={`rounded-2xl border px-4 py-4 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+                        <div className={`rounded-[24px] border px-4 py-4 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                           <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{labels.clean}</div>
                           <div className={`mt-2 text-2xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedSystem.status === 'clean' ? 1 : 0}</div>
                         </div>
-                        <div className={`rounded-2xl border px-4 py-4 ${darkMode ? 'border-white/10 bg-slate-950/40' : 'border-sky-100 bg-white'}`}>
+                        <div className={`rounded-[24px] border px-4 py-4 ${darkMode ? 'border-white/10 bg-slate-950/40' : 'border-sky-100 bg-white'}`}>
                           <div className={`text-[11px] font-bold uppercase tracking-[0.16em] ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{labels.error}</div>
                           <div className={`mt-2 text-2xl font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{selectedSystem.errorCount}</div>
                         </div>
                       </div>
 
-                      <div className={`rounded-2xl border p-4 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/40'}`}>
+                      <div className={`rounded-[24px] border p-4 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/40'}`}>
                         <div className={`flex items-center gap-2 text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>
                           <AlertTriangle className="h-4 w-4 text-sky-600" />
                           Latest finding
@@ -437,7 +437,7 @@ export function AlertsSourceWorkspacePanel({
                               key={alert.id}
                               type="button"
                               onClick={() => onSelectAlert(alert)}
-                              className={`w-full rounded-2xl border px-4 py-3 text-left shadow-sm transition ${darkMode ? 'border-white/10 bg-slate-950/50 hover:bg-slate-900' : 'border-zinc-200 bg-white hover:bg-sky-50'}`}
+                              className={`w-full rounded-[24px] border px-4 py-3 text-left shadow-sm transition ${darkMode ? 'border-white/10 bg-slate-950/50 hover:bg-slate-900' : 'border-zinc-200 bg-white hover:bg-sky-50'}`}
                             >
                               <div className="flex flex-wrap items-center gap-2">
                                 <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${statusClassName(alert)}`}>
@@ -453,7 +453,7 @@ export function AlertsSourceWorkspacePanel({
                       </div>
                     </>
                   ) : (
-                    <div className={`rounded-2xl border px-4 py-6 text-sm shadow-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-400' : 'border-sky-100 bg-sky-50/50 text-zinc-500'}`}>Select a system to review its latest alerts.</div>
+                    <div className={`rounded-[24px] border px-4 py-6 text-sm shadow-sm ${darkMode ? 'border-white/10 bg-slate-950/50 text-slate-400' : 'border-sky-100 bg-sky-50/50 text-zinc-500'}`}>Select a system to review its latest alerts.</div>
                   )}
                 </div>
               </div>
@@ -462,7 +462,7 @@ export function AlertsSourceWorkspacePanel({
 
           {!loading && !error && activeView === 'reports' ? (
             <div className="space-y-4">
-              <div className={`flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+              <div className={`flex flex-wrap items-center justify-between gap-3 rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                 <div>
                   <h3 className={`text-lg font-black ${darkMode ? 'text-white' : 'text-zinc-950'}`}>{sourceLabel} reports</h3>
                   <p className={`mt-1 text-sm ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>Generated {report ? formatTimestamp(report.generatedAt) : 'when report data is available'}.</p>
@@ -488,14 +488,14 @@ export function AlertsSourceWorkspacePanel({
               </div>
 
               <div className="grid gap-4 xl:grid-cols-2">
-                <div className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className={`flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>
                     <Building2 className="h-4 w-4 text-sky-600" />
                     Department Summary
                   </div>
                   <div className="mt-4 space-y-2">
                     {(report?.departmentSummary ?? []).map((department: AlertsDashboardDepartmentSummary) => (
-                      <div key={department.key} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+                      <div key={department.key} className={`flex items-center justify-between rounded-[24px] border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                         <span>
                           <span className={`block text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{department.name}</span>
                           <span className={`mt-1 block text-xs ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{department.totalSystems} systems</span>
@@ -508,14 +508,14 @@ export function AlertsSourceWorkspacePanel({
                   </div>
                 </div>
 
-                <div className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+                <div className={`rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                   <div className={`flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>
                     <ListChecks className="h-4 w-4 text-sky-600" />
                     System Summary
                   </div>
                   <div className="mt-4 space-y-2">
                     {(report?.systemStatuses ?? []).map((system: AlertsDashboardSystemSummary) => (
-                      <div key={system.key} className={`flex items-center justify-between rounded-2xl border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+                      <div key={system.key} className={`flex items-center justify-between rounded-[24px] border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                         <span>
                           <span className={`block text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{system.hostname || system.assetTag || system.assetId}</span>
                           <span className={`mt-1 block text-xs ${darkMode ? 'text-slate-400' : 'text-zinc-500'}`}>{system.department}</span>
@@ -529,17 +529,17 @@ export function AlertsSourceWorkspacePanel({
                 </div>
               </div>
 
-              <div className={`rounded-2xl border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
+              <div className={`rounded-[24px] border p-4 shadow-sm ${darkMode ? 'border-white/10 bg-white/5' : 'border-zinc-200 bg-white'}`}>
                 <div className={`flex items-center gap-2 text-sm font-black uppercase tracking-[0.16em] ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>
                   <AlertTriangle className="h-4 w-4 text-sky-600" />
                   Error Details
                 </div>
                 <div className="mt-4 space-y-2">
                   {(report?.errorDetails ?? []).length === 0 ? (
-                    <div className={`rounded-2xl border px-4 py-4 text-sm shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10 text-slate-300' : 'border-sky-100 bg-sky-50/40 text-zinc-500'}`}>No active error details available for this report scope.</div>
+                    <div className={`rounded-[24px] border px-4 py-4 text-sm shadow-sm ${darkMode ? 'border-sky-400/20 bg-sky-500/10 text-slate-300' : 'border-sky-100 bg-sky-50/40 text-zinc-500'}`}>No active error details available for this report scope.</div>
                   ) : (
                     (report?.errorDetails ?? []).map((detail) => (
-                      <div key={detail.id} className={`rounded-2xl border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
+                      <div key={detail.id} className={`rounded-[24px] border px-4 py-3 ${darkMode ? 'border-sky-400/20 bg-sky-500/10' : 'border-sky-100 bg-sky-50/50'}`}>
                         <div className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-zinc-900'}`}>{detail.title}</div>
                         <div className={`mt-1 text-sm ${darkMode ? 'text-slate-300' : 'text-zinc-600'}`}>{detail.detail}</div>
                       </div>

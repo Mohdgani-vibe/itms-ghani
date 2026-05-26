@@ -20,6 +20,6 @@ describe('AlertsMainTabs', () => {
     expect(markup).toContain('Dashboard');
     expect(markup).toContain('Wazuh');
     expect(markup).toContain('All Alerts');
-    expect(markup).toContain('bg-sky-600');
+    expect(markup).toContain('bg-blue-50');
   });
 });

@@ -5,10 +5,8 @@ import {
   Bug,
   ChevronRight,
   ClipboardCheck,
-  Radar,
   Shield,
   ShieldCheck,
-  TrendingUp,
   X,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -18,12 +16,8 @@ import PatchRunReportModal from '../components/PatchRunReportModal';
 import { AlertsDetailPane } from '../components/alerts/AlertsDetailPane';
 import { AlertsDashboardSourceGrid } from '../components/alerts/AlertsDashboardSourceGrid';
 import { AlertsFeedPane } from '../components/alerts/AlertsFeedPane';
-import { AlertsHeroSection } from '../components/alerts/AlertsHeroSection';
 import { AlertsMainTabs } from '../components/alerts/AlertsMainTabs';
 import { AlertsQueueOverviewCard } from '../components/alerts/AlertsQueueOverviewCard';
-import { AlertsRecentTable } from '../components/alerts/AlertsRecentTable';
-import { AlertsStatusStrip } from '../components/alerts/AlertsStatusStrip';
-import { AlertsSourceWorkspacePanel, type AlertsSourceWorkspaceView } from '../components/alerts/AlertsSourceWorkspacePanel';
 import { AlertsToolbar } from '../components/alerts/AlertsToolbar';
 import {
   renderAlertAsset as alertsRenderAlertAsset,
@@ -44,20 +38,19 @@ import { hasSaltTarget, resolveSaltTarget, saltTargetConnected, type BootstrapDe
 import { buildSaltActionConsolePrefill, buildSaltActionRequest, isPatchReportableSaltAction, saltActionInputError, saltActionSuccessMessage, type SaltActionValue } from '../lib/salt';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, createPatchRunRunningEntry, type PatchRunExecutionResponse, type PatchRunReport } from '../lib/patchReports';
 
-type AlertsView = 'dashboard' | 'wazuh' | 'openscap' | 'clamav' | 'threat-hunting' | 'all-alerts';
+type AlertsView = 'dashboard' | 'all-alerts';
 type SourceKey = 'wazuh' | 'openscap' | 'clamav';
 type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
 type TimeRangeFilter = '24h' | '7d' | '30d' | 'all';
 
 interface ChartDrilldownState {
-  kind: 'timeline' | 'malware' | 'queue';
+  kind: 'timeline' | 'malware';
   label: string;
   detail: string;
   source?: string;
   severity?: SeverityFilter;
   timelineLabel?: string;
   dateLabel?: string;
-  queueMetric?: 'Open' | 'Offline' | 'Errors';
 }
 
 interface DrilldownSystemPreview {
@@ -74,7 +67,6 @@ interface ToastItem {
 
 const LazyThreatTimelineChart = lazy(() => import('../components/alerts/AlertsThreatTimelineChart').then((module) => ({ default: module.AlertsThreatTimelineChart })));
 const LazyMalwareTrendChart = lazy(() => import('../components/alerts/AlertsMalwareTrendChart').then((module) => ({ default: module.AlertsMalwareTrendChart })));
-const LazyQueueHealthChart = lazy(() => import('../components/alerts/AlertsQueueHealthChart').then((module) => ({ default: module.AlertsQueueHealthChart })));
 
 function TimelineChartFallback() {
   return <div className="h-72 w-full rounded-2xl bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)]" aria-hidden="true" />;
@@ -82,10 +74,6 @@ function TimelineChartFallback() {
 
 function MalwareChartFallback() {
   return <div className="h-72 w-full rounded-2xl bg-[linear-gradient(180deg,_#ffffff_0%,_#fff7f8_100%)]" aria-hidden="true" />;
-}
-
-function QueueChartFallback() {
-  return <div className="h-72 w-full rounded-2xl bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)]" aria-hidden="true" />;
 }
 
 interface AlertDeviceRecord extends BootstrapDeviceLike {
@@ -280,17 +268,18 @@ function SectionCard({
   sectionRef?: (element: HTMLElement | null) => void;
 }) {
   return (
-    <section ref={sectionRef} className={`rounded-2xl border bg-white p-5 shadow-sm transition ${highlighted ? 'border-sky-300 ring-1 ring-sky-100' : 'border-zinc-200'}`}>
+    <section ref={sectionRef} className={`overflow-hidden rounded-[28px] border bg-[linear-gradient(180deg,_#ffffff_0%,_#f9fbff_100%)] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] transition ${highlighted ? 'border-sky-300 ring-1 ring-sky-100' : 'border-slate-200'}`}>
       <div className="mb-5 flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-zinc-950">{title}</h2>
+          <div className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Dashboard section</div>
+          <h2 className="text-lg font-black text-zinc-950">{title}</h2>
           {highlightLabel ? <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-sky-700">{highlightLabel}</span> : null}
         </div>
         {actionLabel && onAction ? (
           <button
             type="button"
             onClick={onAction}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold transition ${actionTone === 'primary' ? 'bg-sky-600 text-white hover:bg-sky-700' : 'bg-white text-sky-700 hover:bg-sky-50'}`}
+            className={`inline-flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-bold shadow-sm transition ${actionTone === 'primary' ? 'border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100' : 'border-zinc-200 bg-white text-sky-700 hover:bg-sky-50'}`}
           >
             {actionLabel}
             <ChevronRight className="h-4 w-4" />
@@ -304,7 +293,7 @@ function SectionCard({
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 px-5 py-8 text-center">
+    <div className="rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50/80 px-5 py-8 text-center">
       <AlertTriangle className="mx-auto h-6 w-6 text-zinc-400" />
       <div className="mt-3 text-sm font-semibold text-zinc-800">{title}</div>
       <div className="mt-1 text-sm text-zinc-500">{detail}</div>
@@ -319,22 +308,22 @@ export default function Alerts() {
   const role = (session?.user.role || '').toLowerCase();
   const canOperate = ['super_admin', 'it_team'].includes(role);
   const basePath = location.pathname.split('/alerts')[0] || '/admin';
-  const [view, setView] = useState<AlertsView>('dashboard');
+  const [view, setView] = useState<AlertsView>('all-alerts');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [timeRangeFilter, setTimeRangeFilter] = useState<TimeRangeFilter>('24h');
-  const [darkMode, setDarkMode] = useState(false);
+  const [departmentFilter] = useState('all');
+  const [timeRangeFilter] = useState<TimeRangeFilter>('24h');
+  const [darkMode] = useState(false);
   const [chartDrilldown, setChartDrilldown] = useState<ChartDrilldownState | null>(null);
   const [alertsPage, setAlertsPage] = useState(1);
   const [reloadToken, setReloadToken] = useState(0);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState('');
+  const [, setLastUpdatedAt] = useState('');
   const [alertsData, setAlertsData] = useState<PaginatedAlertsResponse | null>(null);
   const [dashboardData, setDashboardData] = useState<Record<SourceKey, AlertsDashboardResponse | null>>(emptyDashboardMap<AlertsDashboardResponse | null>(null));
-  const [dashboardErrors, setDashboardErrors] = useState<Record<SourceKey, string>>(emptyDashboardMap(''));
+  const [, setDashboardErrors] = useState<Record<SourceKey, string>>(emptyDashboardMap(''));
   const [dataLoading, setDataLoading] = useState(true);
-  const [alertsError, setAlertsError] = useState('');
+  const [, setAlertsError] = useState('');
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [selectedAlert, setSelectedAlert] = useState<AlertsListRecord | null>(null);
   const [selectedDevice, setSelectedDevice] = useState<AlertDeviceRecord | null>(null);
@@ -347,15 +336,10 @@ export default function Alerts() {
   const [selectedSaltAction, setSelectedSaltAction] = useState<SaltActionValue>('system-update');
   const [customSaltInput, setCustomSaltInput] = useState('');
   const [patchReport, setPatchReport] = useState<PatchRunReport | null>(null);
-  const [sourceWorkspaceViews, setSourceWorkspaceViews] = useState<Record<SourceKey, AlertsSourceWorkspaceView>>(emptyDashboardMap<AlertsSourceWorkspaceView>('dashboard'));
-  const [sourceWorkspaceDepartments, setSourceWorkspaceDepartments] = useState<Record<SourceKey, string>>(emptyDashboardMap(''));
-  const [sourceWorkspaceSystemKeys, setSourceWorkspaceSystemKeys] = useState<Record<SourceKey, string>>(emptyDashboardMap(''));
   const timelineSectionRef = useRef<HTMLElement | null>(null);
   const malwareSectionRef = useRef<HTMLElement | null>(null);
-  const queueSectionRef = useRef<HTMLElement | null>(null);
   const timelineChartPrefetchedRef = useRef(false);
   const malwareChartPrefetchedRef = useRef(false);
-  const queueChartPrefetchedRef = useRef(false);
 
   useEffect(() => {
     if (toasts.length === 0) {
@@ -388,18 +372,9 @@ export default function Alerts() {
       void import('../components/alerts/AlertsMalwareTrendChart');
     };
 
-    const prefetchQueueChart = () => {
-      if (queueChartPrefetchedRef.current) {
-        return;
-      }
-      queueChartPrefetchedRef.current = true;
-      void import('../components/alerts/AlertsQueueHealthChart');
-    };
-
     if (typeof window === 'undefined' || typeof IntersectionObserver !== 'function') {
       prefetchTimelineChart();
       prefetchMalwareChart();
-      prefetchQueueChart();
       return;
     }
 
@@ -414,12 +389,9 @@ export default function Alerts() {
         if (entry.target === malwareSectionRef.current) {
           prefetchMalwareChart();
         }
-        if (entry.target === queueSectionRef.current) {
-          prefetchQueueChart();
-        }
       });
 
-      if (timelineChartPrefetchedRef.current && malwareChartPrefetchedRef.current && queueChartPrefetchedRef.current) {
+      if (timelineChartPrefetchedRef.current && malwareChartPrefetchedRef.current) {
         observer.disconnect();
       }
     }, { rootMargin: '240px 0px' });
@@ -430,10 +402,6 @@ export default function Alerts() {
     if (malwareSectionRef.current && !malwareChartPrefetchedRef.current) {
       observer.observe(malwareSectionRef.current);
     }
-    if (queueSectionRef.current && !queueChartPrefetchedRef.current) {
-      observer.observe(queueSectionRef.current);
-    }
-
     return () => {
       observer.disconnect();
     };
@@ -580,8 +548,6 @@ export default function Alerts() {
 
   const {
     alerts,
-    sourceAlerts,
-    moduleCards,
     summarySourceOptions,
     sourceCountMap,
     sourceLabelMap,
@@ -589,11 +555,7 @@ export default function Alerts() {
     filteredAlerts,
     alertsPageSize,
     totalAlerts,
-    openAlertsCount,
-    acknowledgedAlertsCount,
-    resolvedAlertsCount,
     dashboardSourceCards,
-    recentAlerts,
   } = useAlertsDerivedState({
     alertsData,
     dashboardData,
@@ -609,10 +571,6 @@ export default function Alerts() {
     sourceLabel,
   });
   const fadeClass = 'animate-[alerts-fade-in_220ms_ease-out]';
-  const departmentOptions = useMemo(
-    () => Array.from(new Set(alerts.map((alert) => (alert.department || '').trim()).filter(Boolean))).sort((left, right) => left.localeCompare(right)),
-    [alerts],
-  );
   const dashboardTimeCutoff = useMemo(() => {
     const now = Date.now();
     if (timeRangeFilter === '24h') {
@@ -641,40 +599,6 @@ export default function Alerts() {
     }),
     [alerts, dashboardTimeCutoff, departmentFilter, normalizeSeverity, normalizeSourceKey, searchQuery, severityFilter, sourceFilter],
   );
-  const criticalAlerts = useMemo(
-    () => dashboardScopedAlerts.filter((alert) => normalizeSeverity(alert.severity) === 'critical' || normalizeSeverity(alert.severity) === 'high').slice(0, 8),
-    [dashboardScopedAlerts, normalizeSeverity],
-  );
-  const systemsAffectedCount = useMemo(
-    () => new Set(dashboardScopedAlerts.map((alert) => alert.assetId || alert.deviceId).filter(Boolean)).size,
-    [dashboardScopedAlerts],
-  );
-  const criticalCount = useMemo(
-    () => dashboardScopedAlerts.filter((alert) => normalizeSeverity(alert.severity) === 'critical').length,
-    [dashboardScopedAlerts, normalizeSeverity],
-  );
-  const latestSourceUpdate = useMemo(() => {
-    const timestamps = moduleCards.map((entry) => parseTimestamp(entry.lastUpdated)).filter(Boolean);
-    return timestamps.length ? new Date(Math.max(...timestamps)).toISOString() : lastUpdatedAt;
-  }, [lastUpdatedAt, moduleCards]);
-  const liveStatusLabel = dataLoading ? 'Refreshing live telemetry' : 'Live telemetry online';
-  const queueHealthCards = useMemo(
-    () => SOURCE_KEYS.map((source) => {
-      const sourceAlertsList = sourceAlerts[source];
-      const openCount = sourceAlertsList.filter((alert) => !alert.resolved).length;
-      const latestDashboard = dashboardData[source];
-      const systems = latestDashboard?.systems ?? [];
-      const staleSystems = systems.filter((system) => parseTimestamp(system.lastScanAt) < Date.now() - 72 * 60 * 60 * 1000).length;
-      return {
-        source,
-        label: SOURCE_CONFIG[source].label,
-        openCount,
-        staleSystems,
-        errorSystems: latestDashboard?.moduleCards.find((entry) => normalizeSourceKey(entry.source) === source)?.errorSystemsCount ?? 0,
-      };
-    }),
-    [dashboardData, normalizeSourceKey, sourceAlerts],
-  );
   const threatTimeline = useMemo(() => {
     const buckets = new Map<string, number>();
     dashboardScopedAlerts.forEach((alert) => {
@@ -691,99 +615,14 @@ export default function Alerts() {
     () => threatTimeline.map(([label, count]) => ({ label, count })),
     [threatTimeline],
   );
-  const offlineSystems = useMemo(
-    () => SOURCE_KEYS.flatMap((source) => (dashboardData[source]?.systems ?? [])
-      .filter((system) => parseTimestamp(system.lastScanAt) < Date.now() - 72 * 60 * 60 * 1000)
-      .map((system) => ({ ...system, source }))).slice(0, 6),
-    [dashboardData],
-  );
   const clamavTrendPoints = useMemo(() => dashboardData.clamav?.trend.dailyBuckets ?? [], [dashboardData.clamav]);
   const clamavTrendChartPoints = useMemo(
-    () => clamavTrendPoints.slice(-8).map((point) => ({ label: point.date || 'Unknown', count: point.count })),
+    () => clamavTrendPoints.slice(-8).map((point) => ({ label: point.date || 'Unknown', count: Number(point.count) || 0 })),
     [clamavTrendPoints],
   );
-  const complianceFailures = useMemo(() => (dashboardData.openscap?.systems ?? []).filter((system) => system.status === 'error').slice(0, 6), [dashboardData.openscap]);
-  const threatHuntingSystems = useMemo(
-    () => dashboardScopedAlerts.filter((alert) => normalizeSeverity(alert.severity) === 'critical' || alert.title.toLowerCase().includes('suspicious') || alert.detail.toLowerCase().includes('threat')).slice(0, 10),
-    [dashboardScopedAlerts, normalizeSeverity],
-  );
-  const priorityRiskScore = useMemo(
-    () => Math.min(100, (criticalCount * 12) + (offlineSystems.length * 6) + (complianceFailures.length * 7) + (queueHealthCards.reduce((sum, card) => sum + card.errorSystems, 0) * 2)),
-    [complianceFailures.length, criticalCount, offlineSystems.length, queueHealthCards],
-  );
-  const socSignalCards = useMemo(
-    () => [
-      {
-        label: 'Threat Exposure',
-        value: criticalCount,
-        helper: 'Critical alerts waiting for analyst action.',
-        tone: 'border-rose-200 bg-rose-50 text-rose-700',
-      },
-      {
-        label: 'Offline Agents',
-        value: offlineSystems.length,
-        helper: 'Systems with stale telemetry or no fresh scans.',
-        tone: 'border-amber-200 bg-amber-50 text-amber-700',
-      },
-      {
-        label: 'Compliance Drift',
-        value: complianceFailures.length,
-        helper: 'Endpoints failing current hardening controls.',
-        tone: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-      },
-      {
-        label: 'Priority Risk Score',
-        value: priorityRiskScore,
-        helper: 'Weighted from critical findings, stale agents, and queue pressure.',
-        tone: 'border-sky-200 bg-sky-50 text-sky-700',
-      },
-    ],
-    [complianceFailures.length, criticalCount, offlineSystems.length, priorityRiskScore],
-  );
-  const notificationCenterItems = useMemo(
-    () => [
-      {
-        id: 'critical',
-        title: `${criticalCount} critical alerts need triage`,
-        detail: criticalCount > 0 ? 'Open the queue with severity narrowed to critical and high incidents.' : 'No critical incidents are waiting right now.',
-        actionLabel: 'Open Queue',
-        action: () => {
-          setSeverityFilter('critical');
-          setView('all-alerts');
-          setAlertsPage(1);
-        },
-        badge: 'Critical',
-        badgeClassName: 'border-rose-200 bg-rose-50 text-rose-700',
-      },
-      {
-        id: 'offline',
-        title: `${offlineSystems.length} systems have stale telemetry`,
-        detail: offlineSystems.length > 0 ? 'Pivot into the affected source queues to validate agent health and reconnect strategy.' : 'No stale systems are currently visible in the selected time range.',
-        actionLabel: 'Review Agents',
-        action: () => setView('dashboard'),
-        badge: 'Telemetry',
-        badgeClassName: 'border-amber-200 bg-amber-50 text-amber-700',
-      },
-      {
-        id: 'compliance',
-        title: `${complianceFailures.length} endpoints show hardening drift`,
-        detail: complianceFailures.length > 0 ? 'OpenSCAP failures are active and should be correlated against malware and exposure trends.' : 'OpenSCAP drift is currently under control.',
-        actionLabel: 'OpenSCAP View',
-        action: () => setView('openscap'),
-        badge: 'Compliance',
-        badgeClassName: 'border-indigo-200 bg-indigo-50 text-indigo-700',
-      },
-      {
-        id: 'hunt',
-        title: `${threatHuntingSystems.length} investigation leads are active`,
-        detail: threatHuntingSystems.length > 0 ? 'Threat hunting has enough signals to justify a dedicated analyst pass.' : 'No suspicious clusters are active in the current scope.',
-        actionLabel: 'Threat Hunt',
-        action: () => setView('threat-hunting'),
-        badge: 'Hunt',
-        badgeClassName: 'border-sky-200 bg-sky-50 text-sky-700',
-      },
-    ],
-    [complianceFailures.length, criticalCount, offlineSystems.length, threatHuntingSystems.length],
+  const clamavTrendTotal = useMemo(
+    () => clamavTrendChartPoints.reduce((sum, point) => sum + point.count, 0),
+    [clamavTrendChartPoints],
   );
   const chartDrilldownAlerts = useMemo(() => {
     if (!chartDrilldown) {
@@ -835,7 +674,6 @@ export default function Alerts() {
   );
   const timelineSelectionLabel = chartDrilldown?.kind === 'timeline' ? `Bucket ${chartDrilldown.label}` : undefined;
   const malwareSelectionLabel = chartDrilldown?.kind === 'malware' ? `Bucket ${chartDrilldown.label}` : undefined;
-  const queueSelectionLabel = chartDrilldown?.kind === 'queue' ? `${chartDrilldown.label} ${chartDrilldown.queueMetric || 'Open'}` : undefined;
   const selectedAlertSource = normalizeSourceKey(selectedAlert?.source);
   const selectedAssetReadOnly = (selectedDevice?.status || '').trim().toLowerCase() === 'retired';
   const selectedAssetHasSaltTarget = hasSaltTarget(selectedDevice);
@@ -1081,46 +919,8 @@ export default function Alerts() {
     }
   }
 
-  function renderSourceWorkspace(source: SourceKey) {
-    const config = SOURCE_CONFIG[source];
-
-    return (
-      <div className={`space-y-6 ${fadeClass}`}>
-        <AlertsSourceWorkspacePanel
-          source={source}
-          sourceLabel={config.label}
-          alerts={sourceAlerts[source]}
-          dashboard={dashboardData[source]}
-          loading={dataLoading}
-          error={dashboardErrors[source]}
-          activeView={sourceWorkspaceViews[source]}
-          selectedDepartment={sourceWorkspaceDepartments[source]}
-          selectedSystemKey={sourceWorkspaceSystemKeys[source]}
-          darkMode={darkMode}
-          readOnlyReview={!canOperate}
-          onActiveViewChange={(nextView) => {
-            setSourceWorkspaceViews((current) => ({ ...current, [source]: nextView }));
-          }}
-          onSelectDepartment={(department) => {
-            setSourceWorkspaceDepartments((current) => ({ ...current, [source]: department }));
-          }}
-          onSelectSystemKey={(systemKey) => {
-            setSourceWorkspaceSystemKeys((current) => ({ ...current, [source]: systemKey }));
-          }}
-          onSelectAlert={openAlertDetails}
-          renderSourceIcon={alertsRenderSourceIcon}
-          formatRelativeTime={formatRelativeTime}
-        />
-      </div>
-    );
-  }
-
   const mainTabs = [
     { id: 'dashboard' as const, label: 'Dashboard', count: totalAlerts, icon: <ShieldCheck className="h-4 w-4" /> },
-    { id: 'wazuh' as const, label: 'Wazuh', count: sourceAlerts.wazuh.length, icon: <Shield className="h-4 w-4" /> },
-    { id: 'openscap' as const, label: 'OpenSCAP', count: sourceAlerts.openscap.length, icon: <ClipboardCheck className="h-4 w-4" /> },
-    { id: 'clamav' as const, label: 'ClamAV', count: sourceAlerts.clamav.length, icon: <Bug className="h-4 w-4" /> },
-    { id: 'threat-hunting' as const, label: 'Threat Hunting', count: threatHuntingSystems.length, icon: <Radar className="h-4 w-4" /> },
     { id: 'all-alerts' as const, label: 'All Alerts', count: filteredAlerts.length, icon: <Bell className="h-4 w-4" /> },
   ];
 
@@ -1138,20 +938,12 @@ export default function Alerts() {
     };
   });
 
-  const openSourceConsole = (source: SourceKey) => {
-    const candidate = sourceAlerts[source][0];
-    if (candidate) {
-      openAlertDetails(candidate);
-      setView(source);
-      setDetailMessage({ tone: 'success', text: `Source console path primed for ${SOURCE_CONFIG[source].label}. Open the selected alert to continue into endpoint response.` });
-      return;
-    }
-    pushToast(`No live ${SOURCE_CONFIG[source].label} alerts are available for console pivoting.`, 'error');
-  };
-
-  const investigateSource = (source: SourceKey) => {
+  const openSourceAlerts = (source: SourceKey) => {
     setSourceFilter(source);
+    setSeverityFilter('all');
+    setChartDrilldown(null);
     setView('all-alerts');
+    setAlertsPage(1);
   };
 
   const clearChartDrilldown = () => {
@@ -1175,27 +967,7 @@ export default function Alerts() {
       kind: 'malware',
       label,
       detail: `ClamAV detections for ${label}`,
-      source: 'clamav',
       dateLabel: label,
-    });
-    setView('all-alerts');
-    setAlertsPage(1);
-  };
-
-  const handleQueueHealthSelect = (selection: { label: string; metric: 'Open' | 'Offline' | 'Errors' }) => {
-    const sourceKey = SOURCE_KEYS.find((source) => SOURCE_CONFIG[source].label === selection.label);
-    const nextSeverity: SeverityFilter = selection.metric === 'Errors' ? 'high' : 'all';
-    if (sourceKey) {
-      setSourceFilter(sourceKey);
-    }
-    setSeverityFilter(nextSeverity);
-    setChartDrilldown({
-      kind: 'queue',
-      label: selection.label,
-      detail: `${selection.label} ${selection.metric.toLowerCase()} queue`,
-      source: sourceKey,
-      severity: nextSeverity,
-      queueMetric: selection.metric,
     });
     setView('all-alerts');
     setAlertsPage(1);
@@ -1211,128 +983,37 @@ export default function Alerts() {
       `}</style>
 
       <div className="mx-auto max-w-[1600px] space-y-6 pb-10">
-        <div className="sticky top-4 z-40 space-y-4">
-          <AlertsHeroSection
-            feedLabel="Security Operations"
-            totalAlerts={totalAlerts}
-            openCount={openAlertsCount}
-            criticalCount={criticalCount}
-            acknowledgedCount={acknowledgedAlertsCount}
-            resolvedCount={resolvedAlertsCount}
-            systemsAffectedCount={systemsAffectedCount}
-            sourceCountMap={sourceCountMap}
-            moduleCards={moduleCards}
-            sourceFilter={sourceFilter}
-            sourceOptions={summarySourceOptions}
-            severityFilter={severityFilter}
-            departmentFilter={departmentFilter}
-            departmentOptions={departmentOptions}
-            timeRangeFilter={timeRangeFilter}
-            searchQuery={searchQuery}
-            lastUpdatedLabel={formatRelativeTime(latestSourceUpdate)}
-            liveStatusLabel={liveStatusLabel}
-            notificationCount={criticalCount + offlineSystems.length}
-            darkMode={darkMode}
-            readOnlyReview={!canOperate}
-            onSelectSourceFilter={setSourceFilter}
-            onSelectSeverityFilter={(value) => setSeverityFilter(value as SeverityFilter)}
-            onSelectDepartmentFilter={setDepartmentFilter}
-            onSelectTimeRangeFilter={(value) => setTimeRangeFilter(value as TimeRangeFilter)}
-            onSearchQueryChange={setSearchQuery}
-            onToggleDarkMode={() => setDarkMode((current) => !current)}
-            renderSourceIcon={alertsRenderSourceIcon}
-          />
+        <div className={`space-y-3 ${view === 'all-alerts' ? 'relative z-10' : 'sticky top-3 z-30'}`}>
+          <div className="rounded-[20px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-sm">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Alerts Dashboard</div>
+                <h1 className="mt-1 text-2xl font-black tracking-tight text-zinc-950">Security Alerts</h1>
+                <p className="mt-1 text-sm text-zinc-600">Charts, source cards, and the full alerts queue.</p>
+              </div>
+              <button
+                type="button"
+                onClick={refreshData}
+                className="inline-flex items-center justify-center rounded-[16px] border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
 
-          <AlertsStatusStrip
-            loading={dataLoading}
-            alertsError={alertsError}
-            hasAlertsData={Boolean(alertsData)}
-            totalAlertsLabel={`${formatNumber(totalAlerts)} alerts visible across configured sources`}
-            liveLabel={liveStatusLabel}
-            lastUpdatedLabel={formatRelativeTime(latestSourceUpdate)}
-            notificationCount={criticalCount + offlineSystems.length}
-            onRefresh={refreshData}
-          />
-
-          <AlertsMainTabs tabs={mainTabs} activeTab={view} onSelectTab={(value) => setView(value as AlertsView)} />
+          <div>
+            <AlertsMainTabs tabs={mainTabs} activeTab={view} onSelectTab={(value) => setView(value as AlertsView)} />
+          </div>
         </div>
 
-        <main className="space-y-6 overflow-y-auto">
+        <main className="space-y-6">
           {view === 'dashboard' ? (
             <div className={`space-y-6 ${fadeClass}`}>
               <AlertsDashboardSourceGrid
                 cards={sourceDashboardCards}
                 formatNumber={formatNumber}
-                onOpenSource={(source) => setView(source as AlertsView)}
-                onOpenConsole={(source) => openSourceConsole(source as SourceKey)}
-                onInvestigate={(source) => investigateSource(source as SourceKey)}
+                onOpenSource={(source) => openSourceAlerts(source as SourceKey)}
               />
-
-              <section className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-                <div className="rounded-[28px] border border-slate-200 bg-[linear-gradient(135deg,_#ffffff_0%,_#f6fbff_55%,_#eef7ff_100%)] p-5 shadow-sm">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-2xl">
-                      <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
-                        SOC Mission Control
-                      </div>
-                      <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">Live risk posture, response pressure, and analyst-ready prioritization.</h2>
-                      <p className="mt-2 text-sm leading-6 text-zinc-600">This layer compresses the current dashboard scope into the signals that matter first: critical exposure, stale telemetry, compliance drift, and queue pressure.</p>
-                    </div>
-                    <div className="rounded-[24px] border border-sky-200 bg-white/80 px-4 py-4 shadow-sm">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Response pressure</div>
-                      <div className="mt-2 text-4xl font-black text-zinc-950">{priorityRiskScore}</div>
-                      <div className="mt-2 text-sm text-zinc-500">Current weighted SOC score for the selected scope.</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                    {socSignalCards.map((card) => (
-                      <div key={card.label} className="rounded-[24px] border border-white/80 bg-white/90 px-4 py-4 shadow-sm">
-                        <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">{card.label}</div>
-                        <div className="mt-3 flex items-end justify-between gap-3">
-                          <div className="text-3xl font-black text-zinc-950">{formatNumber(card.value)}</div>
-                          <div className={`rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${card.tone}`}>{card.label === 'Priority Risk Score' ? 'Weighted' : 'Live'}</div>
-                        </div>
-                        <div className="mt-2 text-xs leading-5 text-zinc-500">{card.helper}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Notification Center</div>
-                      <h2 className="mt-2 text-2xl font-black tracking-tight text-zinc-950">Priority analyst prompts</h2>
-                    </div>
-                    <div className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-600">
-                      <Bell className="mr-2 h-3.5 w-3.5" /> {notificationCenterItems.length} prompts
-                    </div>
-                  </div>
-
-                  <div className="mt-5 space-y-3">
-                    {notificationCenterItems.map((item) => (
-                      <div key={item.id} className="rounded-[22px] border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f9fbff_100%)] px-4 py-4 shadow-sm">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <div className="text-sm font-black text-zinc-950">{item.title}</div>
-                            <div className="mt-1 text-sm leading-6 text-zinc-600">{item.detail}</div>
-                          </div>
-                          <div className={`rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase ${item.badgeClassName}`}>{item.badge}</div>
-                        </div>
-                        <div className="mt-4 flex items-center justify-between gap-3">
-                          <div className="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-600">
-                            <AlertTriangle className="mr-2 h-3.5 w-3.5" /> Analyst cue
-                          </div>
-                          <button type="button" onClick={item.action} className="inline-flex items-center rounded-full border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50">
-                            {item.actionLabel} <ChevronRight className="ml-1 h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </section>
 
               {chartDrilldown ? (
                 <section className="rounded-[24px] border border-sky-200 bg-[linear-gradient(135deg,_#f7fbff_0%,_#ffffff_50%,_#f2f8ff_100%)] p-5 shadow-sm">
@@ -1408,48 +1089,14 @@ export default function Alerts() {
                 </section>
               ) : null}
 
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,0.9fr)]">
-                <SectionCard title="Recent Critical Alerts Table" actionLabel="All Alerts" onAction={() => setView('all-alerts')} actionTone="primary">
-                  {criticalAlerts.length === 0 ? (
-                    <EmptyState title="No critical alerts in the current scope" detail="Change filters or widen the time range to inspect older incidents." />
-                  ) : (
-                    <div className="overflow-hidden rounded-2xl border border-zinc-200">
-                      <table className="min-w-full divide-y divide-zinc-200 text-left text-sm">
-                        <thead className="bg-zinc-50 text-xs font-bold uppercase tracking-wide text-zinc-500">
-                          <tr>
-                            <th className="px-4 py-3">System</th>
-                            <th className="px-4 py-3">Severity</th>
-                            <th className="px-4 py-3">Department</th>
-                            <th className="px-4 py-3">Source</th>
-                            <th className="px-4 py-3">Time</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-100 bg-white">
-                          {criticalAlerts.map((alert) => (
-                            <tr key={alert.id} onClick={() => openAlertDetails(alert)} className="cursor-pointer hover:bg-zinc-50">
-                              <td className="px-4 py-3 font-semibold text-zinc-950">
-                                {systemName(alert)}
-                                <div className="text-xs font-normal text-zinc-500">{alert.title}</div>
-                              </td>
-                              <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${alertsRenderSeverityClassName(alert)}`}>{normalizeSeverity(alert.severity)}</span></td>
-                              <td className="px-4 py-3 text-zinc-600">{alert.department || 'Unassigned'}</td>
-                              <td className="px-4 py-3 text-zinc-600">{sourceLabel(alert.source, alert.sourceLabel)}</td>
-                              <td className="px-4 py-3 text-zinc-600">{formatRelativeTime(alert.createdAt)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </SectionCard>
-
+              <div className="grid gap-6 xl:grid-cols-2">
                 <SectionCard title="Threat Activity Timeline" highlighted={chartDrilldown?.kind === 'timeline'} highlightLabel={timelineSelectionLabel} sectionRef={(element) => {
                   timelineSectionRef.current = element;
                 }}>
                   {threatTimelinePoints.length === 0 ? (
                     <EmptyState title="No timeline points in scope" detail="The activity timeline fills as alerts enter the selected time window." />
                   ) : (
-                    <div className="rounded-2xl border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-4 shadow-sm">
+                    <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#eef7ff_100%)] p-4 shadow-sm">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div>
                           <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Event pressure</div>
@@ -1463,37 +1110,16 @@ export default function Alerts() {
                     </div>
                   )}
                 </SectionCard>
-              </div>
-
-              <div className="grid gap-6 xl:grid-cols-3">
-                <SectionCard title="Agent Offline Systems">
-                  {offlineSystems.length === 0 ? (
-                    <EmptyState title="No stale agents detected" detail="Systems with scans older than 72 hours will appear here for analyst follow-up." />
-                  ) : (
-                    <div className="space-y-3">
-                      {offlineSystems.map((system) => (
-                        <button key={`${system.source}-${system.key}`} type="button" onClick={() => setView(system.source as AlertsView)} className="flex w-full items-center justify-between rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left hover:bg-zinc-50">
-                          <div>
-                            <div className="font-semibold text-zinc-950">{system.hostname}</div>
-                            <div className="mt-1 text-xs text-zinc-500">{system.department} • {SOURCE_CONFIG[system.source as SourceKey].label}</div>
-                          </div>
-                          <div className="text-xs font-semibold text-amber-600">Last scan {formatRelativeTime(system.lastScanAt)}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </SectionCard>
-
                 <SectionCard title="Malware Detection Trends" highlighted={chartDrilldown?.kind === 'malware'} highlightLabel={malwareSelectionLabel} sectionRef={(element) => {
                   malwareSectionRef.current = element;
                 }}>
                   <div className="space-y-3">
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-4">
+                    <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fff6f7_100%)] px-4 py-4 shadow-sm">
                       <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">ClamAV trendline</div>
-                      <div className="mt-2 text-3xl font-black text-zinc-950">{clamavTrendPoints.reduce((sum, point) => sum + point.count, 0)}</div>
+                      <div className="mt-2 text-3xl font-black text-zinc-950">{clamavTrendTotal}</div>
                       <div className="mt-1 text-sm text-zinc-500">detections across visible daily buckets</div>
                     </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fff7f8_100%)] p-4 shadow-sm">
+                    <div className="rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fff7f8_100%)] p-4 shadow-sm">
                       <div className="mb-4 flex items-center justify-between gap-3">
                         <div className="text-sm text-zinc-600">Click any malware detection point to pivot into that day&apos;s ClamAV alerts.</div>
                         <div className="rounded-full bg-rose-50 px-3 py-1 text-xs font-black text-rose-700">Interactive</div>
@@ -1504,119 +1130,8 @@ export default function Alerts() {
                     </div>
                   </div>
                 </SectionCard>
-
-                <SectionCard title="Compliance Failures">
-                  {complianceFailures.length === 0 ? (
-                    <EmptyState title="No compliance failures in scope" detail="OpenSCAP failures will appear here when hardening drift is detected." />
-                  ) : (
-                    <div className="space-y-3">
-                      {complianceFailures.map((system) => (
-                        <div key={system.key} className="rounded-2xl border border-zinc-200 bg-white px-4 py-3">
-                          <div className="font-semibold text-zinc-950">{system.hostname}</div>
-                          <div className="mt-1 text-xs text-zinc-500">{system.department}</div>
-                          <div className="mt-2 text-sm text-amber-700">{system.errorCount} failing controls</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </SectionCard>
               </div>
 
-              <SectionCard title="Queue Health Monitoring" highlighted={chartDrilldown?.kind === 'queue'} highlightLabel={queueSelectionLabel} sectionRef={(element) => {
-                queueSectionRef.current = element;
-              }}>
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
-                  <div className="rounded-2xl border border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#f8fbff_100%)] p-4 shadow-sm">
-                    <div className="mb-4 flex items-center justify-between gap-3">
-                      <div className="text-sm text-zinc-600">Select any bar to open the matching source queue with severity context.</div>
-                      <div className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700">Source drilldown</div>
-                    </div>
-                    <Suspense fallback={<QueueChartFallback />}>
-                      <LazyQueueHealthChart
-                        items={queueHealthCards}
-                        activeSelection={chartDrilldown?.kind === 'queue' ? { label: chartDrilldown.label, metric: chartDrilldown.queueMetric || 'Open' } : null}
-                        onSelectBar={handleQueueHealthSelect}
-                      />
-                    </Suspense>
-                  </div>
-                  <div className="grid gap-4">
-                    {queueHealthCards.map((card) => (
-                      <div key={card.source} className={`rounded-2xl border px-4 py-4 shadow-sm ${chartDrilldown?.kind === 'queue' && chartDrilldown.label === card.label ? 'border-sky-300 bg-sky-50/70 ring-1 ring-sky-100' : 'border-zinc-200 bg-white'}`}>
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-sm font-black text-zinc-950">{card.label}</div>
-                          <TrendingUp className="h-4 w-4 text-sky-500" />
-                        </div>
-                        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-                          <div className="rounded-xl bg-zinc-50 px-3 py-3"><div className="text-xl font-black text-zinc-950">{card.openCount}</div><div className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">Open</div></div>
-                          <div className="rounded-xl bg-zinc-50 px-3 py-3"><div className="text-xl font-black text-amber-700">{card.staleSystems}</div><div className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">Offline</div></div>
-                          <div className="rounded-xl bg-zinc-50 px-3 py-3"><div className="text-xl font-black text-rose-700">{card.errorSystems}</div><div className="text-[10px] uppercase tracking-[0.14em] text-zinc-500">Errors</div></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </SectionCard>
-
-              <SectionCard title="Recent Alerts" actionLabel="All Alerts" onAction={() => setView('all-alerts')}>
-                {recentAlerts.length === 0 ? (
-                  <EmptyState title="No recent alerts" detail="Recent alerts appear here as new events are received." />
-                ) : (
-                  <AlertsRecentTable
-                    alerts={recentAlerts}
-                    renderSystemName={systemName}
-                    renderSeverityClassName={alertsRenderSeverityClassName}
-                    renderSourceLabel={alertsRenderSourceLabel}
-                    formatDateTime={formatDateTime}
-                  />
-                )}
-              </SectionCard>
-            </div>
-          ) : null}
-
-          {view === 'wazuh' ? renderSourceWorkspace('wazuh') : null}
-          {view === 'openscap' ? renderSourceWorkspace('openscap') : null}
-          {view === 'clamav' ? renderSourceWorkspace('clamav') : null}
-
-          {view === 'threat-hunting' ? (
-            <div className={`space-y-6 ${fadeClass}`}>
-              <SectionCard title="Threat Hunting">
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                  <div className="space-y-3 rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                    <div>
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Hunt Queue</div>
-                      <div className="mt-2 text-xl font-black text-zinc-950">Potential escalations and suspicious systems</div>
-                    </div>
-                    {threatHuntingSystems.length === 0 ? (
-                      <EmptyState title="No active hunt leads" detail="Critical or suspicious alerts in the current filter scope will appear here." />
-                    ) : threatHuntingSystems.map((alert) => (
-                      <button key={alert.id} type="button" onClick={() => openAlertDetails(alert)} className="flex w-full items-start justify-between rounded-2xl border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-left hover:bg-zinc-50">
-                        <div>
-                          <div className="font-semibold text-zinc-950">{systemName(alert)}</div>
-                          <div className="mt-1 text-sm text-zinc-600">{alert.title}</div>
-                          <div className="mt-1 text-xs text-zinc-500">{alert.department || 'Unassigned'} • {sourceLabel(alert.source, alert.sourceLabel)}</div>
-                        </div>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-bold uppercase ${alertsRenderSeverityClassName(alert)}`}>{normalizeSeverity(alert.severity)}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="space-y-4">
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Hunt guidance</div>
-                      <div className="mt-2 text-lg font-black text-zinc-950">Investigation launch points</div>
-                      <div className="mt-3 space-y-2 text-sm text-zinc-600">
-                        <div className="rounded-xl bg-zinc-50 px-3 py-3">Start with Wazuh rule spikes, then pivot into OpenSCAP drift for the same department.</div>
-                        <div className="rounded-xl bg-zinc-50 px-3 py-3">Use the selected alert drawer to reach endpoint terminal and Salt console actions.</div>
-                        <div className="rounded-xl bg-zinc-50 px-3 py-3">Track malware detections against compliance drift to prioritize high-risk systems.</div>
-                      </div>
-                    </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-                      <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Priority risk score</div>
-                      <div className="mt-2 text-4xl font-black text-zinc-950">{Math.min(100, criticalCount * 12 + offlineSystems.length * 4)}</div>
-                      <div className="mt-2 text-sm text-zinc-500">Weighted from critical alerts, stale agents, and active compliance failures in the visible scope.</div>
-                    </div>
-                  </div>
-                </div>
-              </SectionCard>
             </div>
           ) : null}
 
