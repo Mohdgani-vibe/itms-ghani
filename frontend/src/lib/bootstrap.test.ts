@@ -56,6 +56,7 @@ describe('bootstrap', () => {
     const windowsCommand = buildDeviceWindowsBootstrapCommand(device, config);
 
     expect(linuxCommand).toContain("curl -fsSL 'https://itms.example.com/installers/install-itms-agent.sh'");
+    expect(linuxCommand).toContain('--prompt-token');
     expect(linuxCommand).toContain("--category 'laptop'");
     expect(linuxCommand).toContain("--assigned-to-name 'O\"'\"'Brien'");
     expect(linuxCommand).toContain("--notes 'Installed by ITMS bootstrap for ops-laptop-01'");

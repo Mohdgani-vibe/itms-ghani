@@ -117,12 +117,10 @@ export function saltTargetConnected(device?: BootstrapDeviceLike | null) {
 export function buildDeviceLinuxBootstrapCommand(device?: BootstrapDeviceLike | null, config?: InstallAgentConfigLike | null) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.linuxInstallerUrl || `${serverUrl}/installers/install-itms-agent.sh`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', buildDeviceCategory(device)],
     ['asset-tag', device?.assetId || ''],
     ['name', device?.hostname || ''],
@@ -134,7 +132,7 @@ export function buildDeviceLinuxBootstrapCommand(device?: BootstrapDeviceLike | 
     ['wazuh-manager', wazuhManager],
     ['notes', `Installed by ITMS bootstrap for ${device?.hostname || 'endpoint'}`],
   ];
-  return `curl -fsSL ${quoteShell(installerUrl)} -o /tmp/install-itms-agent.sh && sudo bash /tmp/install-itms-agent.sh ${buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))}`;
+  return `curl -fsSL ${quoteShell(installerUrl)} -o /tmp/install-itms-agent.sh && sudo bash /tmp/install-itms-agent.sh --prompt-token ${buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))}`;
 }
 
 export function buildDeviceWindowsBootstrapCommand(device?: BootstrapDeviceLike | null, config?: InstallAgentConfigLike | null) {

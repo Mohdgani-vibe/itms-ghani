@@ -254,17 +254,19 @@ Send a live inventory snapshot to the backend:
 ```bash
 python3 scripts/push-system-inventory.py \
   --server-url http://localhost:3001 \
-  --token "$INVENTORY_INGEST_TOKEN" \
+  --prompt-token \
   --assigned-to-email employee@zerodha.com \
   --category laptop
 ```
+
+If the endpoint was installed with `install-itms-agent.sh`, you can omit `--prompt-token` and let the collector read `ITMS_INGEST_TOKEN` from `/etc/itms-agent.env`. For unattended one-off runs, use `--token-file` with a protected local file.
 
 Attach the latest OpenSCAP hardening result from the Linux results directory when sending a snapshot:
 
 ```bash
 python3 scripts/push-system-inventory.py \
   --server-url http://localhost:3001 \
-  --token "$INVENTORY_INGEST_TOKEN" \
+  --prompt-token \
   --include-openscap-report
 ```
 

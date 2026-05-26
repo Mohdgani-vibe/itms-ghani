@@ -56,13 +56,11 @@ export function buildLinuxBootstrapCommand(config?: InstallAgentConfig | null, u
   const category = buildEndpointCategory(user);
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.linuxInstallerUrl || `${serverUrl}/installers/install-itms-agent.sh`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const notes = 'Installed by ITMS bootstrap';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', category],
     ['assigned-to-name', overrides?.assignedToName || ''],
     ['assigned-to-email', overrides?.assignedToEmail || ''],
@@ -72,7 +70,7 @@ export function buildLinuxBootstrapCommand(config?: InstallAgentConfig | null, u
     ['wazuh-manager', wazuhManager],
     ['notes', notes],
   ];
-  const commandParts = [buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))];
+  const commandParts = ['--prompt-token', buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))];
   if (overrides?.includeHardinfoFallback) {
     commandParts.push('--use-hardinfo-fallback');
   }
@@ -106,9 +104,8 @@ export function buildWindowsBootstrapCommand(config?: InstallAgentConfig | null,
 export function buildLinuxSyncCommand(config?: InstallAgentConfig | null, user?: UserRecord | null, includeHardinfoFallback = true) {
   const category = buildEndpointCategory(user);
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const commandParts = [
-    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --token ${quoteShell(ingestToken)} --category ${quoteShell(category)}`,
+    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --category ${quoteShell(category)}`,
   ];
   if (includeHardinfoFallback) {
     commandParts.push('--use-hardinfo-fallback');

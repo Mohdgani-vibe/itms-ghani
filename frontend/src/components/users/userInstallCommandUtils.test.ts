@@ -30,6 +30,7 @@ describe('userInstallCommandUtils', () => {
     );
 
     expect(command).toContain("curl -fsSL 'https://itms.example.com/installers/install-itms-agent.sh'");
+    expect(command).toContain('--prompt-token');
     expect(command).toContain("--server-url 'https://itms.example.com'");
     expect(command).toContain("--assigned-to-name 'O\"'\"'Brien'");
     expect(command).toContain('--department-name');
@@ -62,6 +63,7 @@ describe('userInstallCommandUtils', () => {
 
   it('builds sync commands with defaults when config is missing', () => {
     expect(buildLinuxSyncCommand()).toContain("--server-url '<ITMS_SERVER_URL>'");
+    expect(buildLinuxSyncCommand()).not.toContain('--token');
     expect(buildLinuxSyncCommand(undefined, null, false)).not.toContain('--use-hardinfo-fallback');
     expect(buildWindowsSyncCommand()).toContain("-ServerUrl '<ITMS_SERVER_URL>'");
     expect(buildWindowsSyncCommand()).not.toContain('-Token');

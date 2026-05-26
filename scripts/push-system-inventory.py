@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import getpass
 import json
 import os
 import platform
@@ -19,6 +20,9 @@ from functools import lru_cache
 from pathlib import Path
 
 
+AGENT_ENV_FILE = Path(os.getenv("ITMS_AGENT_ENV_FILE", "/etc/itms-agent.env"))
+
+
 def run_command(command, timeout=15):
     try:
         result = subprocess.run(command, check=False, capture_output=True, text=True, timeout=timeout)
@@ -34,6 +38,37 @@ def read_text(path):
         return Path(path).read_text(encoding="utf-8", errors="ignore").strip()
     except OSError:
         return ""
+
+
+def read_value_file(path):
+    try:
+        return Path(path).expanduser().read_text(encoding="utf-8", errors="ignore").rstrip("\r\n")
+    except OSError:
+        return ""
+
+
+def read_secret_prompt(label):
+    if sys.stdin.isatty() or sys.stderr.isatty():
+        return getpass.getpass(f"{label}: ").strip()
+
+    value = sys.stdin.readline()
+    if not value:
+        return ""
+    return value.rstrip("\r\n")
+
+
+def env_file_value(name):
+    if not AGENT_ENV_FILE.is_file():
+        return ""
+
+    prefix = f"{name}="
+    try:
+        for line in AGENT_ENV_FILE.read_text(encoding="utf-8", errors="ignore").splitlines():
+            if line.startswith(prefix):
+                return line[len(prefix):].strip()
+    except OSError:
+        return ""
+    return ""
 
 
 def env_flag(name):
@@ -1013,6 +1048,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Collect hardware and OS details from a Linux system and push them to the ITMS backend.")
     parser.add_argument("--server-url", default=os.getenv("ITMS_SERVER_URL", "http://localhost:3001"), help="Backend base URL or full ingest endpoint")
     parser.add_argument("--token", default=os.getenv("ITMS_INGEST_TOKEN", ""), help="Inventory ingest token configured on the backend")
+    parser.add_argument("--token-file", default="", help="Read the inventory ingest token from FILE")
+    parser.add_argument("--prompt-token", action="store_true", help="Prompt for the inventory ingest token without echo")
     parser.add_argument("--asset-tag", default=os.getenv("ITMS_ASSET_TAG", ""), help="Asset tag to report. Defaults to hostname plus a stable device suffix")
     parser.add_argument("--name", default=os.getenv("ITMS_ASSET_NAME", ""), help="Friendly asset name. Defaults to hostname")
     parser.add_argument("--category", default=os.getenv("ITMS_ASSET_CATEGORY", "auto"), help="Asset category such as auto, laptop, desktop, vm, or server")
@@ -1046,6 +1083,14 @@ def parse_args():
 
 def main():
     args = parse_args()
+    token = (args.token or "").strip()
+    if args.token_file:
+        token = read_value_file(args.token_file)
+    elif args.prompt_token:
+        token = read_secret_prompt("Inventory ingest token")
+    elif not token:
+        token = env_file_value("ITMS_INGEST_TOKEN")
+
     payload = build_asset_payload(args)
 
     if args.print_only:
@@ -1053,13 +1098,13 @@ def main():
         sys.stdout.write("\n")
         return 0
 
-    if not args.token:
-        sys.stderr.write("Missing ingest token. Set --token or ITMS_INGEST_TOKEN.\n")
+    if not token:
+        sys.stderr.write("Missing ingest token. Set ITMS_INGEST_TOKEN, use --token-file, use --prompt-token, or rely on /etc/itms-agent.env.\n")
         return 1
 
     endpoint = normalize_endpoint(args.server_url)
     try:
-        status_code, response_body = post_payload(endpoint, args.token, payload, args.timeout)
+        status_code, response_body = post_payload(endpoint, token, payload, args.timeout)
     except urllib.error.HTTPError as error:
         body = error.read().decode("utf-8", errors="ignore")
         sys.stderr.write(f"Inventory push failed with HTTP {error.code}: {body}\n")

@@ -119,14 +119,14 @@ To install only the recurring host-side OpenSCAP scan runner and timer:
 
 ```bash
 chmod +x scripts/install-itms-openscap-runner.sh
-sudo ./scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
+sudo ./scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --prompt-token
 ```
 
 If passwordless or interactive sudo is not available, you can install a user-level timer instead:
 
 ```bash
 chmod +x scripts/install-itms-openscap-user-runner.sh
-./scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
+./scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token-file /path/to/itms-ingest-token
 ```
 
 To inspect the active OpenSCAP timer state together with the latest ITMS OpenSCAP alert for this host:
@@ -259,8 +259,7 @@ curl -sS -X POST http://127.0.0.1:8000/run \
 
 - Expected recovery result: Salt returns `{"return":[{"<minion-id>":true}]}` and `GET /api/terminal/targets/<minion-id>` flips back to `connected:true` quickly instead of timing out for about 15 seconds.
 - SSH terminal sessions require `SSH_TERMINAL_USERNAME` plus either `SSH_TERMINAL_PRIVATE_KEY_PATH` or `SSH_TERMINAL_PRIVATE_KEY`.
-- If you use a classic OpenSSH private key such as `~/.ssh/id_rsa`, set `SSH_TERMINAL_PRIVATE_KEY_PATH` to that key file.
-- For certificate-based SSH access, also set `SSH_TERMINAL_CERTIFICATE_PATH` to the matching OpenSSH user certificate, for example `~/.ssh/id_rsa-cert.pub`; the backend will pair it with the configured private key signer automatically.
+- For certificate-based SSH access, also set `SSH_TERMINAL_CERTIFICATE_PATH` to the matching OpenSSH user certificate; the backend will pair it with the configured signing key.
 - `SSH_TERMINAL_USERNAME` can be a comma-separated candidate list, for example `zerodha-admin,itteam`, and the backend will try them in order until one authenticates.
 - `SSH_TERMINAL_HOST_OVERRIDES` can also override the username per asset using `hostname=user@address:port`, for example `spare=ubuntu@10.10.60.121:8877`.
 - The backend now defaults `SSH_TERMINAL_STRICT_HOST_KEY=true`. Set `SSH_TERMINAL_KNOWN_HOSTS_PATH` to a real known-hosts file and keep strict verification enabled in normal operation.
@@ -283,8 +282,7 @@ docker run -d \
 	-e 'DATABASE_URL=postgres://postgres:postgres@postgres:5432/itms?sslmode=disable' \
 	-e 'MIGRATION_DIR=/app/db/postgres_migrations' \
 	-e 'BACKEND_ADDR=:3001' \
-		-v /home/itteam/.ssh/id_rsa:/home/itteam/.ssh/id_rsa:ro \
-		-v /home/itteam/.ssh/id_rsa-cert.pub:/home/itteam/.ssh/id_rsa-cert.pub:ro \
+	-v /home/itteam/.ssh/id_ed25519:/home/itteam/.ssh/id_ed25519:ro \
 	-v /home/itteam/.ssh/known_hosts:/home/itteam/.ssh/known_hosts:ro \
 	-p 3001:3001 \
 	backend_backend:latest

@@ -326,12 +326,10 @@ export function buildWindowsArgumentString(args: Array<[string, string]>) {
 export function buildSettingsLinuxBootstrapCommand(config?: InstallAgentConfig | null, includeHardinfoFallback = true) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.linuxInstallerUrl || `${serverUrl}/installers/install-itms-agent.sh`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', 'auto'],
     ['assigned-to-name', '<EMPLOYEE_NAME>'],
     ['assigned-to-email', '<EMPLOYEE_EMAIL>'],
@@ -341,7 +339,7 @@ export function buildSettingsLinuxBootstrapCommand(config?: InstallAgentConfig |
     ['wazuh-manager', wazuhManager],
     ['notes', 'Installed by ITMS bootstrap'],
   ];
-  const commandParts = [buildLinuxArgumentString(installArgs)];
+  const commandParts = ['--prompt-token', buildLinuxArgumentString(installArgs)];
   if (includeHardinfoFallback) {
     commandParts.push('--use-hardinfo-fallback');
   }
@@ -370,9 +368,8 @@ export function buildSettingsWindowsBootstrapCommand(config?: InstallAgentConfig
 
 export function buildSettingsLinuxSyncCommand(config?: InstallAgentConfig | null, includeHardinfoFallback = true) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const commandParts = [
-    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --token ${quoteShell(ingestToken)} --category 'auto'`,
+    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --category 'auto'`,
   ];
   if (includeHardinfoFallback) {
     commandParts.push('--use-hardinfo-fallback');
