@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-import UserInstallWorkspace, { resolveInstallVariantCommandState } from './UserInstallWorkspace';
+import UserInstallWorkspace from './UserInstallWorkspace';
+import { resolveInstallVariantCommandState } from './userInstallWorkspaceUtils';
 
 describe('UserInstallWorkspace', () => {
   it('renders install configuration, employee fields, and copyable install/sync code', () => {
