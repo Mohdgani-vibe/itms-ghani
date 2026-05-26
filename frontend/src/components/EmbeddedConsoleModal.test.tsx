@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import EmbeddedConsoleModal, { buildEmbeddedSaltConsoleState } from './EmbeddedConsoleModal';
+import EmbeddedConsoleModal from './EmbeddedConsoleModal';
+import { buildEmbeddedSaltConsoleState } from './embeddedConsoleModalUtils';
 
 vi.mock('react-dom', async () => {
   const actual = await vi.importActual<typeof import('react-dom')>('react-dom');
