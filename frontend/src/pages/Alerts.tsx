@@ -37,10 +37,21 @@ import { getStoredSession } from '../lib/session';
 import { hasSaltTarget, resolveSaltTarget, saltTargetConnected, type BootstrapDeviceLike } from '../lib/bootstrap';
 import { buildSaltActionConsolePrefill, buildSaltActionRequest, isPatchReportableSaltAction, saltActionInputError, saltActionSuccessMessage, type SaltActionValue } from '../lib/salt';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, createPatchRunRunningEntry, type PatchRunExecutionResponse, type PatchRunReport } from '../lib/patchReports';
+import {
+  emptyDashboardMap,
+  formatDateTime,
+  formatNumber,
+  formatRelativeTime,
+  normalizeSeverity,
+  normalizeSourceKey,
+  parseTimestamp,
+  sourceLabel,
+  systemName,
+  type SeverityFilter,
+  type SourceKey,
+} from './alertsUtils';
 
 type AlertsView = 'dashboard' | 'all-alerts';
-type SourceKey = 'wazuh' | 'openscap' | 'clamav';
-type SeverityFilter = 'all' | 'critical' | 'high' | 'medium' | 'low';
 type TimeRangeFilter = '24h' | '7d' | '30d' | 'all';
 
 interface ChartDrilldownState {
@@ -126,53 +137,6 @@ const SOURCE_CONFIG: Record<
   },
 };
 
-export function emptyDashboardMap<T>(value: T) {
-  return {
-    wazuh: value,
-    openscap: value,
-    clamav: value,
-  } as Record<SourceKey, T>;
-}
-
-export function formatNumber(value?: number | null) {
-  return new Intl.NumberFormat('en-US').format(value ?? 0);
-}
-
-export function parseTimestamp(value?: string | null) {
-  const timestamp = Date.parse(value || '');
-  return Number.isFinite(timestamp) ? timestamp : 0;
-}
-
-export function formatDateTime(value?: string | null) {
-  const timestamp = parseTimestamp(value);
-  if (!timestamp) {
-    return 'Unknown time';
-  }
-  return new Date(timestamp).toLocaleString();
-}
-
-export function formatRelativeTime(value?: string | null) {
-  const timestamp = parseTimestamp(value);
-  if (!timestamp) {
-    return 'Unknown time';
-  }
-
-  const diffMs = Date.now() - timestamp;
-  const diffMinutes = Math.max(1, Math.floor(diffMs / 60000));
-  if (diffMinutes < 60) {
-    return `${diffMinutes} min ago`;
-  }
-  const diffHours = Math.floor(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} hr ago`;
-  }
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays < 7) {
-    return `${diffDays} day${diffDays === 1 ? '' : 's'} ago`;
-  }
-  return new Date(timestamp).toLocaleDateString();
-}
-
 function formatTimelineBucketLabel(value?: string | null) {
   const timestamp = parseTimestamp(value);
   if (!timestamp) {
@@ -188,64 +152,6 @@ function formatChartDateLabel(value?: string | null) {
     return 'Unknown';
   }
   return new Date(timestamp).toLocaleDateString('en-US');
-}
-
-export function normalizeSeverity(value?: string | null): SeverityFilter {
-  const severity = (value || '').trim().toLowerCase();
-  if (severity === 'critical') {
-    return 'critical';
-  }
-  if (severity === 'high') {
-    return 'high';
-  }
-  if (severity === 'medium' || severity === 'warning') {
-    return 'medium';
-  }
-  return 'low';
-}
-
-export function normalizeSourceKey(value?: string | null): string {
-  const source = (value || '').trim().toLowerCase();
-  if (source === 'open_scap' || source === 'hardening') {
-    return 'openscap';
-  }
-  if (source === 'clam' || source === 'clamwin' || source === 'clamscan') {
-    return 'clamav';
-  }
-  if (source === 'salt' || source === 'salt_patch' || source === 'patch') {
-    return 'patch';
-  }
-  if (source === 'terminal_session') {
-    return 'terminal';
-  }
-  return source;
-}
-
-export function sourceLabel(value: string, fallback?: string | null) {
-  const normalized = normalizeSourceKey(value);
-  if (fallback && fallback.trim()) {
-    return fallback.trim();
-  }
-  if (normalized === 'wazuh') {
-    return 'Wazuh';
-  }
-  if (normalized === 'openscap') {
-    return 'OpenSCAP';
-  }
-  if (normalized === 'clamav') {
-    return 'ClamAV';
-  }
-  if (normalized === 'patch') {
-    return 'Patch';
-  }
-  if (normalized === 'terminal') {
-    return 'Terminal';
-  }
-  return value || 'Unknown';
-}
-
-export function systemName(alert: AlertsListRecord) {
-  return (alert.hostname || alert.assetName || alert.assetTag || alert.deviceId || 'Unknown system').trim();
 }
 
 function SectionCard({
@@ -597,7 +503,7 @@ export default function Alerts() {
         .includes(searchQuery.trim().toLowerCase());
       return matchesDepartment && matchesTime && matchesSource && matchesSeverity && matchesQuery;
     }),
-    [alerts, dashboardTimeCutoff, departmentFilter, normalizeSeverity, normalizeSourceKey, searchQuery, severityFilter, sourceFilter],
+    [alerts, dashboardTimeCutoff, departmentFilter, searchQuery, severityFilter, sourceFilter],
   );
   const threatTimeline = useMemo(() => {
     const buckets = new Map<string, number>();
@@ -644,7 +550,7 @@ export default function Alerts() {
       }
       return true;
     });
-  }, [chartDrilldown, filteredAlerts, normalizeSeverity, normalizeSourceKey]);
+  }, [chartDrilldown, filteredAlerts]);
   const chartDrilldownTotalAlerts = chartDrilldownAlerts.length;
   const chartDrilldownPaginatedAlerts = useMemo(() => {
     const startIndex = (alertsPage - 1) * alertsPageSize;
@@ -670,7 +576,7 @@ export default function Alerts() {
   );
   const chartDrilldownCriticalCount = useMemo(
     () => chartDrilldownAlerts.filter((alert) => normalizeSeverity(alert.severity) === 'critical' || normalizeSeverity(alert.severity) === 'high').length,
-    [chartDrilldownAlerts, normalizeSeverity],
+    [chartDrilldownAlerts],
   );
   const timelineSelectionLabel = chartDrilldown?.kind === 'timeline' ? `Bucket ${chartDrilldown.label}` : undefined;
   const malwareSelectionLabel = chartDrilldown?.kind === 'malware' ? `Bucket ${chartDrilldown.label}` : undefined;

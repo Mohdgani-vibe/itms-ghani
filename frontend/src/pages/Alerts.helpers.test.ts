@@ -27,7 +27,7 @@ import {
   parseTimestamp,
   sourceLabel,
   systemName,
-} from './Alerts';
+} from './alertsUtils';
 
 describe('Alerts helpers', () => {
   afterEach(() => {
