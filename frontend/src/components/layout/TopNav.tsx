@@ -83,7 +83,6 @@ const portalNavItems = {
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
-    { name: 'Salt Center', path: '/salt' },
     { name: 'Requests', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Chat', path: '/chat' },
@@ -94,7 +93,6 @@ const portalNavItems = {
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
     { name: 'Alerts', path: '/alerts' },
-    { name: 'Salt Center', path: '/salt' },
     { name: 'Requests', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Chat', path: '/chat' },
@@ -106,7 +104,6 @@ const portalNavItems = {
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
-    { name: 'Salt Center', path: '/salt' },
     { name: 'Requests', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Chat', path: '/chat' },
@@ -322,8 +319,8 @@ export default function TopNav() {
                 to={`${basePath}${item.path}`}
                 className={`portal-nav-link px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
                   active
-                    ? 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
-                    : 'portal-nav-link-inactive bg-white text-sky-700 hover:bg-sky-50 dark:border-transparent dark:bg-transparent dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-white'
+                    ? 'portal-nav-link-active border shadow-sm'
+                    : 'portal-nav-link-inactive border border-transparent'
                 }`}
               >
                 {item.name}

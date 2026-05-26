@@ -53,6 +53,31 @@ body:not(.dark *) .patch-workspace-tab-active {
   color: #1e3a8a !important;
 }
 
+.dark .portal-nav-link-inactive,
+.dark .patch-workspace-tab-inactive {
+  background-color: transparent !important;
+  color: #a1a1aa !important;
+}
+
+.dark .portal-nav-link-inactive:hover,
+.dark .patch-workspace-tab-inactive:hover {
+  background-color: rgba(39, 39, 42, 0.7) !important;
+  color: #ffffff !important;
+}
+
+.dark .portal-nav-link-active,
+.dark .patch-workspace-tab-active {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #ffffff !important;
+}
+
+.dark .portal-nav-link-active:hover,
+.dark .patch-workspace-tab-active:hover {
+  background-color: #f4f4f5 !important;
+  color: #000000 !important;
+}
+
 body:not(.dark *) input,
 body:not(.dark *) textarea,
 body:not(.dark *) select,

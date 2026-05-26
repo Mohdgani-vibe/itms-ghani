@@ -133,6 +133,7 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
   const [target, setTarget] = useState<TerminalTargetResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const [showEmbeddedPresets, setShowEmbeddedPresets] = useState(false);
   const [command, setCommand] = useState('');
   const [entries, setEntries] = useState<TerminalEntry[]>([]);
   const [history, setHistory] = useState<string[]>([]);
@@ -147,6 +148,7 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
     setTarget(null);
     setLoading(true);
     setRunning(false);
+    setShowEmbeddedPresets(false);
     setEntries([]);
     setHistory([]);
     setHistoryIndex(-1);
@@ -413,20 +415,21 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
         ) : null}
 
         {embedded ? (
-          <div className="mb-3 rounded-[24px] border border-zinc-800 bg-zinc-900/80 px-4 py-3 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap items-center gap-3 text-sm text-zinc-300">
-                <span className="font-semibold text-white">{target?.hostname || minionId}</span>
-                <span>Asset ID {target?.assetId || 'pending'}</span>
-                <span>{targetDepartmentLabel}</span>
-                <span>{target?.minionId || minionId}</span>
-                <span className={target?.connected ? 'text-emerald-400' : 'text-amber-400'}>{target?.connected ? 'Connected' : loading ? 'Connecting' : 'Disconnected'}</span>
+          <div className="mb-2 rounded-[20px] border border-zinc-800 bg-zinc-900/85 px-3 py-2 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 overflow-x-auto">
+                <div className="flex min-w-max items-center gap-2 text-xs text-zinc-300">
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 font-semibold text-white">{target?.hostname || minionId}</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">{target?.minionId || minionId}</span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">Asset {target?.assetId || 'pending'}</span>
+                  <span className={`rounded-full border px-2.5 py-1 ${target?.connected ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'border-amber-500/30 bg-amber-500/10 text-amber-300'}`}>{target?.connected ? 'Connected' : loading ? 'Connecting' : 'Disconnected'}</span>
+                </div>
               </div>
-              <button type="button" onClick={refreshTarget} disabled={loading} className="inline-flex items-center rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm font-bold text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60">
-                <RotateCcw className="mr-2 h-4 w-4" /> Refresh
+              <button type="button" onClick={refreshTarget} disabled={loading} className="inline-flex shrink-0 items-center rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-xs font-bold text-zinc-200 hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60">
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Refresh
               </button>
             </div>
-            {connectionMessage ? <div className="mt-3 rounded-xl border border-amber-900/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">{connectionMessage}</div> : null}
+            {connectionMessage ? <div className="mt-2 rounded-xl border border-amber-900/70 bg-amber-950/40 px-3 py-2 text-xs text-amber-100">{connectionMessage}</div> : null}
           </div>
         ) : null}
 
@@ -515,35 +518,48 @@ export default function TerminalConsoleView({ minionId, embedded = false, prefil
 
           <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900 shadow-sm">
             {presetGroups.length > 0 || presetCommands.length > 0 ? (
-              <div className={`border-b border-zinc-800 bg-zinc-900 ${embedded ? 'max-h-28 overflow-y-auto px-4 py-3' : 'max-h-56 overflow-y-auto px-5 py-4'}`}>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Quick Presets</div>
-                {presetGroups.length > 0 ? (
-                  <div className={`mt-3 ${embedded ? 'space-y-3' : 'space-y-4'}`}>
-                    {presetGroups.map((group) => (
-                      <div key={group.label}>
-                        <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">{group.label}</div>
-                        <div className="flex flex-wrap gap-2">
-                          {group.commands.map((preset) => (
-                            <button key={`${group.label}:${preset}`} type="button" onClick={() => { setCommand(preset); setHistoryIndex(-1); }} className={`rounded-lg border border-zinc-700 bg-zinc-950 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 ${embedded ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
-                              {preset}
-                            </button>
-                          ))}
+              <div className={`border-b border-zinc-800 bg-zinc-900 ${embedded ? 'px-4 py-3' : 'max-h-56 overflow-y-auto px-5 py-4'}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Quick Presets</div>
+                  {embedded ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowEmbeddedPresets((current) => !current)}
+                      className="rounded-lg border border-zinc-700 bg-zinc-950 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-300 hover:bg-zinc-800"
+                    >
+                      {showEmbeddedPresets ? 'Hide' : 'Show'}
+                    </button>
+                  ) : null}
+                </div>
+                {!embedded || showEmbeddedPresets ? (
+                  presetGroups.length > 0 ? (
+                    <div className={`mt-3 ${embedded ? 'max-h-28 space-y-3 overflow-y-auto pr-1' : 'space-y-4'}`}>
+                      {presetGroups.map((group) => (
+                        <div key={group.label}>
+                          <div className="mb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-500">{group.label}</div>
+                          <div className="flex flex-wrap gap-2">
+                            {group.commands.map((preset) => (
+                              <button key={`${group.label}:${preset}`} type="button" onClick={() => { setCommand(preset); setHistoryIndex(-1); }} className={`rounded-lg border border-zinc-700 bg-zinc-950 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 ${embedded ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
+                                {preset}
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {presetCommands.map((preset) => (
-                      <button key={preset} type="button" onClick={() => { setCommand(preset); setHistoryIndex(-1); }} className={`rounded-lg border border-zinc-700 bg-zinc-950 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 ${embedded ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
-                        {preset}
-                      </button>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={`mt-3 flex flex-wrap gap-2 ${embedded ? 'max-h-28 overflow-y-auto pr-1' : ''}`}>
+                      {presetCommands.map((preset) => (
+                        <button key={preset} type="button" onClick={() => { setCommand(preset); setHistoryIndex(-1); }} className={`rounded-lg border border-zinc-700 bg-zinc-950 text-xs font-semibold text-zinc-300 hover:bg-zinc-800 ${embedded ? 'px-2.5 py-1.5' : 'px-3 py-2'}`}>
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  )
+                ) : null}
               </div>
             ) : null}
-            <div ref={outputRef} className={`flex-1 space-y-4 overflow-auto bg-[#09090b] font-mono text-sm ${embedded ? 'min-h-[420px] px-4 py-4' : 'min-h-[320px] px-5 py-5'}`}>
+            <div ref={outputRef} className={`flex-1 space-y-4 overflow-auto bg-[#09090b] font-mono text-sm ${embedded ? 'min-h-[620px] px-4 py-4 lg:min-h-[640px]' : 'min-h-[320px] px-5 py-5'}`}>
               {loading ? <div className="text-zinc-400">Loading terminal target...</div> : null}
               {connectionMessage ? <div className="rounded-xl border border-amber-900/70 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">Salt target offline. Execution is disabled until the minion reconnects to the master.</div> : null}
               {!loading && entries.length === 0 ? <div className="text-zinc-500">Run a command to start this terminal session.</div> : null}
