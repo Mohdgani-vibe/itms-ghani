@@ -39,20 +39,20 @@ export interface LookupOption {
 }
 
 const PRESET_DEPARTMENTS = [
+  'Accounts',
+  'BOCO',
+  'HR',
+  'IT Team',
+  'Mutual Funds',
+  'Quality',
+  'Sales-ACOP',
   'Customer Support',
   'Account Opening',
-  'ACOP Compliance',
-  'Quality & Training',
-  'NRI - Sales & Account Opening',
-  'Z Team',
-  'Process Team',
-  'HR',
-  'Travel Desk',
-  'Admin',
-  'Front Desk',
-  'Varsity & Media Production',
-  'Z Capital',
-  'Z Tech',
+  'Process',
+  'Business Analysis (ZTeam)',
+  'Varsity',
+  'Tech Support',
+  'Institutional Broking Support',
 ];
 
 export const PORTAL_CHOICES = [
