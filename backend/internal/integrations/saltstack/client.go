@@ -269,6 +269,42 @@ func (client *Client) RunCommand(ctx context.Context, target string, command str
 	return map[string]any{}, nil
 }
 
+func (client *Client) RunFunction(ctx context.Context, target string, functionName string, args []string) (any, error) {
+	if !client.Enabled() {
+		return nil, fmt.Errorf("saltstack integration is not configured")
+	}
+	trimmedFunction := strings.TrimSpace(functionName)
+	if trimmedFunction == "" {
+		return nil, fmt.Errorf("function is required")
+	}
+
+	payload := client.withInlineEAuth(map[string]any{
+		"client":    "local",
+		"tgt":       target,
+		"expr_form": client.targetType,
+		"fun":       trimmedFunction,
+		"arg":       args,
+	})
+
+	var result struct {
+		Return []map[string]any `json:"return"`
+	}
+	if err := client.doJSON(ctx, http.MethodPost, "/run", payload, &result); err != nil {
+		return nil, err
+	}
+
+	for _, item := range result.Return {
+		if output, ok := item[target]; ok {
+			return output, nil
+		}
+		for _, output := range item {
+			return output, nil
+		}
+	}
+
+	return map[string]any{}, nil
+}
+
 func (client *Client) BuildTerminalURL(target string) string {
 	if !client.Enabled() {
 		return ""

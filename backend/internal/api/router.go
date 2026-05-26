@@ -80,6 +80,7 @@ var terminalAllowedCommands = map[string]struct{}{
 var terminalBlockedFragments = []string{"&&", "||", ";", "|", ">", "<", "`", "$(", "${", "sudo ", " su ", " ssh ", "scp ", "sftp ", "rm ", "mkfs", "shutdown", "reboot", "poweroff", "passwd", "useradd", "usermod", "groupadd", "chmod ", "chown ", "tee ", "curl ", "wget ", "nc ", "ncat ", "python ", "python3 ", "perl ", "ruby ", "bash ", "sh ", "zsh ", "fish ", "vi ", "vim ", "nano ", " top ", " htop ", " less ", " more "}
 
 var terminalPresetCommands = []string{"hostname", "uptime", "df -h", "free -h", "ps aux", "systemctl status wazuh-agent", "journalctl -n 100", "ip addr"}
+var terminalAllowedFunctions = []string{"cmd.run", "cmd.script", "disk.usage", "grains.items", "network.interfaces", "pkg.upgrades", "service.status", "state.apply", "state.sls", "status.uptime", "test.ping", "test.version"}
 
 var terminalPresetGroups = []gin.H{
 	{"label": "System", "commands": []string{"hostname", "uptime"}},
@@ -92,6 +93,7 @@ var terminalPresetGroups = []gin.H{
 
 var terminalBlockedExamples = []string{"rm -rf /tmp/demo", "tail -f /var/log/syslog", "systemctl restart wazuh-agent", "sudo cat /etc/shadow", "curl https://example.com/script.sh", "ps aux | grep salt"}
 var terminalStatePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
+var terminalSimpleArgumentPattern = regexp.MustCompile(`^[a-zA-Z0-9._@:/-]+$`)
 
 type terminalCommandMode string
 
@@ -411,8 +413,11 @@ func terminalPolicyPayload() gin.H {
 		allowedCommands = append(allowedCommands, command)
 	}
 	sort.Strings(allowedCommands)
+	allowedFunctions := append([]string(nil), terminalAllowedFunctions...)
+	sort.Strings(allowedFunctions)
 	return gin.H{
 		"allowedCommands": allowedCommands,
+		"allowedFunctions": allowedFunctions,
 		"presetCommands":  terminalPresetCommands,
 		"presetGroups":    terminalPresetGroups,
 		"blockedExamples": terminalBlockedExamples,
@@ -424,6 +429,45 @@ func terminalPolicyPayload() gin.H {
 			"Interactive editors and long-running terminal UIs are blocked.",
 			"Only read-only systemctl and journalctl usage is allowed.",
 		},
+	}
+}
+
+func terminalFunctionPolicy(functionName string, args []string) error {
+	normalizedFunction := strings.ToLower(strings.TrimSpace(functionName))
+	trimmedArgs := make([]string, 0, len(args))
+	for _, arg := range args {
+		trimmed := strings.TrimSpace(arg)
+		if trimmed != "" {
+			trimmedArgs = append(trimmedArgs, trimmed)
+		}
+	}
+
+	switch normalizedFunction {
+	case "test.ping", "test.version", "grains.items", "disk.usage", "status.uptime", "pkg.upgrades", "network.interfaces":
+		if len(trimmedArgs) > 0 {
+			return fmt.Errorf("%s does not accept arguments in the terminal function runner", normalizedFunction)
+		}
+		return nil
+	case "service.status":
+		if len(trimmedArgs) != 1 {
+			return fmt.Errorf("service.status requires exactly one service name")
+		}
+		if !terminalSimpleArgumentPattern.MatchString(trimmedArgs[0]) {
+			return fmt.Errorf("invalid service name")
+		}
+		return nil
+	case "state", "state.apply", "state.sls":
+		if len(trimmedArgs) != 1 {
+			return fmt.Errorf("%s requires exactly one state name", normalizedFunction)
+		}
+		return terminalStatePolicy(trimmedArgs[0])
+	case "cmd.run", "cmd.run_all", "cmd.script":
+		if len(trimmedArgs) == 0 {
+			return fmt.Errorf("%s requires a command", normalizedFunction)
+		}
+		return terminalCommandPolicy(strings.Join(trimmedArgs, " "))
+	default:
+		return fmt.Errorf("function is not allowed in the terminal function runner")
 	}
 }
 
@@ -487,6 +531,10 @@ type compatDeviceRecord struct {
 	BranchName      string
 	AssignedTo      string
 	EntityID        string
+	HasWPS          bool
+	HasLibreOffice  bool
+	HasChrome       bool
+	HasSalt         bool
 }
 
 type apiServer struct {
@@ -856,6 +904,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.POST("/terminal/session", server.createTerminalSessionCompat)
 			protected.GET("/terminal/targets/:minionId", server.getTerminalTarget)
 			protected.POST("/terminal/targets/:minionId/execute", server.executeTerminalCommand)
+			protected.POST("/terminal/targets/:minionId/function", server.executeTerminalFunction)
 
 			protected.GET("/assets", server.listAssets)
 			protected.POST("/assets", server.createAsset)
@@ -2971,7 +3020,11 @@ func (server *apiServer) queryCompatDevices(c *gin.Context, search string, assig
 		SELECT a.id, a.asset_tag, COALESCE(NULLIF(a.hostname, ''), a.asset_tag), a.category, COALESCE(cd.os_name, ''), COALESCE(cd.gpu, ''), COALESCE(cd.mac_address, ''), COALESCE(cd.last_seen::text, ''), a.status,
 			COALESCE(cd.pending_updates, 0), COALESCE(alerts.open_alerts, 0), COALESCE(a.serial_number, ''), COALESCE(a.model, ''),
 			COALESCE(a.cost::text, ''), COALESCE(a.warranty_until::text, ''), COALESCE(u.id::text, ''), COALESCE(u.full_name, ''), COALESCE(u.email, ''), COALESCE(u.emp_id, ''),
-			COALESCE(d.name, ''), COALESCE(l.full_name, ''), COALESCE(a.assigned_to::text, ''), a.entity_id::text`
+				COALESCE(d.name, ''), COALESCE(l.full_name, ''), COALESCE(a.assigned_to::text, ''), a.entity_id::text,
+				EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = a.id AND (lower(sw.name) LIKE '%wps%' OR lower(sw.name) LIKE '%kingsoft office%')),
+				EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = a.id AND (lower(sw.name) LIKE '%libreoffice%' OR lower(sw.name) LIKE '%libre office%')),
+				EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = a.id AND (lower(sw.name) LIKE '%chrome%' OR lower(sw.name) LIKE '%google chrome%')),
+				EXISTS(SELECT 1 FROM asset_software_inventory sw WHERE sw.asset_id = a.id AND (lower(sw.name) LIKE '%salt-minion%' OR lower(sw.name) LIKE '%salt minion%' OR lower(sw.name) LIKE '%saltstack%'))`
 	if paginate {
 		query += `, COUNT(*) OVER()`
 	}
@@ -3006,11 +3059,11 @@ func (server *apiServer) queryCompatDevices(c *gin.Context, search string, assig
 		var pendingUpdates, openAlerts int
 		var item compatDeviceRecord
 		if paginate {
-			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID, &total); err != nil {
+			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID, &item.HasWPS, &item.HasLibreOffice, &item.HasChrome, &item.HasSalt, &total); err != nil {
 				return nil, 0, err
 			}
 		} else {
-			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID); err != nil {
+			if err := rows.Scan(&item.ID, &item.AssetID, &item.Hostname, &item.DeviceType, &item.OSName, &item.GPU, &item.MACAddress, &item.LastSeenAt, &item.Status, &pendingUpdates, &openAlerts, &item.SerialNumber, &item.Model, &item.Cost, &item.WarrantyUntil, &item.UserID, &item.UserFullName, &item.UserEmail, &item.UserEmpID, &item.DepartmentName, &item.BranchName, &item.AssignedTo, &item.EntityID, &item.HasWPS, &item.HasLibreOffice, &item.HasChrome, &item.HasSalt); err != nil {
 				return nil, 0, err
 			}
 		}
@@ -3113,6 +3166,8 @@ func (server *apiServer) patchDevicesCompat(c *gin.Context) {
 		}
 		result = append(result, gin.H{
 			"id":              device.ID,
+			"assetId":         device.AssetID,
+			"assetTag":        device.AssetID,
 			"hostname":        device.Hostname,
 			"patchStatus":     device.PatchStatus,
 			"complianceScore": device.ComplianceScore,
@@ -3120,6 +3175,12 @@ func (server *apiServer) patchDevicesCompat(c *gin.Context) {
 			"lastSeenAt":      emptyToNil(device.LastSeenAt),
 			"department":      mapName(device.DepartmentName),
 			"user":            mapUser(device.UserFullName, device.UserEmail, device.UserEmpID, device.UserID),
+			"installedApps": gin.H{
+				"wps":         device.HasWPS,
+				"libreOffice": device.HasLibreOffice,
+				"chrome":      device.HasChrome,
+				"salt":        device.HasSalt,
+			},
 		})
 	}
 	if !paginate {
@@ -3752,6 +3813,168 @@ func (server *apiServer) executeTerminalCommand(c *gin.Context) {
 		"stdout":  stdout,
 		"stderr":  stderr,
 		"retcode": retcode,
+	})
+}
+
+func (server *apiServer) executeTerminalFunction(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	claims := middleware.CurrentClaims(c)
+	if claims == nil {
+		httpx.Error(c, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	if server.salt == nil || !server.salt.Enabled() {
+		httpx.Error(c, http.StatusBadGateway, "saltstack integration is not configured")
+		return
+	}
+	minionID := strings.TrimSpace(c.Param("minionId"))
+	if minionID == "" {
+		httpx.Error(c, http.StatusBadRequest, "terminal target is required")
+		return
+	}
+	var input struct {
+		Client    string   `json:"client"`
+		Function  string   `json:"function"`
+		Arguments []string `json:"arguments"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid terminal function payload")
+		return
+	}
+	if clientName := strings.TrimSpace(strings.ToLower(input.Client)); clientName != "" && clientName != "local" {
+		httpx.Error(c, http.StatusBadRequest, "only the local Salt client is allowed")
+		return
+	}
+	functionName := strings.TrimSpace(input.Function)
+	if functionName == "" {
+		httpx.Error(c, http.StatusBadRequest, "function is required")
+		return
+	}
+	asset, err := server.fetchAssetByTerminalTarget(minionID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "terminal target not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "terminal target not found")
+		return
+	}
+	if !asset.IsCompute {
+		httpx.Error(c, http.StatusBadRequest, "terminal is only available for compute assets")
+		return
+	}
+	target := coalesceString(asset.SaltMinionID, coalesceString(asset.Hostname, asset.AssetTag))
+	hostname := strings.TrimSpace(asset.Hostname)
+	if hostname == "" {
+		hostname = strings.TrimSpace(asset.AssetTag)
+	}
+	if hostname == "" {
+		hostname = target
+	}
+	if policyErr := terminalFunctionPolicy(functionName, input.Arguments); policyErr != nil {
+		detail := gin.H{"minionId": target, "hostname": hostname, "function": functionName, "arguments": input.Arguments, "policy": policyErr.Error()}
+		_ = server.recordAuditLog(c, middleware.AuditMeta{Action: "terminal_function_blocked", TargetType: "asset", TargetID: asset.ID, Detail: detail})
+		_, _ = server.recordAssetHistory(asset.ID, claims.UserID, "terminal_function_blocked", detail)
+		httpx.Error(c, http.StatusBadRequest, policyErr.Error())
+		return
+	}
+	connected, err := server.salt.TargetConnected(c.Request.Context(), target)
+	if err != nil {
+		httpx.Error(c, http.StatusBadGateway, err.Error())
+		return
+	}
+	if !connected {
+		httpx.Error(c, http.StatusBadGateway, "salt minion is not connected to the master for this asset")
+		return
+	}
+
+	normalizedFunction := strings.ToLower(strings.TrimSpace(functionName))
+	trimmedArgs := make([]string, 0, len(input.Arguments))
+	for _, arg := range input.Arguments {
+		trimmed := strings.TrimSpace(arg)
+		if trimmed != "" {
+			trimmedArgs = append(trimmedArgs, trimmed)
+		}
+	}
+
+	stdout := ""
+	stderr := ""
+	retcode := any(0)
+	mode := "function"
+
+	switch normalizedFunction {
+	case "state", "state.apply", "state.sls":
+		mode = string(terminalCommandModeState)
+		output, runErr := server.salt.RunState(c.Request.Context(), target, trimmedArgs[0])
+		if runErr != nil {
+			server.recordOperationalAlert(asset, claims.UserID, "terminal", "high", "Terminal function failed", runErr.Error())
+			httpx.Error(c, http.StatusBadGateway, runErr.Error())
+			return
+		}
+		formatted, marshalErr := json.MarshalIndent(output, "", "  ")
+		if marshalErr != nil {
+			stdout = strings.TrimSpace(fmt.Sprint(output))
+		} else {
+			stdout = strings.TrimSpace(string(formatted))
+		}
+	case "cmd.run", "cmd.run_all", "cmd.script":
+		mode = string(terminalCommandModeShell)
+		output, runErr := server.salt.RunCommand(c.Request.Context(), target, strings.Join(trimmedArgs, " "))
+		if runErr != nil {
+			server.recordOperationalAlert(asset, claims.UserID, "terminal", "high", "Terminal function failed", runErr.Error())
+			httpx.Error(c, http.StatusBadGateway, runErr.Error())
+			return
+		}
+		stdout = strings.TrimRight(fmt.Sprint(output["stdout"]), "\n")
+		stderr = strings.TrimRight(fmt.Sprint(output["stderr"]), "\n")
+		if stdout == "<nil>" {
+			stdout = ""
+		}
+		if stderr == "<nil>" {
+			stderr = ""
+		}
+		retcode = output["retcode"]
+	default:
+		output, runErr := server.salt.RunFunction(c.Request.Context(), target, normalizedFunction, trimmedArgs)
+		if runErr != nil {
+			server.recordOperationalAlert(asset, claims.UserID, "terminal", "high", "Terminal function failed", runErr.Error())
+			httpx.Error(c, http.StatusBadGateway, runErr.Error())
+			return
+		}
+		formatted, marshalErr := json.MarshalIndent(output, "", "  ")
+		if marshalErr != nil {
+			stdout = strings.TrimSpace(fmt.Sprint(output))
+		} else {
+			stdout = strings.TrimSpace(string(formatted))
+		}
+	}
+
+	auditDetail := gin.H{
+		"minionId":    target,
+		"hostname":    hostname,
+		"function":    normalizedFunction,
+		"arguments":   trimmedArgs,
+		"mode":        mode,
+		"retcode":     retcode,
+		"stdoutBytes": len(stdout),
+		"stderrBytes": len(stderr),
+	}
+	middleware.TagAudit(c, middleware.AuditMeta{Action: "terminal_function_executed", TargetType: "asset", TargetID: asset.ID, Detail: auditDetail})
+	_, _ = server.recordAssetHistory(asset.ID, claims.UserID, "terminal_function", auditDetail)
+	httpx.JSON(c, http.StatusOK, gin.H{
+		"client":    "local",
+		"function":  normalizedFunction,
+		"arguments": trimmedArgs,
+		"mode":      mode,
+		"stdout":    stdout,
+		"stderr":    stderr,
+		"retcode":   retcode,
 	})
 }
 

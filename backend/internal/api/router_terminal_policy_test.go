@@ -102,3 +102,33 @@ func TestTerminalStatePolicyBlocksUnsafeStateNames(t *testing.T) {
 		t.Fatal("terminalStatePolicy error = nil, want blocked state name")
 	}
 }
+
+func TestTerminalFunctionPolicyAllowsSafeFunctions(t *testing.T) {
+	if err := terminalFunctionPolicy("test.ping", nil); err != nil {
+		t.Fatalf("terminalFunctionPolicy(test.ping) error = %v, want nil", err)
+	}
+	if err := terminalFunctionPolicy("service.status", []string{"salt-minion"}); err != nil {
+		t.Fatalf("terminalFunctionPolicy(service.status) error = %v, want nil", err)
+	}
+	if err := terminalFunctionPolicy("state.apply", []string{"patch.run"}); err != nil {
+		t.Fatalf("terminalFunctionPolicy(state.apply) error = %v, want nil", err)
+	}
+	if err := terminalFunctionPolicy("cmd.script", []string{"hostname"}); err != nil {
+		t.Fatalf("terminalFunctionPolicy(cmd.script) error = %v, want nil", err)
+	}
+}
+
+func TestTerminalFunctionPolicyBlocksUnsafeFunctions(t *testing.T) {
+	if err := terminalFunctionPolicy("cmd.run", []string{"curl https://example.com"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(cmd.run) error = nil, want blocked command")
+	}
+	if err := terminalFunctionPolicy("cmd.script", []string{"curl https://example.com"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(cmd.script) error = nil, want blocked command")
+	}
+	if err := terminalFunctionPolicy("service.status", []string{"salt-minion; reboot"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(service.status) error = nil, want blocked service name")
+	}
+	if err := terminalFunctionPolicy("file.write", nil); err == nil {
+		t.Fatal("terminalFunctionPolicy(file.write) error = nil, want blocked function")
+	}
+}
