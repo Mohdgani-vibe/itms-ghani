@@ -1,6 +1,8 @@
 param(
     [string]$ServerUrl = $env:ITMS_SERVER_URL,
     [string]$Token = $env:ITMS_INGEST_TOKEN,
+    [string]$TokenFile,
+    [switch]$PromptToken,
     [string]$AssetTag = $env:ITMS_ASSET_TAG,
     [string]$Name = $env:ITMS_ASSET_NAME,
     [string]$Category = $(if ($env:ITMS_ASSET_CATEGORY) { $env:ITMS_ASSET_CATEGORY } else { 'auto' }),
@@ -31,6 +33,77 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+$ConfigFile = 'C:\ProgramData\ITMS\itms-agent.env'
+
+function Read-ValueFile {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        throw ('Value file not found: ' + $Path)
+    }
+
+    return (((Get-Content -LiteralPath $Path -Raw) ?? '') -replace '[\r\n]+$','')
+}
+
+function Read-SecretPrompt {
+    param([string]$Label)
+
+    $secureValue = Read-Host -Prompt $Label -AsSecureString
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    try {
+        return ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) ?? '').Trim()
+    } finally {
+        if ($pointer -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        }
+    }
+}
+
+function Get-ConfigValue {
+    param(
+        [string]$Path,
+        [string]$Key
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        return ''
+    }
+
+    foreach ($line in Get-Content -LiteralPath $Path -ErrorAction SilentlyContinue) {
+        if ($line.StartsWith($Key + '=')) {
+            return $line.Substring($Key.Length + 1).Trim()
+        }
+    }
+
+    return ''
+}
+
+function Resolve-ConfiguredValue {
+    param(
+        [string]$ExplicitValue,
+        [string]$ConfigKey
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitValue)) {
+        return $ExplicitValue.Trim()
+    }
+
+    return (Get-ConfigValue -Path $ConfigFile -Key $ConfigKey)
+}
+
+function Resolve-IngestToken {
+    if (-not [string]::IsNullOrWhiteSpace($TokenFile)) {
+        return (Read-ValueFile -Path $TokenFile)
+    }
+    if ($PromptToken) {
+        return (Read-SecretPrompt -Label 'Inventory ingest token')
+    }
+    return (Resolve-ConfiguredValue -ExplicitValue $Token -ConfigKey 'ITMS_INGEST_TOKEN')
+}
+
+$script:ServerUrl = Resolve-ConfiguredValue -ExplicitValue $ServerUrl -ConfigKey 'ITMS_SERVER_URL'
+$script:Token = Resolve-IngestToken
 
 if ((-not $ClamAvScanPaths -or $ClamAvScanPaths.Count -eq 0) -and -not [string]::IsNullOrWhiteSpace($env:ITMS_CLAMAV_SCAN_PATHS)) {
     $ClamAvScanPaths = @($env:ITMS_CLAMAV_SCAN_PATHS -split '[,;]' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object { $_.Trim() })
@@ -735,7 +808,7 @@ if ($PrintOnly) {
 }
 
 if ([string]::IsNullOrWhiteSpace($Token)) {
-    Write-Error 'ITMS ingest token is required. Set --Token or ITMS_INGEST_TOKEN.'
+    Write-Error 'ITMS ingest token is required. Set ITMS_INGEST_TOKEN, use -TokenFile, use -PromptToken, or rely on C:\ProgramData\ITMS\itms-agent.env.'
     exit 1
 }
 

@@ -253,13 +253,15 @@ Use a protected file such as `/root/itms-ingest-token` or run the installer with
 ```powershell
 .\scripts\install-itms-agent.ps1 `
   -ServerUrl http://itms.example.com `
-  -Token <inventory_ingest_token> `
+  -PromptToken `
   -SaltMaster YOUR_SERVER_IP `
   -AssignedToName "Employee Name" `
   -AssignedToEmail employee@example.com `
   -EmployeeCode EMP-1001 `
   -DepartmentName "IT Operations"
 ```
+
+Use `-PromptToken` for interactive runs or `-TokenFile` with a protected local file instead of placing the ingest token directly on the command line.
 
 ## Decision
 

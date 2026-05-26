@@ -140,12 +140,10 @@ export function buildDeviceLinuxBootstrapCommand(device?: BootstrapDeviceLike | 
 export function buildDeviceWindowsBootstrapCommand(device?: BootstrapDeviceLike | null, config?: InstallAgentConfigLike | null) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.windowsInstallerUrl || `${serverUrl}/installers/install-itms-agent.ps1`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', buildDeviceCategory(device)],
     ['use-detailed-hardware-inventory', '$true'],
     ['asset-tag', device?.assetId || ''],
@@ -158,5 +156,5 @@ export function buildDeviceWindowsBootstrapCommand(device?: BootstrapDeviceLike 
     ['wazuh-manager', wazuhManager],
     ['notes', `Installed by ITMS bootstrap for ${device?.hostname || 'endpoint'}`],
   ];
-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath ${buildWindowsArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))}"`;
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath -PromptToken ${buildWindowsArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))}"`;
 }

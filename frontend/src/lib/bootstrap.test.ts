@@ -61,6 +61,7 @@ describe('bootstrap', () => {
     expect(linuxCommand).toContain("--notes 'Installed by ITMS bootstrap for ops-laptop-01'");
 
     expect(windowsCommand).toContain("Invoke-WebRequest 'https://itms.example.com/installers/install-itms-agent.ps1'");
+    expect(windowsCommand).toContain('-PromptToken');
     expect(windowsCommand).toContain('-Category');
     expect(windowsCommand).toContain("'O''Brien'");
     expect(windowsCommand).toContain('-UseDetailedHardwareInventory $true');

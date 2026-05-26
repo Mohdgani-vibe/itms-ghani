@@ -351,12 +351,10 @@ export function buildSettingsLinuxBootstrapCommand(config?: InstallAgentConfig |
 export function buildSettingsWindowsBootstrapCommand(config?: InstallAgentConfig | null) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.windowsInstallerUrl || `${serverUrl}/installers/install-itms-agent.ps1`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', 'auto'],
     ['use-detailed-hardware-inventory', '$true'],
     ['assigned-to-name', '<EMPLOYEE_NAME>'],
@@ -367,7 +365,7 @@ export function buildSettingsWindowsBootstrapCommand(config?: InstallAgentConfig
     ['wazuh-manager', wazuhManager],
     ['notes', 'Installed by ITMS bootstrap'],
   ];
-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath ${buildWindowsArgumentString(installArgs)}"`;
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath -PromptToken ${buildWindowsArgumentString(installArgs)}"`;
 }
 
 export function buildSettingsLinuxSyncCommand(config?: InstallAgentConfig | null, includeHardinfoFallback = true) {
@@ -384,8 +382,7 @@ export function buildSettingsLinuxSyncCommand(config?: InstallAgentConfig | null
 
 export function buildSettingsWindowsSyncCommand(config?: InstallAgentConfig | null) {
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Token ${quotePowerShell(ingestToken)} -Category 'auto' -UseDetailedHardwareInventory $true`;
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Category 'auto' -UseDetailedHardwareInventory $true`;
 }
 
 export function formatDateTime(value?: string) {

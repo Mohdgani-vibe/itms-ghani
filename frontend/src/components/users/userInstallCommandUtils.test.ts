@@ -54,6 +54,7 @@ describe('userInstallCommandUtils', () => {
     );
 
     expect(command).toContain("Invoke-WebRequest 'https://itms.example.com/installers/install-itms-agent.ps1'");
+    expect(command).toContain('-PromptToken');
     expect(command).toContain('-ServerUrl');
     expect(command).toContain("'O''Brien'");
     expect(command).toContain('-UseDetailedHardwareInventory $true');
@@ -63,6 +64,7 @@ describe('userInstallCommandUtils', () => {
     expect(buildLinuxSyncCommand()).toContain("--server-url '<ITMS_SERVER_URL>'");
     expect(buildLinuxSyncCommand(undefined, null, false)).not.toContain('--use-hardinfo-fallback');
     expect(buildWindowsSyncCommand()).toContain("-ServerUrl '<ITMS_SERVER_URL>'");
+    expect(buildWindowsSyncCommand()).not.toContain('-Token');
     expect(buildWindowsSyncCommand()).toContain("-Category 'auto'");
   });
 });

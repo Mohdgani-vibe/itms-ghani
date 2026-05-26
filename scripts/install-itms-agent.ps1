@@ -2,8 +2,9 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ServerUrl,
 
-    [Parameter(Mandatory = $true)]
-    [string]$Token,
+    [string]$Token = $env:ITMS_INGEST_TOKEN,
+    [string]$TokenFile,
+    [switch]$PromptToken,
 
     [string]$Category = 'auto',
     [string]$AssignedToEmail,
@@ -73,6 +74,40 @@ function Prompt-IfEmpty {
     }
 
     return (Read-Host -Prompt $Label).Trim()
+}
+
+function Read-ValueFile {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) -or -not (Test-Path -LiteralPath $Path)) {
+        throw ('Value file not found: ' + $Path)
+    }
+
+    return (((Get-Content -LiteralPath $Path -Raw) ?? '') -replace '[\r\n]+$','')
+}
+
+function Read-SecretPrompt {
+    param([string]$Label)
+
+    $secureValue = Read-Host -Prompt $Label -AsSecureString
+    $pointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureValue)
+    try {
+        return ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($pointer) ?? '').Trim()
+    } finally {
+        if ($pointer -ne [IntPtr]::Zero) {
+            [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
+        }
+    }
+}
+
+function Resolve-IngestToken {
+    if (-not [string]::IsNullOrWhiteSpace($TokenFile)) {
+        return (Read-ValueFile -Path $TokenFile)
+    }
+    if ($PromptToken) {
+        return (Read-SecretPrompt -Label 'Inventory ingest token')
+    }
+    return ($Token ?? '').Trim()
 }
 
 function Get-ChocoExecutable {
@@ -318,7 +353,7 @@ function Write-Config {
 
 function Install-InventoryTask {
     $taskName = 'ITMS Inventory Refresh'
-    $taskCommand = 'powershell.exe -ExecutionPolicy Bypass -File "' + $CollectorTarget + '" -ServerUrl "' + $ServerUrl + '" -Token "' + $Token + '" -Category "' + $Category + '"'
+    $taskCommand = 'powershell.exe -ExecutionPolicy Bypass -File "' + $CollectorTarget + '" -ServerUrl "' + $ServerUrl + '" -Category "' + $Category + '"'
     $taskCommand += ' -UseDetailedHardwareInventory $' + $UseDetailedHardwareInventory.ToString().ToLowerInvariant()
     if (-not [string]::IsNullOrWhiteSpace($AssignedToEmail)) {
         $taskCommand += ' -AssignedToEmail "' + $AssignedToEmail + '"'
@@ -347,7 +382,7 @@ function Install-InventoryTask {
 
 function Install-ClamAvTask {
     $taskName = 'ITMS ClamAV Scan'
-    $taskCommand = 'powershell.exe -ExecutionPolicy Bypass -File "' + $CollectorTarget + '" -ServerUrl "' + $ServerUrl + '" -Token "' + $Token + '" -Category "' + $Category + '" -UseDetailedHardwareInventory $' + $UseDetailedHardwareInventory.ToString().ToLowerInvariant() + ' -IncludeClamAvReport'
+    $taskCommand = 'powershell.exe -ExecutionPolicy Bypass -File "' + $CollectorTarget + '" -ServerUrl "' + $ServerUrl + '" -Category "' + $Category + '" -UseDetailedHardwareInventory $' + $UseDetailedHardwareInventory.ToString().ToLowerInvariant() + ' -IncludeClamAvReport'
     if (-not [string]::IsNullOrWhiteSpace($AssignedToEmail)) {
         $taskCommand += ' -AssignedToEmail "' + $AssignedToEmail + '"'
     }
@@ -378,7 +413,6 @@ function Invoke-InitialInventoryPush {
         '-ExecutionPolicy', 'Bypass',
         '-File', $CollectorTarget,
         '-ServerUrl', $ServerUrl,
-        '-Token', $Token,
         '-Category', $Category,
         '-UseDetailedHardwareInventory', $UseDetailedHardwareInventory.ToString().ToLowerInvariant()
     )
@@ -408,6 +442,11 @@ function Invoke-InitialInventoryPush {
 }
 
 function Main {
+    $script:Token = Resolve-IngestToken
+    if ([string]::IsNullOrWhiteSpace($Token)) {
+        throw 'Inventory ingest token is required. Set ITMS_INGEST_TOKEN, pass -TokenFile, or use -PromptToken.'
+    }
+
     if ($RefreshHours -lt 1) {
         throw '-RefreshHours must be a positive integer.'
     }

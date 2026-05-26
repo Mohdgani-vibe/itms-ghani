@@ -153,13 +153,13 @@ On Windows, the bootstrap now installs Chocolatey automatically when needed so t
 You can run it as a single PowerShell command from an elevated prompt:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\install-itms-agent.ps1' -ServerUrl 'http://itms.example.com:3001' -Token 'YOUR_INGEST_TOKEN' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\install-itms-agent.ps1' -ServerUrl 'http://itms.example.com:3001' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
 ```
 
 If the backend is reachable, you do not need to copy the script first. Download and run it in one command:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://localhost:3001/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://localhost:3001' -Token 'replace-with-your-inventory-ingest-token' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'user@zerodha.com' -SaltMaster 'YOUR_SERVER_IP' -WazuhManager 'wazuh.itms'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://localhost:3001/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://localhost:3001' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'user@zerodha.com' -SaltMaster 'YOUR_SERVER_IP' -WazuhManager 'wazuh.itms'"
 
 For Windows endpoints managed through Salt, set `itms:use_detailed_hardware_inventory: true` in pillar if you want the scheduled collector command to keep the richer GPU, display, MAC address, and last boot fields explicit.
 ```

@@ -181,7 +181,7 @@ Windows:
 ```powershell
 powershell.exe -ExecutionPolicy Bypass -File .\scripts\install-itms-agent.ps1 `
   -ServerUrl http://itms.example.com:3001 `
-  -Token $env:INVENTORY_INGEST_TOKEN `
+  -PromptToken `
   -Category desktop `
   -UseDetailedHardwareInventory $true `
   -AssignedToEmail employee@example.com `
@@ -189,18 +189,20 @@ powershell.exe -ExecutionPolicy Bypass -File .\scripts\install-itms-agent.ps1 `
   -WazuhManager wazuh-manager.example.com
 ```
 
+For unattended Windows runs, place the ingest token in a protected local file and pass `-TokenFile` instead of embedding the token in the command line.
+
 Use `-UseDetailedHardwareInventory $true` on Windows bootstrap commands when you want the scheduled collector command to explicitly include GPU, display, MAC address, and last boot collection. It defaults to enabled.
 
 PowerShell one-liner from an elevated prompt on the endpoint:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\install-itms-agent.ps1' -ServerUrl 'http://itms.example.com:3001' -Token 'YOUR_INGEST_TOKEN' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "& '.\scripts\install-itms-agent.ps1' -ServerUrl 'http://itms.example.com:3001' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
 ```
 
 If you publish the installer script to an internal HTTPS URL, the same bootstrap can be run without copying repo files first:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'https://itms.example.com/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://itms.example.com:3001' -Token 'YOUR_INGEST_TOKEN' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'https://itms.example.com/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://itms.example.com:3001' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@example.com' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
 ```
 
 This backend now serves the installer script directly as:
@@ -212,7 +214,7 @@ http://localhost:3001/installers/install-itms-agent.ps1
 So the real one-line Windows bootstrap from an elevated PowerShell prompt is:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://localhost:3001/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://localhost:3001' -Token 'replace-with-your-inventory-ingest-token' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'user@zerodha.com' -SaltMaster 'YOUR_SERVER_IP' -WazuhManager 'wazuh.itms'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://localhost:3001/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://localhost:3001' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'user@zerodha.com' -SaltMaster 'YOUR_SERVER_IP' -WazuhManager 'wazuh.itms'"
 ```
 
 What the bootstrap command does:
@@ -296,7 +298,7 @@ Use this when you need to prove that the Windows bootstrap and collector work on
 Example bootstrap shape:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://ITMS_SERVER/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://ITMS_SERVER' -Token 'YOUR_INGEST_TOKEN' -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@zerodha.com' -AssignedToName 'Employee Name' -EmployeeCode 'EMP001' -DepartmentName 'IT' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest 'http://ITMS_SERVER/installers/install-itms-agent.ps1' -OutFile $scriptPath; & $scriptPath -ServerUrl 'http://ITMS_SERVER' -PromptToken -Category 'desktop' -UseDetailedHardwareInventory $true -AssignedToEmail 'employee@zerodha.com' -AssignedToName 'Employee Name' -EmployeeCode 'EMP001' -DepartmentName 'IT' -SaltMaster 'salt-master.example.com' -WazuhManager 'wazuh-manager.example.com'"
 ```
 
 Expected local results after bootstrap:
@@ -323,8 +325,10 @@ schtasks /Query /TN 'ITMS Compliance Scan'
 Run a manual sync after bootstrap:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\ITMS\push-system-inventory.ps1" -ServerUrl 'http://ITMS_SERVER' -Token 'YOUR_INGEST_TOKEN' -Category 'auto' -UseDetailedHardwareInventory $true
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\ITMS\push-system-inventory.ps1" -ServerUrl 'http://ITMS_SERVER' -Category 'auto' -UseDetailedHardwareInventory $true
 ```
+
+The installed Windows collector reads `C:\ProgramData\ITMS\itms-agent.env` for the ingest token. Use `-TokenFile` or `-PromptToken` only when you need to override that stored configuration.
 
 Expected collector result:
 
@@ -334,7 +338,7 @@ Expected collector result:
 Optional payload-only check before sending:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\ITMS\push-system-inventory.ps1" -ServerUrl 'http://ITMS_SERVER' -Token 'YOUR_INGEST_TOKEN' -PrintOnly | Out-File "$env:TEMP\itms-inventory.json"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\ProgramData\ITMS\push-system-inventory.ps1" -ServerUrl 'http://ITMS_SERVER' -PrintOnly | Out-File "$env:TEMP\itms-inventory.json"
 ```
 
 Backend verification after the sync:

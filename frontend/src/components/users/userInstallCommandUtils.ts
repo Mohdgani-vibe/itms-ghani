@@ -84,13 +84,11 @@ export function buildWindowsBootstrapCommand(config?: InstallAgentConfig | null,
   const category = buildEndpointCategory(user);
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
   const installerUrl = config?.windowsInstallerUrl || `${serverUrl}/installers/install-itms-agent.ps1`;
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
   const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
   const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
   const notes = 'Installed by ITMS bootstrap';
   const installArgs: Array<[string, string]> = [
     ['server-url', serverUrl],
-    ['token', ingestToken],
     ['category', category],
     ['use-detailed-hardware-inventory', '$true'],
     ['assigned-to-name', overrides?.assignedToName || ''],
@@ -102,7 +100,7 @@ export function buildWindowsBootstrapCommand(config?: InstallAgentConfig | null,
     ['notes', notes],
   ];
   const commandArgs = buildWindowsArgumentString(installArgs.filter(([, value]) => value.trim().length > 0));
-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath ${commandArgs}"`;
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(installerUrl)} -OutFile $scriptPath; & $scriptPath -PromptToken ${commandArgs}"`;
 }
 
 export function buildLinuxSyncCommand(config?: InstallAgentConfig | null, user?: UserRecord | null, includeHardinfoFallback = true) {
@@ -121,6 +119,5 @@ export function buildLinuxSyncCommand(config?: InstallAgentConfig | null, user?:
 export function buildWindowsSyncCommand(config?: InstallAgentConfig | null, user?: UserRecord | null) {
   const category = buildEndpointCategory(user);
   const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
-  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Token ${quotePowerShell(ingestToken)} -Category ${quotePowerShell(category)} -UseDetailedHardwareInventory $true`;
+  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Category ${quotePowerShell(category)} -UseDetailedHardwareInventory $true`;
 }
