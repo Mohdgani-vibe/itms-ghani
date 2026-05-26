@@ -4,6 +4,6 @@
 
 itms-windows-refresh-now:
   cmd.run:
-    - name: powershell.exe -ExecutionPolicy Bypass -File C:\ProgramData\ITMS\push-system-inventory.ps1 -ServerUrl {{ server_url }} -Token {{ ingest_token }} -Category {{ category }}
+    - name: powershell.exe -ExecutionPolicy Bypass -File C:\ProgramData\ITMS\push-system-inventory.ps1 -ServerUrl {{ server_url }} -Category {{ category }}
     - shell: cmd
     - onlyif: if exist C:\ProgramData\ITMS\push-system-inventory.ps1 (exit 0) else (exit 1)

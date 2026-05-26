@@ -4,5 +4,5 @@
 
 itms-linux-refresh-now:
   cmd.run:
-    - name: /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url {{ server_url }} --token {{ ingest_token }} --category {{ category }}
+    - name: /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url {{ server_url }} --category {{ category }}
     - onlyif: test -f /opt/itms/push-system-inventory.py

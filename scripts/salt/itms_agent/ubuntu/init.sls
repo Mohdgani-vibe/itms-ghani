@@ -216,7 +216,7 @@ itms-linux-refresh-service:
         [Service]
         Type=oneshot
         EnvironmentFile=/etc/itms-agent.env
-        ExecStart=/usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${ITMS_SERVER_URL} --token ${ITMS_INGEST_TOKEN} --category ${ITMS_ASSET_CATEGORY}
+        ExecStart=/usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${ITMS_SERVER_URL} --category ${ITMS_ASSET_CATEGORY}
 
         [Install]
         WantedBy=multi-user.target

@@ -159,7 +159,7 @@ itms-windows-compliance-task:
 itms-windows-inventory-task:
   cmd.run:
     - name: |
-        schtasks /Create /TN "ITMS Inventory Refresh" /SC HOURLY /MO 6 /RU SYSTEM /F /TR "powershell.exe -ExecutionPolicy Bypass -File C:\ProgramData\ITMS\push-system-inventory.ps1 -ServerUrl {{ server_url }} -Token {{ ingest_token }} -Category {{ category }} -UseDetailedHardwareInventory {{ '$true' if use_detailed_hardware_inventory else '$false' }}"
+        schtasks /Create /TN "ITMS Inventory Refresh" /SC HOURLY /MO 6 /RU SYSTEM /F /TR "powershell.exe -ExecutionPolicy Bypass -File C:\ProgramData\ITMS\push-system-inventory.ps1 -ServerUrl {{ server_url }} -Category {{ category }} -UseDetailedHardwareInventory {{ '$true' if use_detailed_hardware_inventory else '$false' }}"
     - shell: cmd
     - require:
       - file: itms-windows-collector-script

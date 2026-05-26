@@ -206,7 +206,7 @@ api_get() {
 }
 
 collector_cmd() {
-  python3 "$REPO_ROOT/scripts/push-system-inventory.py" --server-url "$BACKEND_URL" --token "$INGEST_TOKEN" "$@"
+  ITMS_INGEST_TOKEN="$INGEST_TOKEN" python3 "$REPO_ROOT/scripts/push-system-inventory.py" --server-url "$BACKEND_URL" "$@"
 }
 
 login() {
