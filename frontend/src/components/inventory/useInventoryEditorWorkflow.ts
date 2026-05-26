@@ -23,8 +23,8 @@ export function useInventoryEditorWorkflow({ triggerInventoryReload, setError, s
   const openEditor = useCallback((item: Partial<InventoryItem>, mode: InventoryEditorMode = 'edit') => {
     setEditingItem(item);
     setEditorMode(mode);
-    setError && setError('');
-    setSuccessMessage && setSuccessMessage('');
+    setError?.('');
+    setSuccessMessage?.('');
   }, [setError, setSuccessMessage]);
 
   const updateEditingField = useCallback((field: keyof InventoryItem, value: InventoryItem[keyof InventoryItem]) => {
@@ -35,8 +35,8 @@ export function useInventoryEditorWorkflow({ triggerInventoryReload, setError, s
     if (!editingItem) return;
     try {
       setSaving(true);
-      setError && setError('');
-      setSuccessMessage && setSuccessMessage('');
+      setError?.('');
+      setSuccessMessage?.('');
       if (editorMode === 'edit') {
         if (!editingItem.id) {
           throw new Error('Inventory item ID is required for updates');
@@ -46,10 +46,10 @@ export function useInventoryEditorWorkflow({ triggerInventoryReload, setError, s
         await createInventoryItem(editingItem);
       }
       closeEditor();
-      triggerInventoryReload && triggerInventoryReload();
-      setSuccessMessage && setSuccessMessage('Inventory item saved successfully.');
+      triggerInventoryReload?.();
+      setSuccessMessage?.('Inventory item saved successfully.');
     } catch (e) {
-      setError && setError(e instanceof Error ? e.message : 'Failed to save inventory item');
+      setError?.(e instanceof Error ? e.message : 'Failed to save inventory item');
     } finally {
       setSaving(false);
     }
