@@ -4337,7 +4337,6 @@ index 6d0af8a..6bcf1dc 100644
  
 -interface InstallAgentConfig {
 -  publicServerUrl: string;
--  inventoryIngestToken: string;
 -  saltMasterHost: string;
 -  wazuhManagerHost: string;
 -  saltApiConfigured: boolean;
@@ -4667,13 +4666,11 @@ index 6d0af8a..6bcf1dc 100644
 -function buildLinuxBootstrapCommand(config?: InstallAgentConfig | null, user?: UserRecord | null, overrides?: InstallOverrides) {
 -  const category = buildEndpointCategory(user);
 -  const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
--  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
 -  const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
 -  const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
 -  const notes = 'Installed by ITMS bootstrap';
 -  const installArgs: Array<[string, string]> = [
 -    ['server-url', serverUrl],
--    ['token', ingestToken],
 -    ['category', category],
 -    ['assigned-to-name', overrides?.assignedToName || ''],
 -    ['assigned-to-email', overrides?.assignedToEmail || ''],
@@ -4683,7 +4680,7 @@ index 6d0af8a..6bcf1dc 100644
 -    ['wazuh-manager', wazuhManager],
 -    ['notes', notes],
 -  ];
--  const commandParts = [buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))];
+-  const commandParts = ['--prompt-token', buildLinuxArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))];
 -  if (overrides?.includeHardinfoFallback) {
 -    commandParts.push('--use-hardinfo-fallback');
 -  }
@@ -4694,13 +4691,11 @@ index 6d0af8a..6bcf1dc 100644
 -function buildWindowsBootstrapCommand(config?: InstallAgentConfig | null, user?: UserRecord | null, overrides?: InstallOverrides) {
 -  const category = buildEndpointCategory(user);
 -  const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
--  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
 -  const saltMaster = config?.saltMasterHost || '<SALT_MASTER>';
 -  const wazuhManager = config?.wazuhManagerHost || '<WAZUH_MANAGER>';
 -  const notes = 'Installed by ITMS bootstrap';
 -  const installArgs: Array<[string, string]> = [
 -    ['server-url', serverUrl],
--    ['token', ingestToken],
 -    ['category', category],
 -    ['use-detailed-hardware-inventory', '$true'],
 -    ['assigned-to-name', overrides?.assignedToName || ''],
@@ -4711,16 +4706,15 @@ index 6d0af8a..6bcf1dc 100644
 -    ['wazuh-manager', wazuhManager],
 -    ['notes', notes],
 -  ];
--  const commandArgs = buildWindowsArgumentString(installArgs.filter(([, value]) => value.trim().length > 0));
+-  const commandArgs = ['-PromptToken', buildWindowsArgumentString(installArgs.filter(([, value]) => value.trim().length > 0))].filter((value) => value.trim().length > 0).join(' ');
 -  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "$scriptPath = Join-Path $env:TEMP 'install-itms-agent.ps1'; Invoke-WebRequest ${quotePowerShell(`${serverUrl}/installers/install-itms-agent.ps1`)} -OutFile $scriptPath; & $scriptPath ${commandArgs}"`;
 -}
 -
 -function buildLinuxSyncCommand(config?: InstallAgentConfig | null, user?: UserRecord | null, includeHardinfoFallback = true) {
 -  const category = buildEndpointCategory(user);
 -  const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
--  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
 -  const commandParts = [
--    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --token ${quoteShell(ingestToken)} --category ${quoteShell(category)}`,
+-    `sudo /usr/bin/python3 /opt/itms/push-system-inventory.py --server-url ${quoteShell(serverUrl)} --category ${quoteShell(category)}`,
 -  ];
 -  if (includeHardinfoFallback) {
 -    commandParts.push('--use-hardinfo-fallback');
@@ -4731,8 +4725,7 @@ index 6d0af8a..6bcf1dc 100644
 -function buildWindowsSyncCommand(config?: InstallAgentConfig | null, user?: UserRecord | null) {
 -  const category = buildEndpointCategory(user);
 -  const serverUrl = config?.publicServerUrl || '<ITMS_SERVER_URL>';
--  const ingestToken = config?.inventoryIngestToken || '<INVENTORY_INGEST_TOKEN>';
--  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Token ${quotePowerShell(ingestToken)} -Category ${quotePowerShell(category)} -UseDetailedHardwareInventory $true`;
+-  return `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\\ProgramData\\ITMS\\push-system-inventory.ps1" -ServerUrl ${quotePowerShell(serverUrl)} -Category ${quotePowerShell(category)} -UseDetailedHardwareInventory $true`;
 -}
 +type UserStatusFilter = 'all' | 'active' | 'inactive';
 +type UserSelectFilter = 'all' | string;
@@ -6350,8 +6343,8 @@ index 6d0af8a..6bcf1dc 100644
 -                  <div className="mt-2 text-sm font-semibold text-zinc-900">{installConfig?.wazuhApiConfigured ? 'Configured' : installConfigLoading ? 'Loading...' : 'Not configured'}</div>
 -                </div>
 -                <div className="rounded-xl bg-zinc-50 px-4 py-3">
--                  <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Inventory token</div>
--                  <div className="mt-2 text-sm font-semibold text-zinc-900">{installConfig?.inventoryIngestToken ? 'Ready' : installConfigLoading ? 'Loading...' : 'Missing'}</div>
+-                  <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Portal install</div>
+-                  <div className="mt-2 text-sm font-semibold text-zinc-900">{installConfig?.portalInstallReady ? 'Ready' : installConfigLoading ? 'Loading...' : 'Missing'}</div>
 -                </div>
 -              </div>
 -              <div className="mt-4 grid gap-3 md:grid-cols-2">
