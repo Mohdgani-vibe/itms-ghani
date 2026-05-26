@@ -261,19 +261,21 @@ EOF
 fi
 
 if [[ -f "$BACKEND_ENV_FILE" ]]; then
-  python3 - "$BACKEND_ENV_FILE" "$BACKEND_SECRETS_FILE" "$SALT_API_PORT" "$SALT_API_USER" "$SALT_API_PASSWORD" "$SALT_API_EAUTH" "$WAZUH_API_PORT" "$WAZUH_API_USERNAME" "$WAZUH_API_PASSWORD" <<'PY'
+  SALT_API_PASSWORD="$SALT_API_PASSWORD" WAZUH_API_PASSWORD="$WAZUH_API_PASSWORD" \
+    python3 - "$BACKEND_ENV_FILE" "$BACKEND_SECRETS_FILE" "$SALT_API_PORT" "$SALT_API_USER" "$SALT_API_EAUTH" "$WAZUH_API_PORT" "$WAZUH_API_USERNAME" <<'PY'
 import pathlib
+import os
 import sys
 
 env_path = pathlib.Path(sys.argv[1])
 secret_path = pathlib.Path(sys.argv[2])
 salt_api_port = sys.argv[3]
 salt_api_user = sys.argv[4]
-salt_api_password = sys.argv[5]
-salt_api_eauth = sys.argv[6]
-wazuh_api_port = sys.argv[7]
-wazuh_api_user = sys.argv[8]
-wazuh_api_password = sys.argv[9]
+salt_api_eauth = sys.argv[5]
+wazuh_api_port = sys.argv[6]
+wazuh_api_user = sys.argv[7]
+salt_api_password = os.environ["SALT_API_PASSWORD"]
+wazuh_api_password = os.environ["WAZUH_API_PASSWORD"]
 text = env_path.read_text() if env_path.exists() else ""
 secret_text = secret_path.read_text() if secret_path.exists() else ""
 public_updates = {
