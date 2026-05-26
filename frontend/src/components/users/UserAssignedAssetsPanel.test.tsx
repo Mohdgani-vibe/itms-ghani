@@ -1,7 +1,8 @@
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 
-import UserAssignedAssetsPanel, { userAssignedDeviceActionsReadOnly, userAssignedInventoryActionsReadOnly } from './UserAssignedAssetsPanel';
+import UserAssignedAssetsPanel from './UserAssignedAssetsPanel';
+import { userAssignedDeviceActionsReadOnly, userAssignedInventoryActionsReadOnly } from './userAssignedAssetsPanelUtils';
 
 describe('userAssignedDeviceActionsReadOnly', () => {
   it('fails closed for inactive users and retired devices', () => {

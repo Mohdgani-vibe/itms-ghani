@@ -1,5 +1,10 @@
 import { ChevronRight } from 'lucide-react';
-import { actionButtonStyles } from '../../lib/buttonStyles';
+
+import {
+  inventoryReadOnlyMessage,
+  userAssignedDeviceActionsReadOnly,
+  userAssignedInventoryActionsReadOnly,
+} from './userAssignedAssetsPanelUtils';
 
 type ToolStatusKey = 'salt' | 'wazuh' | 'openscap' | 'clamav';
 
@@ -75,25 +80,6 @@ interface UserAssignedAssetsPanelProps {
   onReturnInventoryAsset: (assetId: string) => void;
   onRetireInventoryAsset: (assetId: string) => void;
   onAssignAvailableDevice?: (assetId: string) => void;
-}
-
-export function userAssignedDeviceActionsReadOnly(readOnly: boolean, userStatus?: string | null, deviceStatus?: string | null) {
-  return readOnly || userStatus === 'inactive' || (deviceStatus || '').trim().toLowerCase() === 'retired';
-}
-
-export function userAssignedInventoryActionsReadOnly(readOnly: boolean, userStatus?: string | null, itemStatus?: string | null) {
-  return readOnly || userStatus === 'inactive' || (itemStatus || '').trim().toLowerCase() !== 'allocated';
-}
-
-function inventoryReadOnlyMessage(itemStatus?: string | null) {
-  const normalized = (itemStatus || '').trim().toLowerCase();
-  if (normalized === 'retired') {
-    return 'This inventory item is retired. Asset actions are read-only until the item returns to an allocated state.';
-  }
-  if (normalized === 'returned' || normalized === 'inventory') {
-    return 'This inventory item is no longer allocated to this user. Asset actions are read-only until the item is allocated again.';
-  }
-  return 'This inventory item is read-only until the item is allocated to this user.';
 }
 
 export default function UserAssignedAssetsPanel({
@@ -200,7 +186,7 @@ export default function UserAssignedAssetsPanel({
                   onUnassignDevice(asset.id);
                 }}
                 disabled={assetActionLoadingId === asset.id}
-                className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.remove}`}
+                className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60"
               >
                 {assetActionLoadingId === asset.id ? 'Updating...' : 'Remove From User'}
               </button>
@@ -211,7 +197,7 @@ export default function UserAssignedAssetsPanel({
                   onDeleteAsset(asset.id);
                 }}
                 disabled={assetActionLoadingId === asset.id}
-                className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.delete}`}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
               >
                 {assetActionLoadingId === asset.id ? 'Updating...' : 'Delete Asset'}
               </button>
@@ -265,7 +251,7 @@ export default function UserAssignedAssetsPanel({
                 type="button"
                 onClick={() => onReturnInventoryAsset(asset.id)}
                 disabled={assetActionLoadingId === asset.id}
-                className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.save}`}
+                className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-bold text-white hover:bg-zinc-800 disabled:opacity-60"
               >
                 {assetActionLoadingId === asset.id ? 'Updating...' : 'Return'}
               </button>
@@ -273,7 +259,7 @@ export default function UserAssignedAssetsPanel({
                 type="button"
                 onClick={() => onRetireInventoryAsset(asset.id)}
                 disabled={assetActionLoadingId === asset.id}
-                className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.delete}`}
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-60"
               >
                 {assetActionLoadingId === asset.id ? 'Updating...' : 'Scrap'}
               </button>
@@ -281,7 +267,7 @@ export default function UserAssignedAssetsPanel({
                 type="button"
                 onClick={() => onDeleteAsset(asset.id)}
                 disabled={assetActionLoadingId === asset.id}
-                className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.delete}`}
+                className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"
               >
                 {assetActionLoadingId === asset.id ? 'Updating...' : 'Delete Asset'}
               </button>
@@ -290,8 +276,8 @@ export default function UserAssignedAssetsPanel({
         })}
 
         {showAvailableDevices ? (
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
-            <div className="text-xs font-bold uppercase tracking-wider text-emerald-700">Available Unassigned Systems</div>
+          <div className="rounded-2xl border border-sky-100 bg-sky-50/70 p-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-sky-700">Available Unassigned Systems</div>
             <div className="mt-1 text-sm text-zinc-600">Pick a system below to assign it to this user.</div>
 
             {availableDevicesLoading ? <div className="mt-4 text-sm text-zinc-500">Loading unassigned systems...</div> : null}
@@ -333,7 +319,7 @@ export default function UserAssignedAssetsPanel({
                             type="button"
                             onClick={() => onAssignAvailableDevice(device.id)}
                             disabled={availableDeviceActionLoadingId === device.id}
-                            className={`rounded-lg px-3 py-2 text-xs font-bold transition disabled:opacity-60 ${actionButtonStyles.add}`}
+                            className="rounded-lg bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-60"
                           >
                             {availableDeviceActionLoadingId === device.id ? 'Assigning...' : 'Assign Device'}
                           </button>
