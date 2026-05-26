@@ -58,7 +58,7 @@ INVENTORY_SYNC_DEFAULT_LOCATION_ID=
 PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
 SALT_MASTER_HOST=
 WAZUH_MANAGER_HOST=
-JWT_SECRET=replace-with-a-random-secret-of-at-least-32-characters
+JWT_SECRET=
 JWT_TTL=24h
 SALT_API_BASE_URL=
 SALT_API_TOKEN=
@@ -90,7 +90,7 @@ GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URL=http://YOUR_SERVER_IP/api/auth/google/callback
 GOOGLE_HOSTED_DOMAIN=zerodha.com
 DEFAULT_ADMIN_EMAIL=admin@zerodha.com
-DEFAULT_ADMIN_PASSWORD=replace-with-a-strong-admin-password
+DEFAULT_ADMIN_PASSWORD=
 DEFAULT_ADMIN_NAME=ITMS Admin
 EOF
 ```
@@ -172,4 +172,3 @@ If live integrations are enabled on this server:
 - Docker Compose loads `backend/.env.secrets` after `backend/.env`, so secret values there win.
 - Keep `JWT_SECRET` and `DEFAULT_ADMIN_PASSWORD` in `backend/.env.secrets` as the effective deployed values.
 - Leave Salt, SSH terminal, and Wazuh settings empty unless this server is actually wired to those services.
-- The remaining uncommitted local source changes in this workspace are unrelated to this runbook.
