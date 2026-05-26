@@ -43,15 +43,17 @@ To render the fillable runbook with real values instead of editing placeholders 
 
 ```bash
 cd /home/itteam/itms
+mkdir -p .run
 bash scripts/render-second-server-runbook.sh \
 	--server-ip YOUR_SERVER_IP \
 	--server-name YOUR_SERVER_NAME_OR_IP \
 	--prompt-admin-password \
 	--prompt-jwt-secret \
-	--output docs/second-server-runbook.generated.md
+	--output .run/second-server-runbook.generated.md
 ```
 
 If you need a non-interactive workflow, store the values in protected files and use `--admin-password-file` plus `--jwt-secret-file` instead of putting secrets directly on the command line.
+Keep the generated file under `.run/` or another ignored/private location because it will contain real secret values.
 
 Base packages that must exist before the repo scripts can do the rest:
 

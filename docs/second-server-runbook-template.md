@@ -2,7 +2,7 @@
 
 Use this template when bringing up a fresh Ubuntu server for ITMS. Replace every `YOUR_*` placeholder before running the commands.
 
-If you prefer a rendered copy instead of manual edits, run `bash scripts/render-second-server-runbook.sh --server-ip YOUR_SERVER_IP --server-name YOUR_SERVER_NAME_OR_IP --prompt-admin-password --prompt-jwt-secret --output docs/second-server-runbook.generated.md` from the repo root. For non-interactive workflows, use `--admin-password-file` and `--jwt-secret-file` with protected files instead of inline secrets.
+If you prefer a rendered copy instead of manual edits, run `mkdir -p .run && bash scripts/render-second-server-runbook.sh --server-ip YOUR_SERVER_IP --server-name YOUR_SERVER_NAME_OR_IP --prompt-admin-password --prompt-jwt-secret --output .run/second-server-runbook.generated.md` from the repo root. For non-interactive workflows, use `--admin-password-file` and `--jwt-secret-file` with protected files instead of inline secrets. Keep the rendered file in `.run/` or another ignored/private location because it contains real secret values.
 
 ## Target Values
 
