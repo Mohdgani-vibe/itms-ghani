@@ -20,6 +20,7 @@ Related documentation:
 - Hardening and security change summary: `docs/release-hardening-summary-2026-04-22.md`
 - Stakeholder-facing release note: `docs/release-note-2026-04-22.md`
 - Fillable second-server rollout checklist: `docs/second-server-runbook-template.md`
+- Second-server runbook renderer: `scripts/render-second-server-runbook.sh`
 
 ## Update Existing Server
 
@@ -31,6 +32,18 @@ git pull --ff-only origin main
 ```
 
 ## Provision Another Ubuntu Server
+
+To render the fillable runbook with real values instead of editing placeholders by hand:
+
+```bash
+cd /home/itteam/itms
+bash scripts/render-second-server-runbook.sh \
+	--server-ip YOUR_SERVER_IP \
+	--server-name YOUR_SERVER_NAME_OR_IP \
+	--admin-password 'replace-with-a-strong-admin-password' \
+	--jwt-secret 'replace-with-a-random-secret-of-at-least-32-characters' \
+	--output docs/second-server-runbook.generated.md
+```
 
 Base packages that must exist before the repo scripts can do the rest:
 
