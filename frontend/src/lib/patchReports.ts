@@ -479,3 +479,81 @@ export function downloadPatchRunReportCsv(report: PatchRunReport, mode: 'all' | 
   anchor.remove();
   URL.revokeObjectURL(objectUrl);
 }
+
+async function loadJsPdf() {
+  const module = await import('jspdf');
+  return module.jsPDF;
+}
+
+export async function downloadPatchRunReportPdf(report: PatchRunReport) {
+  const normalizedReport = normalizePatchRunReport(report);
+  if (!normalizedReport) {
+    return;
+  }
+
+  const jsPDF = await loadJsPdf();
+  const document = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = document.internal.pageSize.getWidth();
+  const pageHeight = document.internal.pageSize.getHeight();
+  const margin = 36;
+  const contentWidth = pageWidth - (margin * 2);
+  const bottomLimit = pageHeight - 48;
+  let cursorY = 42;
+
+  const ensureSpace = (requiredHeight: number) => {
+    if (cursorY + requiredHeight <= bottomLimit) {
+      return;
+    }
+    document.addPage();
+    cursorY = 42;
+  };
+
+  const writeHeading = (title: string, subtitle?: string) => {
+    ensureSpace(44);
+    document.setFont('helvetica', 'bold');
+    document.setFontSize(18);
+    document.text(title, margin, cursorY);
+    cursorY += 18;
+    if (subtitle) {
+      document.setFont('helvetica', 'normal');
+      document.setFontSize(10);
+      document.setTextColor(90, 90, 90);
+      const lines = document.splitTextToSize(subtitle, contentWidth);
+      document.text(lines, margin, cursorY);
+      cursorY += lines.length * 12;
+      document.setTextColor(0, 0, 0);
+    }
+    cursorY += 10;
+  };
+
+  const writeLines = (lines: string[]) => {
+    for (const line of lines) {
+      ensureSpace(18);
+      document.setFont('helvetica', 'normal');
+      document.setFontSize(10);
+      const wrapped = document.splitTextToSize(line, contentWidth);
+      document.text(wrapped, margin, cursorY);
+      cursorY += wrapped.length * 12 + 4;
+    }
+  };
+
+  writeHeading('Patch Run Report', `${normalizedReport.scopeLabel} · Generated ${new Date(normalizedReport.completedAt).toLocaleString()}`);
+  writeHeading('Summary');
+  writeLines([
+    `Scope: ${normalizedReport.scopeLabel}`,
+    `Requested at: ${normalizedReport.requestedAt}`,
+    `Completed at: ${normalizedReport.completedAt}`,
+    `Success count: ${normalizedReport.successCount}`,
+    `Failed count: ${normalizedReport.failedCount}`,
+    `Systems processed: ${normalizedReport.totalCount || normalizedReport.rows.length}`,
+  ]);
+  writeHeading('Systems');
+  writeLines((normalizedReport.rows.length > 0 ? normalizedReport.rows : [{ hostname: 'No patch rows available', department: '', status: 'failed', patchStatus: '', target: '', action: '', updatedItems: [], packageChanges: [], message: '' }]).map((row) => {
+    const packageSummary = row.packageChanges.length > 0
+      ? row.packageChanges.map((change) => `${change.name}:${change.fromVersion || '-'}=>${change.toVersion || '-'}`).join('; ')
+      : row.updatedItems.join('; ') || 'No package updates reported';
+    return `${row.hostname} · ${row.department} · ${row.status.toUpperCase()} · ${row.patchStatus} · ${packageSummary} · ${row.message}`;
+  }));
+
+  document.save(`patch-run-report-${slugifySegment(normalizedReport.scopeLabel)}-${normalizedReport.completedAt.slice(0, 10)}.pdf`);
+}

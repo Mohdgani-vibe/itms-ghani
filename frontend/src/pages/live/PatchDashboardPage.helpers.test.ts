@@ -20,7 +20,7 @@ import {
   parseReportSort,
   renderPackageChangeSummary,
   shouldShowReportRowMessage,
-} from './PatchDashboardPage';
+} from './PatchDashboardPage.helpers';
 
 describe('PatchDashboardPage helpers', () => {
   afterEach(() => {

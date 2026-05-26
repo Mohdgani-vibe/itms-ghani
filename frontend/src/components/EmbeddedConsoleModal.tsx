@@ -108,73 +108,73 @@ export default function EmbeddedConsoleModal({ consoleState, titleId, closeButto
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-zinc-950/72 p-2 sm:p-3 backdrop-blur-[2px]" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-zinc-950/48 p-2 sm:p-3 backdrop-blur-[6px]" onClick={onClose}>
       <div
-        className="flex h-[96vh] w-full max-w-[98vw] flex-col overflow-hidden rounded-[28px] border border-zinc-800 bg-zinc-950 shadow-[0_32px_90px_rgba(0,0,0,0.5)]"
+        className="flex h-[96vh] w-full max-w-[98vw] flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_32px_90px_rgba(15,23,42,0.28)]"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="border-b border-zinc-800 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(74,222,128,0.14),_transparent_24%),linear-gradient(180deg,_rgba(12,17,29,0.96)_0%,_rgba(9,12,20,0.96)_100%)] px-4 py-4 sm:px-5 sm:py-5">
+        <div className="border-b border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(59,130,246,0.10),_transparent_24%),linear-gradient(180deg,_#f8fcff_0%,_#ffffff_100%)] px-4 py-4 sm:px-5 sm:py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
-              <div className="inline-flex items-center rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-300">{consoleState.kind === 'ssh' ? 'SSH Terminal' : 'Salt Console'}</div>
-              <h2 id={titleId} className="mt-3 truncate text-2xl font-black tracking-tight text-white">{consoleState.title}</h2>
-              <p className="mt-1 truncate text-sm text-zinc-400">{consoleState.subtitle}</p>
+              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">{consoleState.kind === 'ssh' ? 'SSH Terminal' : 'Salt Console'}</div>
+              <h2 id={titleId} className="mt-3 truncate text-2xl font-black tracking-tight text-zinc-950">{consoleState.title}</h2>
+              <p className="mt-1 truncate text-sm text-zinc-500">{consoleState.subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
               {navigation ? (
                 <>
-                  <div className="hidden rounded-2xl border border-zinc-800 bg-zinc-950/50 px-3 py-2 text-right text-xs text-zinc-400 lg:block">
-                    <div className="font-semibold text-zinc-200">{navigation.index + 1} of {navigation.total}</div>
+                  <div className="hidden rounded-2xl border border-zinc-200 bg-white/80 px-3 py-2 text-right text-xs text-zinc-500 lg:block">
+                    <div className="font-semibold text-zinc-900">{navigation.index + 1} of {navigation.total}</div>
                     <div className="mt-0.5">Alt+Shift+Left/Right</div>
                   </div>
-                  <button type="button" onClick={navigation.onPrevious} disabled={navigation.index === 0} className="inline-flex items-center rounded-2xl border border-zinc-700 bg-zinc-950/70 px-3.5 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={navigation.onPrevious} disabled={navigation.index === 0} className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50">
                     <ChevronLeft className="mr-1 h-4 w-4" /> Prev
                   </button>
-                  <button type="button" onClick={navigation.onNext} disabled={navigation.index >= navigation.total - 1} className="inline-flex items-center rounded-2xl border border-zinc-700 bg-zinc-950/70 px-3.5 py-2.5 text-sm font-bold text-zinc-100 transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={navigation.onNext} disabled={navigation.index >= navigation.total - 1} className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50">
                     Next <ChevronRight className="ml-1 h-4 w-4" />
                   </button>
                 </>
               ) : null}
-              <button ref={closeButtonRef} type="button" onClick={onClose} className="inline-flex items-center rounded-2xl border border-zinc-700 bg-white px-3.5 py-2.5 text-sm font-bold text-zinc-900 shadow-sm transition hover:bg-zinc-100">
+              <button ref={closeButtonRef} type="button" onClick={onClose} className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-3.5 py-2.5 text-sm font-bold text-zinc-900 shadow-sm transition hover:bg-zinc-50">
                 <X className="mr-2 h-4 w-4" /> Close
               </button>
             </div>
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
-            <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-200">
+            <div className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-700">
               {consoleState.kind === 'ssh' ? 'Secure Device Access' : consoleState.kind === 'salt-loading' ? 'Preparing Salt Target' : 'Live Salt Command Session'}
             </div>
             {'assetId' in consoleState && consoleState.assetId ? (
-              <div className="rounded-full border border-sky-500/25 bg-sky-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-sky-200">
+              <div className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-blue-700">
                 Asset ID {consoleState.assetId}
               </div>
             ) : null}
             {consoleState.kind === 'salt' && consoleState.departmentName ? (
-              <div className="rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-200">
+              <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-700">
                 Department {consoleState.departmentName}
               </div>
             ) : null}
             {consoleState.kind === 'salt' ? (
-              <div className="rounded-full border border-zinc-700 bg-zinc-950/55 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-300">
+              <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-700">
                 Salt Target {consoleState.minionId}
               </div>
             ) : null}
-            <div className="rounded-full border border-zinc-700 bg-zinc-950/55 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-300">
+            <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-zinc-700">
               Embedded Workspace
             </div>
           </div>
         </div>
-        <div className="min-h-0 flex-1 bg-[linear-gradient(180deg,_#06080d_0%,_#090d15_100%)] p-1.5 sm:p-2">
+        <div className="min-h-0 flex-1 bg-[linear-gradient(180deg,_#eef5ff_0%,_#f8fbff_100%)] p-2 sm:p-3">
           {consoleState.kind === 'ssh' ? <SshTerminalView key={consoleState.assetId} assetId={consoleState.assetId} embedded /> : null}
           {consoleState.kind === 'salt-loading' ? (
-            <div className="flex h-full min-h-[420px] items-center justify-center rounded-[24px] border border-zinc-800 bg-zinc-950/80 px-6 py-8 text-center shadow-inner">
+            <div className="flex h-full min-h-[420px] items-center justify-center rounded-[28px] border border-zinc-200 bg-white px-6 py-8 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
               <div>
-                <div className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">Loading Salt Target</div>
-                <div className="mt-3 text-lg font-bold text-white">Preparing console session for the selected device.</div>
-                <div className="mt-2 text-sm text-zinc-400">Fetching the latest Salt target details before opening the next console.</div>
+                <div className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Loading Salt Target</div>
+                <div className="mt-3 text-lg font-bold text-zinc-950">Preparing console session for the selected device.</div>
+                <div className="mt-2 text-sm text-zinc-500">Fetching the latest Salt target details before opening the next console.</div>
               </div>
             </div>
           ) : null}

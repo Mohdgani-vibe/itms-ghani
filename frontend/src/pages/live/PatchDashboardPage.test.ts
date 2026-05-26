@@ -30,7 +30,8 @@ vi.mock('../../components/PatchRunReportModal', () => ({
   default: () => null,
 }));
 
-import PatchDashboardPage, { parsePatchWorkspaceView } from './PatchDashboardPage';
+import PatchDashboardPage from './PatchDashboardPage';
+import { parsePatchWorkspaceView } from './PatchDashboardPage.helpers';
 import { shouldResetOpeningReportId } from './patchDashboardState';
 
 function renderPatchDashboard(initialEntry: string) {
@@ -70,33 +71,38 @@ describe('shouldResetOpeningReportId', () => {
 });
 
 describe('parsePatchWorkspaceView', () => {
-  it('maps legacy reports queries into the terminal workspace', () => {
+  it('maps legacy views into the terminal workspace', () => {
     expect(parsePatchWorkspaceView('reports', true)).toBe('terminal');
     expect(parsePatchWorkspaceView('terminal', true)).toBe('terminal');
+    expect(parsePatchWorkspaceView('scripts', true)).toBe('terminal');
+    expect(parsePatchWorkspaceView('history', true)).toBe('terminal');
+    expect(parsePatchWorkspaceView('systems', true)).toBe('systems');
     expect(parsePatchWorkspaceView(null, true)).toBe('systems');
   });
 
-  it('forces systems view when report access is unavailable', () => {
-    expect(parsePatchWorkspaceView('terminal', false)).toBe('systems');
+  it('falls back to systems when terminal access is unavailable', () => {
+    expect(parsePatchWorkspaceView('reports', false)).toBe('systems');
+    expect(parsePatchWorkspaceView('scripts', false)).toBe('systems');
   });
 });
 
 describe('PatchDashboardPage', () => {
-  it('renders the systems workspace shell with the inventory layout', () => {
+  it('renders the systems workspace shell by default', () => {
     const markup = renderPatchDashboard('/admin/patch');
 
-    expect(markup).toContain('Patch Command Deck');
-    expect(markup).toContain('Department deck');
-    expect(markup).toContain('Patch operations with a live systems view, not a flat admin list.');
-    expect(markup).toContain('Department Control');
-    expect(markup).toContain('Department scope');
-    expect(markup).toContain('Open device list');
+    expect(markup).toContain('Patch Workspace');
+    expect(markup).toContain('Patch workspace for systems and terminal operations.');
+    expect(markup).toContain('Systems');
+    expect(markup).toContain('Terminal');
+    expect(markup).toContain('Patch status counts across the current fleet scope');
+    expect(markup).toContain('All departments in view');
   });
 
-  it('renders the terminal workspace shell and maps legacy reports view', () => {
+  it('renders the terminal workspace shell from the reports view query', () => {
     const markup = renderPatchDashboard('/admin/patch?view=reports');
 
-    expect(markup).toContain('Report archive');
+    expect(markup).toContain('Terminal');
+    expect(markup).toContain('Saved scripts, job history, and report archive');
     expect(markup).toContain('Featured Report');
     expect(markup).toContain('Latest verified run in the current scope');
     expect(markup).toContain('Report Archive');

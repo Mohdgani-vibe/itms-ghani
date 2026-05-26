@@ -1,7 +1,6 @@
 import { CheckCircle2, Download, RefreshCw, XCircle } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { actionButtonStyles } from '../lib/buttonStyles';
-import { downloadPatchRunReportCsv, normalizePatchRunReport, type PatchRunReport } from '../lib/patchReports';
+import { downloadPatchRunReportCsv, downloadPatchRunReportPdf, normalizePatchRunReport, type PatchRunReport } from '../lib/patchReports';
 
 interface PatchRunReportModalProps {
   report: PatchRunReport | null;
@@ -60,18 +59,18 @@ export default function PatchRunReportModal({ report, onClose }: PatchRunReportM
   const hasUpdatedRows = normalizedReport.rows.some((row) => row.updatedItems.length > 0);
 
   return createPortal(
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-[2px]">
-      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.28)]" role="dialog" aria-modal="true" aria-labelledby="patch-run-report-title">
-        <div className="border-b border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.14),_transparent_22%),linear-gradient(135deg,_#f4fdf7_0%,_#ffffff_54%,_#fff8ef_100%)] px-6 py-5">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-[6px]">
+      <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-[0_32px_80px_rgba(15,23,42,0.28)]" role="dialog" aria-modal="true" aria-labelledby="patch-run-report-title">
+        <div className="border-b border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.18),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.14),_transparent_22%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_54%,_#fff8ef_100%)] px-6 py-5">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
                 Patch Report
               </div>
               <h2 id="patch-run-report-title" className="mt-3 text-2xl font-black tracking-tight text-zinc-950">Patch Run Report</h2>
               <p className="mt-1 text-sm text-zinc-600">{normalizedReport.scopeLabel} • {processedCount}/{totalCount} device(s) processed</p>
             </div>
-            <button type="button" onClick={onClose} className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-600 shadow-sm transition hover:bg-zinc-50">
+            <button type="button" onClick={onClose} className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50">
               Close
             </button>
           </div>
@@ -99,7 +98,7 @@ export default function PatchRunReportModal({ report, onClose }: PatchRunReportM
             </div>
           </div>
           {isRunning ? (
-            <div className="mt-4 rounded-2xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-900">
+            <div className="mt-4 rounded-[22px] border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-900 shadow-sm">
               Patch update is running now. This popup will keep filling with device results as each patch call finishes.
             </div>
           ) : null}
@@ -116,7 +115,7 @@ export default function PatchRunReportModal({ report, onClose }: PatchRunReportM
             </thead>
             <tbody className="divide-y divide-zinc-100 bg-white">
               {normalizedReport.rows.map((row) => (
-                <tr key={row.deviceId} className="transition hover:bg-emerald-50/30">
+                <tr key={row.deviceId} className="transition hover:bg-sky-50/30">
                   <td className="px-4 py-3 align-top">
                     <div className="text-sm font-semibold text-zinc-900">{row.hostname}</div>
                     <div className="mt-1 text-xs text-zinc-500">{row.department}</div>
@@ -137,15 +136,22 @@ export default function PatchRunReportModal({ report, onClose }: PatchRunReportM
           </table>
         </div>
 
-        <div className="flex flex-wrap justify-end gap-3 border-t border-zinc-200 bg-white px-6 py-4">
-          <button type="button" disabled={isRunning || !hasUpdatedRows} onClick={() => downloadPatchRunReportCsv(normalizedReport, 'updated')} className={`inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition disabled:opacity-60 ${actionButtonStyles.add}`}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 bg-[linear-gradient(180deg,_#ffffff_0%,_#fbfdff_100%)] px-6 py-4">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Export report outputs</div>
+          <div className="flex flex-wrap justify-end gap-3">
+          <button type="button" disabled={isRunning || !hasUpdatedRows} onClick={() => downloadPatchRunReportCsv(normalizedReport, 'updated')} className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60">
             <Download className="mr-2 h-4 w-4" />
             Download Updated CSV
           </button>
-          <button type="button" disabled={isRunning} onClick={() => downloadPatchRunReportCsv(normalizedReport)} className={`inline-flex items-center rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition disabled:opacity-60 ${actionButtonStyles.add}`}>
+          <button type="button" disabled={isRunning} onClick={() => { void downloadPatchRunReportPdf(normalizedReport); }} className="inline-flex items-center rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:opacity-60">
+            <Download className="mr-2 h-4 w-4" />
+            Download PDF
+          </button>
+          <button type="button" disabled={isRunning} onClick={() => downloadPatchRunReportCsv(normalizedReport)} className="inline-flex items-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-zinc-800 disabled:opacity-60">
             <Download className="mr-2 h-4 w-4" />
             Download Full CSV Report
           </button>
+          </div>
         </div>
       </div>
     </div>,
