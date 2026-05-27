@@ -16,7 +16,7 @@ import {
   sumValuesForMonth,
   summarizeCardSeries,
   summarizeTrend,
-} from './DashboardPage';
+} from './dashboardPageUtils';
 
 describe('DashboardPage helpers', () => {
   afterEach(() => {
