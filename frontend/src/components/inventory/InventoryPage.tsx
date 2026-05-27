@@ -278,26 +278,85 @@ export default function InventoryPage() {
     setAudit(response.items);
   }
 
-  async function refreshAll() {
-    setLoading(true);
-    setError('');
-    try {
-      await Promise.all([loadCatalogData(), loadAssetsData(), loadAuditData()]);
-    } catch (loadError: unknown) {
-      setError(getErrorMessage(loadError, 'Failed to load inventory module'));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void refreshAll();
+    let cancelled = false;
+
+    async function initializeInventoryPage() {
+      setLoading(true);
+      setError('');
+      try {
+        const [options, mainItemRecords, subItemRecords, supplierRecords, branchList, entityList, assetsResponse, auditResponse] = await Promise.all([
+          fetchInventoryModuleOptions(),
+          fetchInventoryMainItems(),
+          fetchInventorySubItems(),
+          fetchInventorySuppliers(),
+          fetchInventoryModuleBranches(),
+          fetchInventoryEntities(),
+          fetchInventoryModuleAssets({ page: 1 }),
+          fetchInventoryModuleAudit('inventory'),
+        ]);
+        if (cancelled) {
+          return;
+        }
+        setItems(mainItemRecords.length ? mainItemRecords : options.items);
+        setSubItems(subItemRecords.length ? subItemRecords : options.subItems);
+        setSuppliers(supplierRecords.length ? supplierRecords : options.suppliers);
+        setBranches(options.branches);
+        setEntities(Array.isArray(entityList) ? entityList.filter((entity) => entity.is_active !== false) : []);
+        setDefaultCompanyName(options.defaultCompanyName || '');
+        setEmployees(options.employees);
+        setBranchRecords(branchList);
+        setAssets(assetsResponse.items);
+        setSummary(assetsResponse.summary);
+        setAudit(auditResponse.items);
+      } catch (loadError: unknown) {
+        if (!cancelled) {
+          setError(getErrorMessage(loadError, 'Failed to load inventory module'));
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void initializeInventoryPage();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
-    void loadAssetsData().catch((loadError: unknown) => {
-      setError(getErrorMessage(loadError, 'Failed to load inventory assets'));
-    });
+    let cancelled = false;
+
+    async function refreshFilteredAssets() {
+      try {
+        const response = await fetchInventoryModuleAssets({
+          search: searchQuery,
+          mainItemId: mainItemFilter === 'all' ? undefined : mainItemFilter,
+          subItemId: subItemFilter === 'all' ? undefined : subItemFilter,
+          branchId: branchFilter === 'all' ? undefined : branchFilter,
+          assetType: assetTypeFilter === 'all' ? undefined : assetTypeFilter,
+          page: 1,
+        });
+        if (cancelled) {
+          return;
+        }
+        setAssets(response.items);
+        setSummary(response.summary);
+      } catch (loadError: unknown) {
+        if (!cancelled) {
+          setError(getErrorMessage(loadError, 'Failed to load inventory assets'));
+        }
+      }
+    }
+
+    void refreshFilteredAssets();
+
+    return () => {
+      cancelled = true;
+    };
   }, [searchQuery, mainItemFilter, subItemFilter, branchFilter, assetTypeFilter]);
 
   const branchSummary = useMemo(() => {

@@ -171,7 +171,7 @@ export default function Chat() {
    }, [activeChannel]);
    const backupOwnerCandidates = useMemo(() => {
       return filterBackupOwnerCandidates(ownerCandidates, selectedOwnerId, activeChannel);
-   }, [activeChannel?.primaryOwner?.id, ownerCandidates, selectedOwnerId]);
+   }, [activeChannel, ownerCandidates, selectedOwnerId]);
    const { isActiveChannelClosed, canCloseActiveChannel, canReopenActiveChannel } = deriveChatChannelActionPermissions(role, activeChannel);
 
    useEffect(() => {

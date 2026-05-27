@@ -43,7 +43,7 @@ export function useAlertsDerivedState({
   normalizeSourceKey,
   sourceLabel,
 }: UseAlertsDerivedStateParams) {
-  const alerts = alertsData?.items ?? [];
+  const alerts = useMemo(() => alertsData?.items ?? [], [alertsData?.items]);
 
   const sourceAlerts = useMemo(
     () => ({
@@ -54,8 +54,10 @@ export function useAlertsDerivedState({
     [alerts, normalizeSourceKey],
   );
 
-  const moduleCards =
-    dashboardData.wazuh?.moduleCards ?? dashboardData.openscap?.moduleCards ?? dashboardData.clamav?.moduleCards ?? [];
+  const moduleCards = useMemo(
+    () => dashboardData.wazuh?.moduleCards ?? dashboardData.openscap?.moduleCards ?? dashboardData.clamav?.moduleCards ?? [],
+    [dashboardData.clamav?.moduleCards, dashboardData.openscap?.moduleCards, dashboardData.wazuh?.moduleCards],
+  );
 
   const moduleCardBySource = useMemo(() => {
     return new Map(moduleCards.map((card) => [normalizeSourceKey(card.source), card]));
