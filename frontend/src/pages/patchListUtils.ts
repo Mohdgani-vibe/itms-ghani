@@ -1,7 +1,9 @@
 import { patchDeviceActionsReadOnly } from '../components/patch/patchDeviceActions';
 import type { PatchRunReport } from '../lib/patchReports';
 
-const PATCH_PAGE_SIZE = 20;
+export { patchDeviceActionsReadOnly } from '../components/patch/patchDeviceActions';
+
+export const PATCH_PAGE_SIZE = 20;
 
 export interface PatchDevice {
   id: string;

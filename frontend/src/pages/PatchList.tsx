@@ -10,8 +10,9 @@ import PatchListFeedback from '../components/patch/PatchListFeedback';
 import PatchListHeader from '../components/patch/PatchListHeader';
 import PatchRecentReportsPanel from '../components/patch/PatchRecentReportsPanel';
 import DepartmentSaltConsolePickerModal, { type DepartmentConsoleDevice } from '../components/DepartmentSaltConsolePickerModal';
-import EmbeddedConsoleModal, { buildEmbeddedSaltConsoleState, type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
+import EmbeddedConsoleModal, { type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
 import PatchRunReportModal from '../components/PatchRunReportModal';
+import { buildEmbeddedSaltConsoleState } from '../components/embeddedConsoleModalUtils';
 import Pagination from '../components/Pagination';
 import { resolveSaltTarget, type BootstrapDeviceLike } from '../lib/bootstrap';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, downloadPatchRunReportCsv, filterPatchRunReports, listPatchReportDepartments, sortPatchRunReports, type PatchRunExecutionResponse, type PatchRunReport, type PatchRunReportDateRange, type PatchRunReportSort, type PatchRunReportSummary } from '../lib/patchReports';
@@ -19,6 +20,7 @@ import { buildSaltActionConsolePrefill } from '../lib/salt';
 import { getStoredSession } from '../lib/session';
 import { PATCH_DEVICE_READ_ONLY_REASON } from '../components/patch/patchDeviceActions';
 import {
+  PATCH_PAGE_SIZE,
   buildPatchBatchDevicesUrl,
   buildPatchDevicesUrl,
   countActionablePatchDevices,
@@ -29,6 +31,7 @@ import {
   formatPatchRunSuccessMessage,
   formatPatchScopeLabel,
   normalizePatchDepartmentOptions,
+  patchDeviceActionsReadOnly,
   selectActionablePatchDevices,
   selectDepartmentSystems,
   selectVisiblePatchReports,

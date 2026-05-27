@@ -1,7 +1,7 @@
 import type { ChatChannel, DirectoryUser } from '../components/chat/types';
 
 const CHAT_MESSAGE_PAGE_SIZE = 100;
-const CHAT_CHANNEL_PAGE_SIZE = 50;
+export const CHAT_CHANNEL_PAGE_SIZE = 50;
 
 export function deriveChatPermissions(role: string, chatAutoCreateEnabled: boolean) {
    const isAuditor = role === 'auditor';

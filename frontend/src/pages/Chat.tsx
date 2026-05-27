@@ -8,6 +8,7 @@ import { apiRequest } from '../lib/api';
 import { sortByRecentChatActivity } from '../lib/chat';
 import { getStoredSession } from '../lib/session';
 import {
+   CHAT_CHANNEL_PAGE_SIZE,
    buildChatChannelsUrl,
    buildChatMessagesUrl,
    deriveChatChannelActionPermissions,

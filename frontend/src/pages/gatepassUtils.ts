@@ -214,7 +214,7 @@ export function hasDisplayValue(value?: string) {
 }
 
 export function fieldDisplayValue(value?: string) {
-  return hasDisplayValue(value) ? value.trim() : '— not filled —';
+  return typeof value === 'string' && hasDisplayValue(value) ? value.trim() : '— not filled —';
 }
 
 export function formatIssueTime(value?: string) {

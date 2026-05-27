@@ -4,7 +4,8 @@ import { apiRequest } from '../../lib/api';
 import { hasSaltTarget, resolveSaltTarget, saltTargetConnected } from '../../lib/bootstrap';
 import { createPatchRunProgressReport, createPatchRunReport, createPatchRunReportEntry, createPatchRunRunningEntry, type PatchRunExecutionResponse, type PatchRunReport } from '../../lib/patchReports';
 import { buildSaltActionConsolePrefill, buildSaltActionRequest, isPatchReportableSaltAction, saltActionInputError, saltActionSuccessMessage, type SaltActionValue } from '../../lib/salt';
-import { buildEmbeddedSaltConsoleState, type EmbeddedConsoleState } from '../EmbeddedConsoleModal';
+import type { EmbeddedConsoleState } from '../EmbeddedConsoleModal';
+import { buildEmbeddedSaltConsoleState } from '../embeddedConsoleModalUtils';
 
 interface DeviceAccessWorkflowDevice {
   id: string;

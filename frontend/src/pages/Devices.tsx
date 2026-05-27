@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Filter, HardDrive, RefreshCw, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { apiRequest } from '../lib/api';
 import { getStoredSession } from '../lib/session';
 import Pagination from '../components/Pagination';
 import {
+  DEVICES_PAGE_SIZE,
   formatCurrency,
   formatDateTime,
   loadInventoryData,

@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import EmbeddedConsoleModal, { buildEmbeddedSaltConsoleState, type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
+import EmbeddedConsoleModal, { type EmbeddedConsoleState } from '../components/EmbeddedConsoleModal';
 import PatchRunReportModal from '../components/PatchRunReportModal';
 import { AlertsDetailPane } from '../components/alerts/AlertsDetailPane';
 import { AlertsDashboardSourceGrid } from '../components/alerts/AlertsDashboardSourceGrid';
@@ -32,6 +32,7 @@ import {
 } from '../components/alerts/AlertsDisplay';
 import type { AlertsDashboardResponse, AlertsListRecord, PaginatedAlertsResponse } from '../components/alerts/types';
 import { useAlertsDerivedState } from '../hooks/useAlertsDerivedState';
+import { buildEmbeddedSaltConsoleState } from '../components/embeddedConsoleModalUtils';
 import { apiRequest } from '../lib/api';
 import { getStoredSession } from '../lib/session';
 import { hasSaltTarget, resolveSaltTarget, saltTargetConnected, type BootstrapDeviceLike } from '../lib/bootstrap';

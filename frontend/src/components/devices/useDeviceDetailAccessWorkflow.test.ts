@@ -2,7 +2,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../EmbeddedConsoleModal', () => ({
+vi.mock('../embeddedConsoleModalUtils', () => ({
   buildEmbeddedSaltConsoleState: ({
     title,
     systemLabel,
@@ -30,7 +30,9 @@ vi.mock('../EmbeddedConsoleModal', () => ({
 
 import { useDeviceDetailAccessWorkflow, deviceDetailAccessActionsReadOnly } from './useDeviceDetailAccessWorkflow';
 
-type CapturedWorkflow = Pick<ReturnType<typeof useDeviceDetailAccessWorkflow>, 'handleOpenMainSaltConsole'>;
+type CapturedWorkflow = {
+  handleOpenMainSaltConsole: () => void;
+};
 
 function WorkflowHarness({ onCapture }: { onCapture: (workflow: CapturedWorkflow) => void }) {
   const workflow = useDeviceDetailAccessWorkflow({
@@ -85,11 +87,8 @@ describe('useDeviceDetailAccessWorkflow', () => {
       },
     }));
 
-    if (!capturedWorkflow) {
-      throw new Error('workflow was not captured');
-    }
-
-    capturedWorkflow.handleOpenMainSaltConsole();
+    expect(capturedWorkflow).not.toBeNull();
+    capturedWorkflow!.handleOpenMainSaltConsole();
 
     expect(embeddedConsoleSetter).toHaveBeenCalledWith({
       kind: 'salt',

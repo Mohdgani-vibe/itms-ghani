@@ -1,6 +1,6 @@
 import { apiRequest } from '../lib/api';
 
-const DEVICES_PAGE_SIZE = 50;
+export const DEVICES_PAGE_SIZE = 50;
 
 export type DeviceAssignmentFilter = 'all' | 'assigned' | 'unassigned';
 
