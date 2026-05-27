@@ -7,7 +7,7 @@ vi.hoisted(() => {
   });
 });
 
-import { getSshBlockedReason, shouldRecordSshTerminalSession } from './SshTerminalPage';
+import { getSshBlockedReason, shouldRecordSshTerminalSession } from './sshTerminalPageUtils';
 
 describe('SshTerminalPage helpers', () => {
   it('blocks missing and retired SSH targets', () => {
