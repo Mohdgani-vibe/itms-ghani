@@ -5,7 +5,7 @@ import {
   formatRelativeTime,
   getStatusClasses,
   normalizeRequestRecord,
-} from './MyRequestsPage';
+} from './myRequestsPageUtils';
 
 describe('MyRequestsPage helpers', () => {
   afterEach(() => {
