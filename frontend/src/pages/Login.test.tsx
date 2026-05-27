@@ -25,6 +25,7 @@ describe('Login', () => {
     expect(markup).toContain('Sign in to your portal');
     expect(markup).toContain('Use email and password');
     expect(markup).toContain('Google SSO not configured');
+    expect(markup).not.toContain('href="#"');
     expect(markup).not.toContain('Email / Employee ID');
     expect(markup).not.toContain('Signing in...');
   });

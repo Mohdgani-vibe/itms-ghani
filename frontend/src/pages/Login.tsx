@@ -84,6 +84,7 @@ export default function Login() {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [supportMessage, setSupportMessage] = useState('');
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -201,6 +202,7 @@ export default function Login() {
     try {
       setLoading(true);
       setError('');
+      setSupportMessage('');
 
       const normalizedEmail = normalizeLoginIdentifier(email);
       const response = await apiRequest<LoginResponse>('/api/auth/login', {
@@ -217,6 +219,11 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleForgotPassword = useCallback(() => {
+    setError('');
+    setSupportMessage('Password resets are handled by IT or a super admin. Contact IT for a reset or account review.');
+  }, []);
 
   const enableCredentialFields = useCallback(() => {
     setCredentialFieldsReady(true);
@@ -348,9 +355,13 @@ export default function Login() {
                 </div>
 
                 <div className="text-sm">
-                  <a href="#" className="font-medium text-brand-600 hover:text-brand-500">
+                  <button
+                    type="button"
+                    onClick={handleForgotPassword}
+                    className="font-medium text-brand-600 transition hover:text-brand-500"
+                  >
                     Forgot password?
-                  </a>
+                  </button>
                 </div>
               </div>
 
@@ -358,6 +369,12 @@ export default function Login() {
                 {error ? (
                   <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
                     {error}
+                  </div>
+                ) : null}
+
+                {supportMessage ? (
+                  <div className="mb-3 rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-700">
+                    {supportMessage}
                   </div>
                 ) : null}
 
