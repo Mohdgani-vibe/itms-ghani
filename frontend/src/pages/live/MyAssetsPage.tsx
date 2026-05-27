@@ -1,145 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../lib/api';
+import {
+  assetPresenceState,
+  formatAssignmentAge,
+  formatCurrency,
+  formatWarrantyWindow,
+  getWarrantyBadge,
+  warrantyTone,
+  type AssignedDevice,
+  type AssignedItem,
+} from './myAssetsPageUtils';
 
 type MyAssetSection = 'overview' | 'devices' | 'items';
-
-interface AssignedDevice {
-  id: string;
-  assetTag: string;
-  hostname: string;
-  rustdeskId?: string | null;
-  cost?: string | null;
-  serialNumber: string;
-  specs: string;
-  status: string;
-  lastSeenAt?: string | null;
-  warrantyExpiresAt: string;
-  assignedAt?: string;
-  warrantyBadge?: string;
-}
-
-interface AssignedItem {
-  id: string;
-  itemCode: string;
-  name: string;
-  serialNumber: string;
-  specs: string;
-  status: string;
-  warrantyExpiresAt: string;
-  cost?: string | null;
-  assignedAt?: string;
-  warrantyBadge?: string;
-}
-
-export function getWarrantyBadge(value: string) {
-  if (!value) {
-    return 'active';
-  }
-
-  const diffDays = Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diffDays <= 7) {
-    return '7_days';
-  }
-  if (diffDays <= 15) {
-    return '15_days';
-  }
-  if (diffDays <= 30) {
-    return '30_days';
-  }
-  return 'active';
-}
 
 interface AssetsResponse {
   devices: AssignedDevice[];
   items: AssignedItem[];
-}
-
-export function warrantyTone(value: string) {
-  if (value === '7_days' || value === '15_days') {
-    return 'bg-red-100 text-red-700';
-  }
-
-  if (value === '30_days') {
-    return 'bg-amber-100 text-amber-700';
-  }
-
-  return 'bg-emerald-100 text-emerald-700';
-}
-
-export function formatWarrantyWindow(value: string) {
-  if (!value) {
-    return 'Warranty date not set';
-  }
-
-  const diffDays = Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) {
-    return `Expired ${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} ago`;
-  }
-  if (diffDays === 0) {
-    return 'Expires today';
-  }
-  return `${diffDays} day${diffDays === 1 ? '' : 's'} remaining`;
-}
-
-export function formatAssignmentAge(value?: string) {
-  if (!value) {
-    return 'Assignment date not available';
-  }
-
-  const diffDays = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / (1000 * 60 * 60 * 24)));
-  return `In use for ${diffDays} day${diffDays === 1 ? '' : 's'}`;
-}
-
-export function formatCurrency(value?: string | null) {
-  if (!value) {
-    return 'Cost not tracked';
-  }
-
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return value;
-  }
-
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(parsed);
-}
-
-export function assetPresenceState(lastSeenAt?: string | null) {
-  if (!lastSeenAt) {
-    return {
-      label: 'Retained',
-      detail: 'This assigned device remains visible until IT removes it from your profile.',
-      classes: 'bg-zinc-100 text-zinc-700',
-    };
-  }
-
-  const seenAt = new Date(lastSeenAt);
-  if (Number.isNaN(seenAt.getTime())) {
-    return {
-      label: 'Retained',
-      detail: 'This assigned device remains visible until IT removes it from your profile.',
-      classes: 'bg-zinc-100 text-zinc-700',
-    };
-  }
-
-  const ageHours = (Date.now() - seenAt.getTime()) / (1000 * 60 * 60);
-  if (ageHours <= 24) {
-    return {
-      label: 'Recently Seen',
-      detail: `Last inventory heartbeat ${seenAt.toLocaleString()}.`,
-      classes: 'bg-emerald-100 text-emerald-700',
-    };
-  }
-
-  return {
-    label: 'Offline',
-    detail: `Last inventory heartbeat ${seenAt.toLocaleString()}. The device still stays listed here until IT removes it.`,
-    classes: 'bg-amber-100 text-amber-800',
-  };
 }
 
 export default function MyAssetsPage() {
@@ -216,7 +93,7 @@ export default function MyAssetsPage() {
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.10),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#f6fbf7_100%)] px-6 py-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-emerald-700">
+              <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-sky-700">
                 Employee Workspace
               </div>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-zinc-950 sm:text-4xl">My Assets</h1>
@@ -250,7 +127,7 @@ export default function MyAssetsPage() {
               key={section.id}
               type="button"
               onClick={() => handleSelectSection(section.id)}
-              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-emerald-300 bg-emerald-100 text-emerald-800 shadow-sm' : 'border-zinc-200 bg-white text-emerald-700 hover:border-emerald-200 hover:bg-emerald-50'}`}
+              className={`rounded-full border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${activeSection === section.id ? 'border-sky-300 bg-sky-100 text-sky-800 shadow-sm' : 'border-zinc-200 bg-white text-sky-700 hover:border-sky-200 hover:bg-sky-50'}`}
             >
               {section.label}
             </button>

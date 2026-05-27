@@ -7,7 +7,7 @@ import {
   formatWarrantyWindow,
   getWarrantyBadge,
   warrantyTone,
-} from './MyAssetsPage';
+} from './myAssetsPageUtils';
 
 describe('MyAssetsPage helpers', () => {
   afterEach(() => {
