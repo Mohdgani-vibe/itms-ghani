@@ -20,7 +20,7 @@ import {
   softwareSourceLabel,
   toDateInputValue,
   toolStatusTone,
-} from './DeviceDetailPage';
+} from './deviceDetailPageUtils';
 
 describe('DeviceDetailPage helpers', () => {
   it('matches patch jobs against hostname, asset id, and salt identifier', () => {
