@@ -44,7 +44,8 @@ vi.mock('../../components/settings/SettingsWorkflowMembersPanel', () => ({ defau
 vi.mock('../../components/settings/SettingsWorkflowRulesPanel', () => ({ default: () => null }));
 vi.mock('../../components/settings/SettingsWorkflowRoutingPanel', () => ({ default: () => null }));
 
-import SettingsPage, { normalizeWorkflowSettings } from './SettingsPage';
+import SettingsPage from './SettingsPage';
+import { normalizeWorkflowSettings } from './settingsPageUtils';
 
 describe('SettingsPage', () => {
   it('normalizes legacy patch department ring names', () => {

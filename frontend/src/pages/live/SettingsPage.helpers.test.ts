@@ -24,7 +24,7 @@ import {
   routesToEditorText,
   serializeWorkflowSettings,
   workflowTypeAssignee,
-} from './SettingsPage';
+} from './settingsPageUtils';
 
 describe('SettingsPage helpers', () => {
   it('normalizes workflow settings defaults', () => {
