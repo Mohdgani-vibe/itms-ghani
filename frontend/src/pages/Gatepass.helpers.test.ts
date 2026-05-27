@@ -17,7 +17,7 @@ import {
   todayDate,
   userDisplayName,
   validateGatepassForm,
-} from './Gatepass';
+} from './gatepassUtils';
 
 describe('Gatepass helpers', () => {
   afterEach(() => {
