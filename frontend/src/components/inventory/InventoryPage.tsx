@@ -177,6 +177,10 @@ function compactEntityName(name: string) {
     .trim();
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 function formatHeroBranchLabel(branch: LookupOption, branchRecord?: InventoryModuleBranch, entityName?: string) {
   const compactEntity = compactEntityName(entityName || branchRecord?.entity_code || branch.name);
   const locationCode = branchRecord?.location_code || '';
@@ -279,8 +283,8 @@ export default function InventoryPage() {
     setError('');
     try {
       await Promise.all([loadCatalogData(), loadAssetsData(), loadAuditData()]);
-    } catch (loadError: any) {
-      setError(loadError.message || 'Failed to load inventory module');
+    } catch (loadError: unknown) {
+      setError(getErrorMessage(loadError, 'Failed to load inventory module'));
     } finally {
       setLoading(false);
     }
@@ -291,8 +295,8 @@ export default function InventoryPage() {
   }, []);
 
   useEffect(() => {
-    void loadAssetsData().catch((loadError: any) => {
-      setError(loadError.message || 'Failed to load inventory assets');
+    void loadAssetsData().catch((loadError: unknown) => {
+      setError(getErrorMessage(loadError, 'Failed to load inventory assets'));
     });
   }, [searchQuery, mainItemFilter, subItemFilter, branchFilter, assetTypeFilter]);
 
@@ -414,8 +418,8 @@ export default function InventoryPage() {
       await Promise.all([loadAssetsData(), loadCatalogData(), loadAuditData()]);
       closeEditor();
       setSelectedItem(null);
-    } catch (saveError: any) {
-      setError(saveError.message || 'Failed to save inventory item');
+    } catch (saveError: unknown) {
+      setError(getErrorMessage(saveError, 'Failed to save inventory item'));
     } finally {
       setSaving(false);
     }
@@ -440,8 +444,8 @@ export default function InventoryPage() {
       setSuccessMessage(assignmentDraft.assignedUserId ? 'Asset reassigned successfully.' : 'Asset unassigned successfully.');
       setAssignmentDraft(null);
       await Promise.all([loadAssetsData(), loadCatalogData(), loadAuditData()]);
-    } catch (assignError: any) {
-      setError(assignError.message || 'Failed to update asset assignment');
+    } catch (assignError: unknown) {
+      setError(getErrorMessage(assignError, 'Failed to update asset assignment'));
     } finally {
       setSaving(false);
     }
@@ -453,8 +457,8 @@ export default function InventoryPage() {
     try {
       const blob = await downloadInventoryModuleTemplate();
       downloadBlob('inventory-module-template.csv', blob);
-    } catch (downloadError: any) {
-      setError(downloadError.message || 'Failed to download template');
+    } catch (downloadError: unknown) {
+      setError(getErrorMessage(downloadError, 'Failed to download template'));
     } finally {
       setCsvActionLoading('');
     }
@@ -466,8 +470,8 @@ export default function InventoryPage() {
     try {
       const blob = await exportInventoryModuleCsv();
       downloadBlob('inventory-module-export.csv', blob);
-    } catch (downloadError: any) {
-      setError(downloadError.message || 'Failed to export inventory');
+    } catch (downloadError: unknown) {
+      setError(getErrorMessage(downloadError, 'Failed to export inventory'));
     } finally {
       setCsvActionLoading('');
     }
@@ -488,8 +492,8 @@ export default function InventoryPage() {
         setSuccessMessage(`CSV import successful. Created ${result.created} assets.`);
       }
       await Promise.all([loadAssetsData(), loadCatalogData(), loadAuditData()]);
-    } catch (uploadError: any) {
-      setError(uploadError.message || 'Failed to import inventory CSV');
+    } catch (uploadError: unknown) {
+      setError(getErrorMessage(uploadError, 'Failed to import inventory CSV'));
     } finally {
       setImportingInventory(false);
       event.target.value = '';
@@ -522,8 +526,8 @@ export default function InventoryPage() {
       setDeleteTarget(null);
       setSelectedItem(null);
       await Promise.all([loadAssetsData(), loadCatalogData(), loadAuditData()]);
-    } catch (deleteError: any) {
-      setError(deleteError.message || 'Failed to delete record');
+    } catch (deleteError: unknown) {
+      setError(getErrorMessage(deleteError, 'Failed to delete record'));
     } finally {
       setDeleteBusy(false);
     }
@@ -547,8 +551,8 @@ export default function InventoryPage() {
       setStockDialogOpen(false);
       setStockDraft({ operation: 'add', subItemId: '', branchId: '', fromBranchId: '', toBranchId: '', quantity: 1, note: '' });
       await Promise.all([loadAssetsData(), loadAuditData()]);
-    } catch (stockError: any) {
-      setError(stockError.message || 'Failed to update stock');
+    } catch (stockError: unknown) {
+      setError(getErrorMessage(stockError, 'Failed to update stock'));
     } finally {
       setSaving(false);
     }
@@ -568,8 +572,8 @@ export default function InventoryPage() {
       }
       setMainItemDraft({ name: '' });
       await Promise.all([loadCatalogData(), loadAssetsData()]);
-    } catch (submitError: any) {
-      setError(submitError.message || 'Failed to save main item');
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError, 'Failed to save main item'));
     } finally {
       setSaving(false);
     }
@@ -628,8 +632,8 @@ export default function InventoryPage() {
       }
       setSubItemDraft({ itemId: '', name: '', itemCode: '', companyName: '', supplierId: '', operatingSystem: '', assetType: 'non_critical', remarks: '' });
       await Promise.all([loadCatalogData(), loadAssetsData()]);
-    } catch (submitError: any) {
-      setError(submitError.message || 'Failed to save sub item');
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError, 'Failed to save sub item'));
     } finally {
       setSaving(false);
     }
@@ -649,8 +653,8 @@ export default function InventoryPage() {
       }
       setSupplierDraft({ name: '', contactInfo: '' });
       await loadCatalogData();
-    } catch (submitError: any) {
-      setError(submitError.message || 'Failed to save supplier');
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError, 'Failed to save supplier'));
     } finally {
       setSaving(false);
     }
@@ -679,8 +683,8 @@ export default function InventoryPage() {
       }
       setBranchDraft({ name: '', location: '', locationCode: '', isActive: true });
       await Promise.all([loadCatalogData(), loadAssetsData()]);
-    } catch (submitError: any) {
-      setError(submitError.message || 'Failed to save branch');
+    } catch (submitError: unknown) {
+      setError(getErrorMessage(submitError, 'Failed to save branch'));
     } finally {
       setSaving(false);
     }
