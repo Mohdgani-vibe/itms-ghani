@@ -7,7 +7,7 @@ vi.hoisted(() => {
   });
 });
 
-import { buildPatchBatchDevicesUrl, buildPatchDevicesUrl, countActionablePatchDevices, derivePatchPermissions, formatPatchDepartmentConsoleTitle, formatPatchDepartmentSystemsLabel, formatPatchDevicesTotalLabel, formatPatchRunSuccessMessage, formatPatchScopeLabel, normalizePatchDepartmentOptions, selectActionablePatchDevices, selectDepartmentSystems, selectVisiblePatchReports, summarizePatchRunRows } from './PatchList';
+import { buildPatchBatchDevicesUrl, buildPatchDevicesUrl, countActionablePatchDevices, derivePatchPermissions, formatPatchDepartmentConsoleTitle, formatPatchDepartmentSystemsLabel, formatPatchDevicesTotalLabel, formatPatchRunSuccessMessage, formatPatchScopeLabel, normalizePatchDepartmentOptions, selectActionablePatchDevices, selectDepartmentSystems, selectVisiblePatchReports, summarizePatchRunRows } from './patchListUtils';
 
 describe('PatchList helpers', () => {
   it('builds the default patch devices query', () => {
