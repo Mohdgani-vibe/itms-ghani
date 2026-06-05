@@ -58,3 +58,11 @@ export function createEmptyTemplateDraft(kind: AuthoredTemplateKind = 'sls'): Au
 		content: '',
 	};
 }
+
+export function saveAuthoredSaltTemplates(templates: AuthoredSaltTemplate[]) {
+	if (typeof window === 'undefined') {
+		return;
+	}
+
+	window.localStorage.setItem(SALT_TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+}

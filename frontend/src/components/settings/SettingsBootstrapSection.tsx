@@ -51,8 +51,8 @@ export default function SettingsBootstrapSection({
                 {copyStatus === 'linux' ? 'Copied' : 'Copy'}
               </button>
             </div>
-            <h3 className="mt-1 text-lg font-bold text-zinc-900">Ubuntu or Debian install + first sync</h3>
-            <p className="mt-2 text-sm text-zinc-500">Uses current backend values and keeps employee-specific fields editable before execution.</p>
+            <h3 className="mt-1 text-lg font-bold text-zinc-900">Ubuntu, Debian, Fedora, CentOS, or RHEL install + first sync</h3>
+            <p className="mt-2 text-sm text-zinc-500">Uses current backend values and supports both apt-based and dnf or yum-based Linux bootstrap flows before the first sync.</p>
             <pre className="mt-3 overflow-x-auto rounded-xl bg-zinc-900 px-3 py-3 text-xs text-zinc-100">{linuxBootstrapCommand}</pre>
 
             <div className="mt-5 flex items-center justify-between gap-3">

@@ -131,12 +131,14 @@ main() {
   assert_contains "$live_copy" 'install_salt_minion_with_bootstrap() {'
   assert_contains "$live_copy" 'Installing Salt Minion via bootstrap-salt stable ${SALT_BOOTSTRAP_VERSION}'
   assert_contains "$live_copy" 'bash "$bootstrap_script" stable "$SALT_BOOTSTRAP_VERSION"'
+  assert_contains "$live_copy" '--token-file FILE        Read INVENTORY_INGEST_TOKEN from FILE'
+  assert_contains "$live_copy" '--prompt-token           Prompt for INVENTORY_INGEST_TOKEN without echo'
   assert_contains "$live_copy" '--require-salt           Fail the bootstrap if Salt installation does not succeed'
   assert_contains "$live_copy" 'OPENSCAP_PROFILE="${ITMS_OPENSCAP_PROFILE:-auto}"'
   assert_contains "$live_copy" 'resolve_openscap_profile() {'
   assert_contains "$live_copy" 'PROFILE="${ITMS_OPENSCAP_PROFILE:-}"'
   assert_contains "$live_copy" "for unsupported_agent in list(target_root.findall('agent')):"
-  assert_contains "$live_copy" 'curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s --'
+  assert_contains "$live_copy" 'curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s -- --server-url http://itms.example.com --token-file /path/to/inventory-ingest-token [options]'
   assert_not_contains "$live_copy" 'https://bootstrap.saltproject.io'
   assert_not_contains "$live_copy" 'PROFILE="${ITMS_OPENSCAP_PROFILE:-xccdf_org.ssgproject.content_profile_standard}"'
 

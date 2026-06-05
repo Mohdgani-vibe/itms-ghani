@@ -243,6 +243,31 @@ echo "devices: $devices_count"
 echo "requests: $requests_count"
 echo "announcements: $announcements_count"
 
+echo
+echo "Checking patch endpoints ..."
+patch_dashboard_payload="$(api_json GET "$API_BASE_URL/api/patch/dashboard" "$token")"
+printf '%s' "$patch_dashboard_payload" | json_require_keys failed pending rebootPending total upToDate
+
+patch_devices_payload="$(api_json GET "$API_BASE_URL/api/patch/devices" "$token")"
+patch_devices_count="$(printf '%s' "$patch_devices_payload" | json_len)"
+
+patch_reports_payload="$(api_json GET "$API_BASE_URL/api/patch/reports?limit=1" "$token")"
+patch_reports_count="$(printf '%s' "$patch_reports_payload" | json_len)"
+if (( patch_reports_count > 1 )); then
+  echo "Patch reports limit query returned more than one item: $patch_reports_count" >&2
+  exit 1
+fi
+
+patch_workspace_execute_response_file="$(mktemp)"
+patch_workspace_execute_status="$(curl -sS -o "$patch_workspace_execute_response_file" -w '%{http_code}' -X POST -H "Authorization: Bearer $token" -H "Content-Type: application/json" --data '{}' "$API_BASE_URL/api/salt/workspace/execute" || true)"
+patch_workspace_execute_body="$(cat "$patch_workspace_execute_response_file")"
+rm -f "$patch_workspace_execute_response_file"
+expect_http_error "400" "$patch_workspace_execute_status" "$patch_workspace_execute_body" "function is required" "salt workspace execute validation"
+
+echo "patch dashboard total: $(printf '%s' "$patch_dashboard_payload" | json_field "['total']")"
+echo "patch devices: $patch_devices_count"
+echo "patch reports (limit=1): $patch_reports_count"
+
 terminal_hostname="$(printf '%s' "$devices_payload" | python3 -c 'import json, sys; devices = json.load(sys.stdin); hostname = next((str(device.get("hostname", "")).strip() for device in devices if str(device.get("hostname", "")).strip()), ""); print(hostname)')"
 ssh_asset_id="$(printf '%s' "$assets_payload" | python3 -c 'import json, sys; assets = json.load(sys.stdin); asset_id = next((str(asset.get("id", "")).strip() for asset in assets if str(asset.get("id", "")).strip()), ""); print(asset_id)')"
 if [[ -n "$terminal_hostname" ]]; then

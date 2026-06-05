@@ -295,10 +295,10 @@ export default function TopNav() {
 
   return (
     <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40 shadow-sm text-zinc-800 dark:text-zinc-100 transition-colors">
-      <div className="flex h-14 items-center justify-between px-4 xl:px-6">
+      <div className="flex h-14 items-center justify-between gap-3 px-4 xl:px-6">
         
         {/* Logo */}
-        <Link to={`${basePath}/dashboard`} className="flex items-center gap-2 mr-6 flex-shrink-0 group cursor-pointer transition-opacity hover:opacity-90">
+        <Link to={`${basePath}/dashboard`} className="mr-4 flex flex-shrink-0 items-center gap-2 group cursor-pointer transition-opacity hover:opacity-90">
           <div className="bg-brand-600 dark:bg-brand-500 p-1.5 rounded flex items-center justify-center shadow-sm group-hover:bg-brand-700 dark:group-hover:bg-brand-600 transition-colors">
             <MonitorSmartphone className="h-5 w-5 text-white" />
           </div>
@@ -310,7 +310,7 @@ export default function TopNav() {
         </Link>
 
         {/* Global Navigation */}
-        <nav className="hidden md:flex flex-1 space-x-1 overflow-x-auto custom-scrollbar">
+        <nav className="custom-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
           {navItems.map((item) => {
             const active = isActive(item.path);
             return (
@@ -330,14 +330,14 @@ export default function TopNav() {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+        <div className="ml-3 flex flex-shrink-0 items-center gap-3">
           {!isAuditor ? <div className="relative hidden lg:block">
             <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
             </div>
             <input
               type="text"
-              className="block w-48 rounded border border-zinc-200 bg-white py-1.5 pl-9 pr-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500 sm:text-xs"
+              className="block w-40 rounded border border-zinc-200 bg-white py-1.5 pl-9 pr-3 text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-200 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white dark:placeholder-zinc-500 xl:w-44 sm:text-xs"
               placeholder="Search..."
             />
           </div> : null}

@@ -276,11 +276,17 @@ func normalizeWorkflowIDs(ids []string) []string {
 
 func normalizeWorkflowRoutes(routes []workflowRoute) []workflowRoute {
 	normalized := make([]workflowRoute, 0, len(routes))
+	seen := make(map[string]struct{}, len(routes))
 	for _, route := range routes {
 		route = normalizeWorkflowRoute(route)
 		if route.Match == "" || route.AssigneeID == "" {
 			continue
 		}
+		key := route.Match + "\x00" + route.AssigneeID
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
 		normalized = append(normalized, route)
 	}
 	return normalized

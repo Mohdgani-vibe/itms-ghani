@@ -56,6 +56,12 @@ func TestTerminalCommandPolicyStillBlocksUnsafeNormalizedCommand(t *testing.T) {
 	}
 }
 
+func TestTerminalCommandPolicyBlocksMultilineCommands(t *testing.T) {
+	if err := terminalCommandPolicy("hostname\nuname -a"); err == nil {
+		t.Fatal("terminalCommandPolicy(multiline) error = nil, want blocked command")
+	}
+}
+
 func TestParseTerminalCommandRecognizesSaltStateCommands(t *testing.T) {
 	tests := []struct {
 		name     string

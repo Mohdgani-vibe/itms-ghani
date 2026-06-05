@@ -18,6 +18,7 @@ import { AlertsDashboardSourceGrid } from '../components/alerts/AlertsDashboardS
 import { AlertsFeedPane } from '../components/alerts/AlertsFeedPane';
 import { AlertsMainTabs } from '../components/alerts/AlertsMainTabs';
 import { AlertsQueueOverviewCard } from '../components/alerts/AlertsQueueOverviewCard';
+import { AlertsSourceWorkspacePanel, type AlertsSourceWorkspaceView } from '../components/alerts/AlertsSourceWorkspacePanel';
 import { AlertsToolbar } from '../components/alerts/AlertsToolbar';
 import {
   renderAlertAsset as alertsRenderAlertAsset,
@@ -208,6 +209,36 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
   );
 }
 
+function sourceSubnavButtonClass(source: SourceKey, active: boolean) {
+  if (source === 'openscap') {
+    return `group inline-flex min-w-[220px] items-start gap-3 rounded-[18px] border px-4 py-3 text-left backdrop-blur-xl transition ${active ? 'border-white/70 bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(238,242,255,0.9)_100%)] text-indigo-900 shadow-[0_20px_40px_rgba(99,102,241,0.16)] ring-1 ring-white/60' : 'border-white/60 bg-[linear-gradient(135deg,_rgba(255,255,255,0.48)_0%,_rgba(255,255,255,0.28)_100%)] text-zinc-700 shadow-[0_16px_34px_rgba(15,23,42,0.08)] hover:border-indigo-200/70 hover:bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(238,242,255,0.8)_100%)] hover:text-indigo-800'}`;
+  }
+  if (source === 'clamav') {
+    return `group inline-flex min-w-[220px] items-start gap-3 rounded-[18px] border px-4 py-3 text-left backdrop-blur-xl transition ${active ? 'border-white/70 bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(255,241,242,0.9)_100%)] text-rose-900 shadow-[0_20px_40px_rgba(244,63,94,0.16)] ring-1 ring-white/60' : 'border-white/60 bg-[linear-gradient(135deg,_rgba(255,255,255,0.48)_0%,_rgba(255,255,255,0.28)_100%)] text-zinc-700 shadow-[0_16px_34px_rgba(15,23,42,0.08)] hover:border-rose-200/70 hover:bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(255,241,242,0.82)_100%)] hover:text-rose-800'}`;
+  }
+  return `group inline-flex min-w-[220px] items-start gap-3 rounded-[18px] border px-4 py-3 text-left backdrop-blur-xl transition ${active ? 'border-white/70 bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(239,248,255,0.88)_100%)] text-sky-900 shadow-[0_20px_40px_rgba(14,165,233,0.16)] ring-1 ring-white/60' : 'border-white/60 bg-[linear-gradient(135deg,_rgba(255,255,255,0.48)_0%,_rgba(255,255,255,0.28)_100%)] text-zinc-700 shadow-[0_16px_34px_rgba(15,23,42,0.08)] hover:border-sky-200/70 hover:bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(240,249,255,0.78)_100%)] hover:text-sky-800'}`;
+}
+
+function sourceSubnavIconClass(source: SourceKey, active: boolean) {
+  if (source === 'openscap') {
+    return active ? 'border-white/80 bg-white/70 text-indigo-700 shadow-sm' : 'border-white/70 bg-white/45 text-zinc-500 shadow-sm group-hover:border-indigo-200/70 group-hover:bg-white/70 group-hover:text-indigo-700';
+  }
+  if (source === 'clamav') {
+    return active ? 'border-white/80 bg-white/70 text-rose-700 shadow-sm' : 'border-white/70 bg-white/45 text-zinc-500 shadow-sm group-hover:border-rose-200/70 group-hover:bg-white/70 group-hover:text-rose-700';
+  }
+  return active ? 'border-white/80 bg-white/70 text-sky-700 shadow-sm' : 'border-white/70 bg-white/45 text-zinc-500 shadow-sm group-hover:border-sky-200/70 group-hover:bg-white/70 group-hover:text-sky-700';
+}
+
+function sourceSubnavBadgeClass(source: SourceKey, active: boolean) {
+  if (source === 'openscap') {
+    return active ? 'bg-indigo-100/90 text-indigo-800' : 'bg-white/70 text-zinc-500 group-hover:bg-indigo-100/90 group-hover:text-indigo-700';
+  }
+  if (source === 'clamav') {
+    return active ? 'bg-rose-100/90 text-rose-800' : 'bg-white/70 text-zinc-500 group-hover:bg-rose-100/90 group-hover:text-rose-700';
+  }
+  return active ? 'bg-sky-100/90 text-sky-800' : 'bg-white/70 text-zinc-500 group-hover:bg-sky-100/90 group-hover:text-sky-700';
+}
+
 export default function Alerts() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -215,7 +246,8 @@ export default function Alerts() {
   const role = (session?.user.role || '').toLowerCase();
   const canOperate = ['super_admin', 'it_team'].includes(role);
   const basePath = location.pathname.split('/alerts')[0] || '/admin';
-  const [view, setView] = useState<AlertsView>('all-alerts');
+  const [view, setView] = useState<AlertsView>('dashboard');
+  const [sourceDetailOpen, setSourceDetailOpen] = useState(false);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -243,6 +275,10 @@ export default function Alerts() {
   const [selectedSaltAction, setSelectedSaltAction] = useState<SaltActionValue>('system-update');
   const [customSaltInput, setCustomSaltInput] = useState('');
   const [patchReport, setPatchReport] = useState<PatchRunReport | null>(null);
+  const [selectedDashboardSource, setSelectedDashboardSource] = useState<SourceKey>('wazuh');
+  const [sourceWorkspaceView, setSourceWorkspaceView] = useState<AlertsSourceWorkspaceView>('dashboard');
+  const [sourceWorkspaceDepartment, setSourceWorkspaceDepartment] = useState('');
+  const [sourceWorkspaceSystemKey, setSourceWorkspaceSystemKey] = useState('');
   const timelineSectionRef = useRef<HTMLElement | null>(null);
   const malwareSectionRef = useRef<HTMLElement | null>(null);
   const timelineChartPrefetchedRef = useRef(false);
@@ -455,6 +491,7 @@ export default function Alerts() {
 
   const {
     alerts,
+    sourceAlerts,
     summarySourceOptions,
     sourceCountMap,
     sourceLabelMap,
@@ -831,9 +868,17 @@ export default function Alerts() {
     { id: 'all-alerts' as const, label: 'All Alerts', count: filteredAlerts.length, icon: <Bell className="h-4 w-4" /> },
   ];
 
+  const selectedSourceAlerts = sourceAlerts[selectedDashboardSource] ?? [];
+  const selectedSourceDashboard = dashboardData[selectedDashboardSource] ?? null;
+
   const sourceDashboardCards = dashboardSourceCards.map((card) => {
     const dashboard = dashboardData[card.source as SourceKey];
     const moduleCard = dashboard?.moduleCards.find((entry) => normalizeSourceKey(entry.source) === card.source);
+    const departmentCount = dashboard?.departments.length ?? 0;
+    const affectedDepartmentCount = dashboard?.departments.filter((entry) => entry.errorCount > 0).length ?? 0;
+    const scannedCount = moduleCard?.totalSystemsScanned ?? 0;
+    const fixedRatePercent = scannedCount > 0 ? Math.round(((moduleCard?.cleanSystemsCount ?? 0) / scannedCount) * 100) : 0;
+    const affectedDepartmentPercent = departmentCount > 0 ? Math.round((affectedDepartmentCount / departmentCount) * 100) : 0;
     const riskScore = Math.min(100, Math.round((card.issueCount * 8) + (card.alertCount * 4)));
     return {
       ...card,
@@ -842,15 +887,28 @@ export default function Alerts() {
       healthTone: moduleCard?.statusColor === 'red' ? 'critical' as const : moduleCard?.statusColor === 'yellow' ? 'warning' as const : 'healthy' as const,
       riskScore,
       sparklineValues: dashboard?.trend.dailyBuckets.map((bucket) => bucket.count) ?? [0, 0, 0, 0, 0],
+      departmentCount,
+      affectedDepartmentCount,
+      affectedDepartmentPercent,
+      fixedRatePercent,
     };
   });
 
   const openSourceAlerts = (source: SourceKey) => {
-    setSourceFilter(source);
-    setSeverityFilter('all');
+    setSelectedDashboardSource(source);
+    setSourceWorkspaceView('department');
+    setSourceWorkspaceDepartment('');
+    setSourceWorkspaceSystemKey('');
     setChartDrilldown(null);
-    setView('all-alerts');
-    setAlertsPage(1);
+    setView('dashboard');
+    setSourceDetailOpen(true);
+  };
+
+  const handleOpenSourceSystem = (system: { assetId: string }) => {
+    if (!system.assetId) {
+      return;
+    }
+    navigate(`${basePath}/devices/${system.assetId}`);
   };
 
   const clearChartDrilldown = () => {
@@ -881,7 +939,7 @@ export default function Alerts() {
   };
 
   return (
-    <div className={`min-h-screen px-4 py-6 xl:px-6 ${darkMode ? 'text-white' : 'text-zinc-900'}`} style={{ backgroundColor: darkMode ? '#07111f' : PAGE_BG }}>
+    <div className={`min-h-screen overflow-hidden px-4 py-6 xl:px-6 ${darkMode ? 'text-white' : 'text-zinc-900'}`} style={{ backgroundColor: darkMode ? '#07111f' : PAGE_BG }}>
       <style>{`
         @keyframes alerts-fade-in {
           from { opacity: 0; transform: translateY(8px); }
@@ -889,9 +947,17 @@ export default function Alerts() {
         }
       `}</style>
 
-      <div className="mx-auto max-w-[1600px] space-y-6 pb-10">
+      {!darkMode ? (
+        <>
+          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.16),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.86)_0%,_rgba(240,244,250,0)_100%)]" />
+          <div aria-hidden="true" className="pointer-events-none absolute left-[-120px] top-[180px] h-[320px] w-[320px] rounded-full bg-sky-200/30 blur-3xl" />
+          <div aria-hidden="true" className="pointer-events-none absolute right-[-80px] top-[120px] h-[280px] w-[280px] rounded-full bg-amber-100/30 blur-3xl" />
+        </>
+      ) : null}
+
+      <div className="relative mx-auto max-w-[1600px] space-y-6 pb-10">
         <div className={`space-y-3 ${view === 'all-alerts' ? 'relative z-10' : 'sticky top-3 z-30'}`}>
-          <div className="rounded-[20px] border border-zinc-200 bg-white/95 px-5 py-4 shadow-sm">
+          <div className="rounded-[24px] border border-white/60 bg-[linear-gradient(135deg,_rgba(255,255,255,0.74)_0%,_rgba(255,255,255,0.52)_100%)] px-5 py-4 shadow-[0_22px_48px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Alerts Dashboard</div>
@@ -901,7 +967,7 @@ export default function Alerts() {
               <button
                 type="button"
                 onClick={refreshData}
-                className="inline-flex items-center justify-center rounded-[16px] border border-blue-200 bg-blue-50 px-4 py-2.5 text-sm font-bold text-blue-700 transition hover:bg-blue-100"
+                className="inline-flex items-center justify-center rounded-[16px] border border-white/70 bg-[linear-gradient(135deg,_rgba(239,246,255,0.94)_0%,_rgba(219,234,254,0.72)_100%)] px-4 py-2.5 text-sm font-bold text-blue-700 shadow-[0_14px_30px_rgba(59,130,246,0.12)] transition hover:brightness-[1.03]"
               >
                 Refresh
               </button>
@@ -909,12 +975,58 @@ export default function Alerts() {
           </div>
 
           <div>
-            <AlertsMainTabs tabs={mainTabs} activeTab={view} onSelectTab={(value) => setView(value as AlertsView)} />
+            <AlertsMainTabs
+              tabs={mainTabs}
+              activeTab={view}
+              onSelectTab={(value) => {
+                const nextView = value as AlertsView;
+                setView(nextView);
+                if (nextView === 'dashboard') {
+                  setSourceDetailOpen(false);
+                }
+              }}
+            />
+          </div>
+
+          <div className="rounded-[24px] border border-white/65 bg-[linear-gradient(135deg,_rgba(255,255,255,0.62)_0%,_rgba(240,248,255,0.42)_100%)] p-3 shadow-[0_24px_54px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
+            <div className="mb-3 flex items-center justify-between gap-3 px-2">
+              <div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Source Navigation</div>
+                <div className="mt-1 text-sm text-zinc-600">Jump straight into Wazuh, OpenSCAP, or ClamAV without leaving the Alerts workspace.</div>
+              </div>
+              <div className="rounded-full border border-white/70 bg-[linear-gradient(135deg,_rgba(224,242,254,0.9)_0%,_rgba(255,255,255,0.7)_100%)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-sky-700 shadow-sm backdrop-blur-xl">Always visible</div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {SOURCE_KEYS.map((source) => {
+                const config = SOURCE_CONFIG[source];
+                const Icon = config.icon;
+                const active = selectedDashboardSource === source && sourceDetailOpen;
+                return (
+                  <button
+                    key={source}
+                    type="button"
+                    onClick={() => openSourceAlerts(source)}
+                    className={sourceSubnavButtonClass(source, active)}
+                  >
+                    <span className={`mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border backdrop-blur-xl ${sourceSubnavIconClass(source, active)}`}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-black text-inherit">{config.label}</span>
+                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] backdrop-blur-lg ${sourceSubnavBadgeClass(source, active)}`}>{active ? 'Active' : 'Open'}</span>
+                      </span>
+                      <span className="mt-1 block text-xs leading-5 text-zinc-500 group-hover:text-sky-700">{config.title}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         <main className="space-y-6">
-          {view === 'dashboard' ? (
+          {view === 'dashboard' && !sourceDetailOpen ? (
             <div className={`space-y-6 ${fadeClass}`}>
               <AlertsDashboardSourceGrid
                 cards={sourceDashboardCards}
@@ -923,7 +1035,7 @@ export default function Alerts() {
               />
 
               {chartDrilldown ? (
-                <section className="rounded-[24px] border border-sky-200 bg-[linear-gradient(135deg,_#f7fbff_0%,_#ffffff_50%,_#f2f8ff_100%)] p-5 shadow-sm">
+                <section className="rounded-[28px] border border-white/65 bg-[linear-gradient(135deg,_rgba(247,251,255,0.70)_0%,_rgba(255,255,255,0.55)_50%,_rgba(242,248,255,0.72)_100%)] p-5 shadow-[0_26px_60px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="max-w-3xl">
                       <div className="inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-sky-700">
@@ -933,10 +1045,10 @@ export default function Alerts() {
                       <p className="mt-2 text-sm leading-6 text-zinc-600">The dashboard is highlighting the currently selected chart slice. Use this preview to inspect the matching scope before moving into the full queue.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <button type="button" onClick={() => setView('all-alerts')} className="rounded-full border border-sky-200 bg-white px-4 py-2 text-sm font-bold text-sky-700 shadow-sm transition hover:bg-sky-50">
+                      <button type="button" onClick={() => setView('all-alerts')} className="rounded-full border border-white/75 bg-white/70 px-4 py-2 text-sm font-bold text-sky-700 shadow-sm backdrop-blur-xl transition hover:bg-white/90">
                         Open Queue
                       </button>
-                      <button type="button" onClick={clearChartDrilldown} className="rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50">
+                      <button type="button" onClick={clearChartDrilldown} className="rounded-full border border-white/75 bg-white/70 px-4 py-2 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur-xl transition hover:bg-white/90">
                         Clear Selection
                       </button>
                     </div>
@@ -944,29 +1056,29 @@ export default function Alerts() {
 
                   <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
                     <div className="grid gap-3 sm:grid-cols-3">
-                      <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
+                      <div className="rounded-2xl border border-white/75 bg-white/68 px-4 py-4 shadow-sm backdrop-blur-xl">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Matching alerts</div>
                         <div className="mt-2 text-3xl font-black text-zinc-950">{chartDrilldownTotalAlerts}</div>
                       </div>
-                      <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
+                      <div className="rounded-2xl border border-white/75 bg-white/68 px-4 py-4 shadow-sm backdrop-blur-xl">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Open in slice</div>
                         <div className="mt-2 text-3xl font-black text-sky-700">{chartDrilldownOpenCount}</div>
                       </div>
-                      <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-4 shadow-sm">
+                      <div className="rounded-2xl border border-white/75 bg-white/68 px-4 py-4 shadow-sm backdrop-blur-xl">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Critical or high</div>
                         <div className="mt-2 text-3xl font-black text-rose-700">{chartDrilldownCriticalCount}</div>
                       </div>
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="rounded-2xl border border-white/75 bg-white/68 p-4 shadow-sm backdrop-blur-xl">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Matching systems</div>
                         <div className="mt-3 space-y-2">
                           {chartDrilldownSystems.length === 0 ? (
                             <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3 text-sm text-zinc-500">No systems matched the active selection.</div>
                           ) : (
                             chartDrilldownSystems.map((system) => (
-                              <div key={system.key} className="rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3">
+                              <div key={system.key} className="rounded-xl border border-white/75 bg-white/55 px-3 py-3 backdrop-blur-lg">
                                 <div className="text-sm font-semibold text-zinc-950">{system.label}</div>
                                 <div className="mt-1 text-xs text-zinc-500">{system.sourceLabel}</div>
                               </div>
@@ -975,11 +1087,11 @@ export default function Alerts() {
                         </div>
                       </div>
 
-                      <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="rounded-2xl border border-white/75 bg-white/68 p-4 shadow-sm backdrop-blur-xl">
                         <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Alert preview</div>
                         <div className="mt-3 space-y-2">
                           {chartDrilldownAlerts.slice(0, 3).map((alert) => (
-                            <button key={alert.id} type="button" onClick={() => openAlertDetails(alert)} className="w-full rounded-xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 text-left transition hover:bg-zinc-50">
+                            <button key={alert.id} type="button" onClick={() => openAlertDetails(alert)} className="w-full rounded-xl border border-white/75 bg-white/55 px-3 py-3 text-left backdrop-blur-lg transition hover:bg-white/72">
                               <div className="flex items-center justify-between gap-3">
                                 <div className="text-sm font-semibold text-zinc-950">{systemName(alert)}</div>
                                 <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold uppercase ${alertsRenderSeverityClassName(alert)}`}>{normalizeSeverity(alert.severity)}</span>
@@ -1039,6 +1151,51 @@ export default function Alerts() {
                 </SectionCard>
               </div>
 
+            </div>
+          ) : null}
+
+          {view === 'dashboard' && sourceDetailOpen ? (
+            <div className={`space-y-6 ${fadeClass}`}>
+              <section className="rounded-[28px] border border-white/65 bg-[linear-gradient(135deg,_rgba(255,255,255,0.72)_0%,_rgba(245,249,255,0.55)_100%)] px-5 py-5 shadow-[0_26px_60px_rgba(15,23,42,0.12)] backdrop-blur-2xl">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Source Detail View</div>
+                    <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950">{SOURCE_CONFIG[selectedDashboardSource].label} alert details</h2>
+                    <p className="mt-1 text-sm text-zinc-600">Department coverage, system owners, latest alert details, and direct system links for the selected source.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSourceDetailOpen(false);
+                      setSourceWorkspaceView('department');
+                      setSourceWorkspaceDepartment('');
+                      setSourceWorkspaceSystemKey('');
+                    }}
+                    className="inline-flex items-center justify-center rounded-[16px] border border-white/75 bg-white/72 px-4 py-2.5 text-sm font-bold text-zinc-700 shadow-sm backdrop-blur-xl transition hover:bg-white/90"
+                  >
+                    Back to source cards
+                  </button>
+                </div>
+              </section>
+
+              <AlertsSourceWorkspacePanel
+                source={selectedDashboardSource}
+                sourceLabel={SOURCE_CONFIG[selectedDashboardSource].label}
+                alerts={selectedSourceAlerts}
+                dashboard={selectedSourceDashboard}
+                loading={dataLoading}
+                error=""
+                activeView={sourceWorkspaceView}
+                selectedDepartment={sourceWorkspaceDepartment}
+                selectedSystemKey={sourceWorkspaceSystemKey}
+                onActiveViewChange={setSourceWorkspaceView}
+                onSelectDepartment={setSourceWorkspaceDepartment}
+                onSelectSystemKey={setSourceWorkspaceSystemKey}
+                onSelectAlert={openAlertDetails}
+                onOpenSystem={handleOpenSourceSystem}
+                renderSourceIcon={alertsRenderSourceIcon}
+                formatRelativeTime={formatRelativeTime}
+              />
             </div>
           ) : null}
 

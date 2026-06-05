@@ -1,4 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+// @vitest-environment jsdom
+
+import { act } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const alertsPageMocks = vi.hoisted(() => ({
@@ -8,6 +12,7 @@ const alertsPageMocks = vi.hoisted(() => ({
   useAlertsDerivedStateMock: vi.fn(),
   alertsMainTabsMock: vi.fn(),
   alertsDashboardSourceGridMock: vi.fn(),
+  alertsSourceWorkspacePanelMock: vi.fn(),
   alertsQueueOverviewCardMock: vi.fn(),
   alertsFeedPaneMock: vi.fn(),
 }));
@@ -37,9 +42,15 @@ vi.mock('../components/alerts/AlertsMainTabs', () => ({
 }));
 
 vi.mock('../components/alerts/AlertsDashboardSourceGrid', () => ({
-  AlertsDashboardSourceGrid: (props: unknown) => {
+  AlertsDashboardSourceGrid: (props: { onOpenSource: (source: string) => void }) => {
     alertsPageMocks.alertsDashboardSourceGridMock(props);
-    return <div>alerts-dashboard-source-grid</div>;
+    return <button type="button" onClick={() => props.onOpenSource('wazuh')}>alerts-dashboard-source-grid</button>;
+  },
+}));
+vi.mock('../components/alerts/AlertsSourceWorkspacePanel', () => ({
+  AlertsSourceWorkspacePanel: (props: unknown) => {
+    alertsPageMocks.alertsSourceWorkspacePanelMock(props);
+    return <div>alerts-source-workspace-panel</div>;
   },
 }));
 
@@ -56,15 +67,61 @@ vi.mock('../components/alerts/AlertsQueueOverviewCard', () => ({
     return <div>alerts-queue-overview-card</div>;
   },
 }));
-vi.mock('../components/alerts/AlertsSourceWorkspacePanel', () => ({ AlertsSourceWorkspacePanel: () => null }));
 vi.mock('../components/alerts/AlertsToolbar', () => ({ AlertsToolbar: () => null }));
+vi.mock('../components/alerts/AlertsThreatTimelineChart', () => ({ AlertsThreatTimelineChart: () => <div>alerts-threat-timeline-chart</div> }));
+vi.mock('../components/alerts/AlertsMalwareTrendChart', () => ({ AlertsMalwareTrendChart: () => <div>alerts-malware-trend-chart</div> }));
 vi.mock('../components/EmbeddedConsoleModal', () => ({ default: () => null }));
 vi.mock('../components/PatchRunReportModal', () => ({ default: () => null }));
 
 import Alerts from './Alerts';
 
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+async function flushEffects() {
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
+async function renderAlertsPage() {
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  let root: Root | null = null;
+
+  await act(async () => {
+    root = createRoot(container);
+    root.render(<Alerts />);
+  });
+  await flushEffects();
+
+  return {
+    container,
+    cleanup: async () => {
+      if (root) {
+        await act(async () => {
+          root!.unmount();
+        });
+      }
+      container.remove();
+    },
+  };
+}
+
+afterEach(() => {
+  document.body.innerHTML = '';
+  alertsPageMocks.useLocationMock.mockReset();
+  alertsPageMocks.useNavigateMock.mockReset();
+  alertsPageMocks.getStoredSessionMock.mockReset();
+  alertsPageMocks.useAlertsDerivedStateMock.mockReset();
+  alertsPageMocks.alertsMainTabsMock.mockReset();
+  alertsPageMocks.alertsDashboardSourceGridMock.mockReset();
+  alertsPageMocks.alertsSourceWorkspacePanelMock.mockReset();
+  alertsPageMocks.alertsQueueOverviewCardMock.mockReset();
+  alertsPageMocks.alertsFeedPaneMock.mockReset();
+});
+
 describe('Alerts', () => {
-  it('renders the default all-alerts shell before data resolves', () => {
+  it('renders the default dashboard shell before data resolves', () => {
     alertsPageMocks.useLocationMock.mockReturnValue({ pathname: '/admin/alerts' });
     alertsPageMocks.useNavigateMock.mockReturnValue(vi.fn());
     alertsPageMocks.getStoredSessionMock.mockReturnValue({
@@ -94,17 +151,19 @@ describe('Alerts', () => {
     expect(markup).toContain('Security Alerts');
     expect(markup).toContain('Refresh');
     expect(markup).toContain('alerts-main-tabs');
-    expect(markup).toContain('alerts-queue-overview-card');
-    expect(markup).toContain('alerts-feed-pane');
+    expect(markup).toContain('Source Navigation');
+    expect(markup).toContain('Wazuh');
+    expect(markup).toContain('OpenSCAP');
+    expect(markup).toContain('ClamAV');
+    expect(markup).toContain('alerts-dashboard-source-grid');
+    expect(markup).not.toContain('alerts-source-workspace-panel');
     expect(alertsPageMocks.alertsMainTabsMock).toHaveBeenCalledWith(expect.objectContaining({
-      activeTab: 'all-alerts',
+      activeTab: 'dashboard',
     }));
-    expect(alertsPageMocks.alertsQueueOverviewCardMock).toHaveBeenCalledWith(expect.objectContaining({
-      severityFilter: 'all',
-    }));
+    expect(alertsPageMocks.alertsSourceWorkspacePanelMock).not.toHaveBeenCalled();
   });
 
-  it('passes initial queue wiring to the alerts feed pane during server render', () => {
+  it('passes source card wiring during dashboard server render', () => {
     alertsPageMocks.useLocationMock.mockReturnValue({ pathname: '/admin/alerts' });
     alertsPageMocks.useNavigateMock.mockReturnValue(vi.fn());
     alertsPageMocks.getStoredSessionMock.mockReturnValue({
@@ -131,17 +190,105 @@ describe('Alerts', () => {
 
     renderToStaticMarkup(<Alerts />);
 
-    expect(alertsPageMocks.alertsFeedPaneMock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
-      loading: true,
-      alerts: [],
-      totalAlerts: 0,
-      currentPage: 1,
-      pageSize: 25,
-      onSelectAlert: expect.any(Function),
-      renderSystemName: expect.any(Function),
-      renderAlertStatusClassName: expect.any(Function),
-      renderSourceLabel: expect.any(Function),
-      formatRelativeTime: expect.any(Function),
+    expect(alertsPageMocks.alertsDashboardSourceGridMock.mock.calls[0]?.[0]).toEqual(expect.objectContaining({
+      cards: [],
+      formatNumber: expect.any(Function),
+      onOpenSource: expect.any(Function),
     }));
+  });
+
+  it('opens the dedicated source detail view when a source card is clicked', async () => {
+    alertsPageMocks.useLocationMock.mockReturnValue({ pathname: '/admin/alerts' });
+    alertsPageMocks.useNavigateMock.mockReturnValue(vi.fn());
+    alertsPageMocks.getStoredSessionMock.mockReturnValue({
+      user: { role: 'super_admin' },
+    });
+    alertsPageMocks.useAlertsDerivedStateMock.mockReturnValue({
+      alerts: [],
+      sourceAlerts: { wazuh: [], openscap: [], clamav: [] },
+      moduleCards: [],
+      summarySourceOptions: [],
+      sourceCountMap: {},
+      sourceLabelMap: {},
+      alertsToolbarTabs: [],
+      filteredAlerts: [],
+      alertsPageSize: 25,
+      paginatedFilteredAlerts: [],
+      totalAlerts: 0,
+      openAlertsCount: 0,
+      acknowledgedAlertsCount: 0,
+      resolvedAlertsCount: 0,
+      dashboardSourceCards: [],
+      recentAlerts: [],
+    });
+
+    const { container, cleanup } = await renderAlertsPage();
+
+    const sourceButton = Array.from(container.querySelectorAll('button')).find((element) => element.textContent?.includes('alerts-dashboard-source-grid'));
+    expect(sourceButton).toBeTruthy();
+
+    await act(async () => {
+      sourceButton?.click();
+    });
+    await flushEffects();
+
+    expect(container.textContent).toContain('Source Detail View');
+    expect(container.textContent).toContain('Wazuh alert details');
+    expect(container.textContent).toContain('alerts-source-workspace-panel');
+    expect(alertsPageMocks.alertsSourceWorkspacePanelMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      source: 'wazuh',
+      sourceLabel: 'Wazuh',
+      activeView: 'department',
+      onSelectAlert: expect.any(Function),
+      onOpenSystem: expect.any(Function),
+    }));
+
+    await cleanup();
+  });
+
+  it('opens the dedicated source detail view from the persistent source subnav', async () => {
+    alertsPageMocks.useLocationMock.mockReturnValue({ pathname: '/admin/alerts' });
+    alertsPageMocks.useNavigateMock.mockReturnValue(vi.fn());
+    alertsPageMocks.getStoredSessionMock.mockReturnValue({
+      user: { role: 'super_admin' },
+    });
+    alertsPageMocks.useAlertsDerivedStateMock.mockReturnValue({
+      alerts: [],
+      sourceAlerts: { wazuh: [], openscap: [], clamav: [] },
+      moduleCards: [],
+      summarySourceOptions: [],
+      sourceCountMap: {},
+      sourceLabelMap: {},
+      alertsToolbarTabs: [],
+      filteredAlerts: [],
+      alertsPageSize: 25,
+      paginatedFilteredAlerts: [],
+      totalAlerts: 0,
+      openAlertsCount: 0,
+      acknowledgedAlertsCount: 0,
+      resolvedAlertsCount: 0,
+      dashboardSourceCards: [],
+      recentAlerts: [],
+    });
+
+    const { container, cleanup } = await renderAlertsPage();
+
+    const sourceButton = Array.from(container.querySelectorAll('button')).find((element) => element.textContent?.includes('OpenSCAP'));
+    expect(sourceButton).toBeTruthy();
+
+    await act(async () => {
+      sourceButton?.click();
+    });
+    await flushEffects();
+
+    expect(container.textContent).toContain('Source Detail View');
+    expect(container.textContent).toContain('OpenSCAP alert details');
+    expect(alertsPageMocks.alertsSourceWorkspacePanelMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      source: 'openscap',
+      sourceLabel: 'OpenSCAP',
+      activeView: 'department',
+    }));
+
+    await cleanup();
   });
 });

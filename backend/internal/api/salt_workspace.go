@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,19 +22,27 @@ func (server *apiServer) saltWorkspace(c *gin.Context) {
 		return
 	}
 
+	recentItemsLimit := parseRecentItemsLimit(c.Query("limit"), 12)
+
 	assets, summary, err := server.loadSaltWorkspaceAssets(c)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	recentExecutions, err := server.loadSaltWorkspaceRecentExecutions()
+	recentExecutions, err := server.loadSaltWorkspaceRecentExecutions(recentItemsLimit)
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	jobHistory, err := server.loadSaltWorkspaceJobHistory()
+	jobHistory, err := server.loadSaltWorkspaceJobHistory(recentItemsLimit)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	slsFiles, err := server.loadSaltWorkspaceSLSFiles()
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -42,12 +54,70 @@ func (server *apiServer) saltWorkspace(c *gin.Context) {
 		"assets":           assets,
 		"recentExecutions": recentExecutions,
 		"jobHistory":       jobHistory,
+		"slsFiles":         slsFiles,
 		"executionPolicy":  terminalPolicyPayload(),
 		"presets":          saltWorkspacePresets(),
 		"integrations": gin.H{
 			"saltApiConfigured": server.salt != nil && server.salt.Enabled(),
 		},
 	})
+}
+
+func parseRecentItemsLimit(raw string, defaultLimit int) int {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return defaultLimit
+	}
+
+	parsed, err := strconv.Atoi(trimmed)
+	if err != nil || parsed <= 0 {
+		return defaultLimit
+	}
+	if parsed > 100 {
+		return 100
+	}
+	return parsed
+}
+
+func (server *apiServer) loadSaltWorkspaceSLSFiles() ([]string, error) {
+	root := "/srv/salt"
+	files := make([]string, 0)
+	if _, err := os.Stat(root); err != nil {
+		if os.IsNotExist(err) {
+			return files, nil
+		}
+		return nil, err
+	}
+
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !strings.HasSuffix(d.Name(), ".sls") {
+			return nil
+		}
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		normalized := normalizeSaltWorkspaceSLSName(relPath)
+		if normalized != "" {
+			files = append(files, normalized)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(files)
+	return files, nil
+}
+
+func normalizeSaltWorkspaceSLSName(relPath string) string {
+	normalized := strings.TrimSuffix(filepath.ToSlash(relPath), ".sls")
+	normalized = strings.Trim(normalized, "/")
+	normalized = strings.TrimSuffix(normalized, "/init")
+	return strings.Trim(normalized, "/")
 }
 
 func (server *apiServer) loadSaltWorkspaceAssets(c *gin.Context) ([]gin.H, gin.H, error) {
@@ -182,15 +252,15 @@ func (server *apiServer) loadSaltWorkspaceAssets(c *gin.Context) ([]gin.H, gin.H
 	}, nil
 }
 
-func (server *apiServer) loadSaltWorkspaceRecentExecutions() ([]gin.H, error) {
-	rows, err := server.db.Query(`
+func (server *apiServer) loadSaltWorkspaceRecentExecutions(limit int) ([]gin.H, error) {
+	rows, err := server.db.Query(fmt.Sprintf(`
 		SELECT h.id, COALESCE(a.hostname, a.asset_tag), h.detail, h.created_at
 		FROM asset_history h
 		JOIN assets a ON a.id = h.asset_id
 		WHERE h.action = 'patch_run'
 		ORDER BY h.created_at DESC
-		LIMIT 12
-	`)
+		LIMIT %d
+	`, limit))
 	if err != nil {
 		return nil, err
 	}
@@ -218,14 +288,14 @@ func (server *apiServer) loadSaltWorkspaceRecentExecutions() ([]gin.H, error) {
 	return items, rows.Err()
 	}
 
-func (server *apiServer) loadSaltWorkspaceJobHistory() ([]gin.H, error) {
-	rows, err := server.db.Query(`
+func (server *apiServer) loadSaltWorkspaceJobHistory(limit int) ([]gin.H, error) {
+	rows, err := server.db.Query(fmt.Sprintf(`
 		SELECT r.id::text, r.scope_label, r.requested_at, r.completed_at, r.success_count, r.failed_count, r.row_count, COALESCE(u.full_name, '')
 		FROM patch_run_reports r
 		LEFT JOIN users u ON u.id = r.actor_id
 		ORDER BY r.created_at DESC
-		LIMIT 12
-	`)
+		LIMIT %d
+	`, limit))
 	if err != nil {
 		return nil, err
 	}

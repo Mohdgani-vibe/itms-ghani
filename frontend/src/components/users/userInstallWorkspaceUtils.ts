@@ -1,9 +1,3 @@
-const RPM_INSTALLER_NOTICE = [
-  '# RPM-based ITMS bootstrap is not configured in this deployment yet.',
-  '# Supported direct Linux bootstrap today: Ubuntu and Debian.',
-  '# Contact ITMS admin if you need Fedora, CentOS, or Red Hat onboarding enabled.',
-].join('\n');
-
 const LINUX_INSTALL_VARIANTS = [
   {
     key: 'ubuntu' as const,
@@ -24,26 +18,26 @@ const LINUX_INSTALL_VARIANTS = [
   {
     key: 'fedora' as const,
     label: 'Fedora',
-    title: 'Fedora install status',
-    description: 'RPM-based bootstrap is not configured in this ITMS deployment yet.',
+    title: 'Fedora install + first sync',
+    description: 'RPM-based Linux bootstrap for Fedora endpoints using dnf-compatible install flow.',
     copyKind: 'fedora' as const,
-    supported: false,
+    supported: true,
   },
   {
     key: 'centos' as const,
     label: 'CentOS',
-    title: 'CentOS install status',
-    description: 'RPM-based bootstrap is not configured in this ITMS deployment yet.',
+    title: 'CentOS install + first sync',
+    description: 'RPM-based Linux bootstrap for CentOS endpoints using yum or dnf install flow.',
     copyKind: 'centos' as const,
-    supported: false,
+    supported: true,
   },
   {
     key: 'redhat' as const,
     label: 'Red Hat',
-    title: 'Red Hat install status',
-    description: 'RPM-based bootstrap is not configured in this ITMS deployment yet.',
+    title: 'Red Hat install + first sync',
+    description: 'RPM-based Linux bootstrap for Red Hat Enterprise Linux endpoints using yum or dnf install flow.',
     copyKind: 'redhat' as const,
-    supported: false,
+    supported: true,
   },
 ] as const;
 
@@ -76,28 +70,18 @@ export function resolveInstallVariantCommandState(
   windowsInstallCommand: string,
   windowsSyncCommand: string,
 ): InstallVariantCommandState {
-  const linuxVariantSupported = selectedInstallVariant.commandType !== 'linux' || selectedInstallVariant.supported;
-
   return {
     installCommand: selectedInstallVariant.commandType === 'windows'
       ? windowsInstallCommand
-      : linuxVariantSupported
-        ? linuxInstallCommand
-        : RPM_INSTALLER_NOTICE,
+      : linuxInstallCommand,
     syncCommand: selectedInstallVariant.commandType === 'windows'
       ? windowsSyncCommand
-      : linuxVariantSupported
-        ? linuxSyncCommand
-        : RPM_INSTALLER_NOTICE,
+      : linuxSyncCommand,
     syncCopyKind: selectedInstallVariant.commandType === 'windows'
       ? 'windows-sync'
-      : linuxVariantSupported
-        ? 'linux-sync'
-        : selectedInstallVariant.copyKind,
+      : 'linux-sync',
     syncTitle: selectedInstallVariant.commandType === 'windows'
       ? 'Windows Sync Code'
-      : linuxVariantSupported
-        ? 'Linux Sync Code'
-        : `${selectedInstallVariant.label} sync status`,
+      : 'Linux Sync Code',
   };
 }

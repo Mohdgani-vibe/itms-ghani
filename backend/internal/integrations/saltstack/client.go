@@ -143,23 +143,41 @@ func (client *Client) AcceptMinionKey(ctx context.Context, target string) error 
 }
 
 func (client *Client) RunState(ctx context.Context, target string, state string) (map[string]any, error) {
+	return client.RunNamedState(ctx, target, "state.apply", state)
+}
+
+func (client *Client) RunNamedState(ctx context.Context, target string, function string, state string) (map[string]any, error) {
 	if !client.Enabled() {
 		return nil, fmt.Errorf("saltstack integration is not configured")
+	}
+	trimmedFunction := strings.ToLower(strings.TrimSpace(function))
+	if trimmedFunction == "" {
+		trimmedFunction = "state.apply"
+	}
+	if trimmedFunction == "state" {
+		trimmedFunction = "state.apply"
+	}
+	if trimmedFunction != "state.apply" && trimmedFunction != "state.sls" {
+		return nil, fmt.Errorf("unsupported Salt state function %s", strings.TrimSpace(function))
+	}
+	trimmedState := strings.TrimSpace(state)
+	if trimmedState == "" {
+		return nil, fmt.Errorf("state is required")
 	}
 
 	payload := client.withInlineEAuth(map[string]any{
 		"client":    "local",
 		"tgt":       target,
 		"expr_form": client.targetType,
-		"fun":       "state.apply",
-		"arg":       []string{state},
+		"fun":       trimmedFunction,
+		"arg":       []string{trimmedState},
 	})
 
 	var result map[string]any
 	if err := client.doJSONWithTimeout(ctx, http.MethodPost, "/run", payload, &result, 10*time.Minute); err != nil {
 		return nil, err
 	}
-	if err := stateApplyError(result, target, state); err != nil {
+	if err := stateApplyError(result, target, trimmedState); err != nil {
 		return nil, err
 	}
 	return result, nil
@@ -303,6 +321,81 @@ func (client *Client) RunFunction(ctx context.Context, target string, functionNa
 	}
 
 	return map[string]any{}, nil
+}
+
+func (client *Client) RunLowstate(ctx context.Context, payload map[string]any) (any, error) {
+	if !client.Enabled() {
+		return nil, fmt.Errorf("saltstack integration is not configured")
+	}
+
+	lowstate := make(map[string]any, len(payload)+2)
+	for key, value := range payload {
+		lowstate[key] = value
+	}
+	if _, ok := lowstate["client"]; !ok {
+		lowstate["client"] = "local"
+	}
+	if target, ok := lowstate["tgt"].(string); ok && strings.TrimSpace(target) != "" {
+		if _, hasExpr := lowstate["expr_form"]; !hasExpr {
+			lowstate["expr_form"] = client.targetType
+		}
+	}
+
+	var result struct {
+		Return []any `json:"return"`
+	}
+	if err := client.doJSONWithTimeout(ctx, http.MethodPost, "/run", client.withInlineEAuth(lowstate), &result, 10*time.Minute); err != nil {
+		return nil, err
+	}
+	if len(result.Return) == 0 {
+		return map[string]any{}, nil
+	}
+	return result.Return[0], nil
+}
+
+func (client *Client) RunStateWithOptions(ctx context.Context, target string, state string, test bool) (any, error) {
+	return client.RunNamedStateWithOptions(ctx, target, "state.apply", state, test)
+}
+
+func (client *Client) RunNamedStateWithOptions(ctx context.Context, target string, function string, state string, test bool) (any, error) {
+	if !client.Enabled() {
+		return nil, fmt.Errorf("saltstack integration is not configured")
+	}
+	trimmedFunction := strings.ToLower(strings.TrimSpace(function))
+	if trimmedFunction == "" {
+		trimmedFunction = "state.apply"
+	}
+	if trimmedFunction == "state" {
+		trimmedFunction = "state.apply"
+	}
+	if trimmedFunction != "state.apply" && trimmedFunction != "state.sls" {
+		return nil, fmt.Errorf("unsupported Salt state function %s", strings.TrimSpace(function))
+	}
+	trimmedState := strings.TrimSpace(state)
+	if trimmedState == "" {
+		return nil, fmt.Errorf("state is required")
+	}
+
+	payload := map[string]any{
+		"client":    "local",
+		"tgt":       target,
+		"expr_form": client.targetType,
+		"fun":       trimmedFunction,
+		"arg":       []string{trimmedState},
+	}
+	if test {
+		payload["kwarg"] = map[string]any{"test": true}
+	}
+
+	result, err := client.RunLowstate(ctx, payload)
+	if err != nil {
+		return nil, err
+	}
+	resultMap, _ := result.(map[string]any)
+	if err := stateApplyError(resultMap, target, trimmedState); err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (client *Client) BuildTerminalURL(target string) string {
@@ -510,6 +603,12 @@ func (client *Client) formEncodedBody(body any) string {
 			for _, item := range typed {
 				values.Add(key, fmt.Sprint(item))
 			}
+		case map[string]any:
+			encoded, err := json.Marshal(typed)
+			if err != nil {
+				continue
+			}
+			values.Add(key, string(encoded))
 		case nil:
 			continue
 		default:

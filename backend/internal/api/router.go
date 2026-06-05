@@ -80,7 +80,7 @@ var terminalAllowedCommands = map[string]struct{}{
 var terminalBlockedFragments = []string{"&&", "||", ";", "|", ">", "<", "`", "$(", "${", "sudo ", " su ", " ssh ", "scp ", "sftp ", "rm ", "mkfs", "shutdown", "reboot", "poweroff", "passwd", "useradd", "usermod", "groupadd", "chmod ", "chown ", "tee ", "curl ", "wget ", "nc ", "ncat ", "python ", "python3 ", "perl ", "ruby ", "bash ", "sh ", "zsh ", "fish ", "vi ", "vim ", "nano ", " top ", " htop ", " less ", " more "}
 
 var terminalPresetCommands = []string{"hostname", "uptime", "df -h", "free -h", "ps aux", "systemctl status wazuh-agent", "journalctl -n 100", "ip addr"}
-var terminalAllowedFunctions = []string{"cmd.run", "cmd.script", "disk.usage", "grains.items", "network.interfaces", "pkg.upgrades", "service.status", "state.apply", "state.sls", "status.uptime", "test.ping", "test.version"}
+var terminalAllowedFunctions = []string{"cmd.run", "cmd.script", "disk.usage", "grains.items", "network.interfaces", "pkg.uptodate", "pkg.upgrades", "service.status", "state.apply", "state.sls", "status.uptime", "test.ping", "test.version"}
 
 var terminalPresetGroups = []gin.H{
 	{"label": "System", "commands": []string{"hostname", "uptime"}},
@@ -323,6 +323,9 @@ func terminalCommandPolicy(command string) error {
 	if trimmed == "" {
 		return fmt.Errorf("command is required")
 	}
+	if strings.ContainsAny(trimmed, "\r\n") {
+		return fmt.Errorf("command must be a single line")
+	}
 	lowerCommand := strings.ToLower(" " + trimmed + " ")
 	for _, fragment := range terminalBlockedFragments {
 		if strings.Contains(lowerCommand, fragment) {
@@ -443,7 +446,7 @@ func terminalFunctionPolicy(functionName string, args []string) error {
 	}
 
 	switch normalizedFunction {
-	case "test.ping", "test.version", "grains.items", "disk.usage", "status.uptime", "pkg.upgrades", "network.interfaces":
+	case "test.ping", "test.version", "grains.items", "disk.usage", "status.uptime", "pkg.upgrades", "pkg.uptodate", "network.interfaces":
 		if len(trimmedArgs) > 0 {
 			return fmt.Errorf("%s does not accept arguments in the terminal function runner", normalizedFunction)
 		}
@@ -898,6 +901,9 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.POST("/patch/reports", server.createPatchRunReport)
 			protected.POST("/patch/run", server.patchRunCompat)
 			protected.GET("/salt/workspace", server.saltWorkspace)
+			protected.GET("/salt/workspace/templates", server.getSaltWorkspaceTemplates)
+			protected.PUT("/salt/workspace/templates", server.updateSaltWorkspaceTemplates)
+			protected.POST("/salt/workspace/execute", server.executeSaltWorkspaceAction)
 			protected.GET("/ssh/assets/:id", server.getSSHTarget)
 			protected.POST("/ssh/session", server.createSSHSession)
 			protected.GET("/terminal/session", server.listTerminalSessionsCompat)
@@ -3434,13 +3440,14 @@ func (server *apiServer) listPatchRunReports(c *gin.Context) {
 	if !server.requireRoles(c, "super_admin", "it_team") {
 		return
 	}
-	rows, err := server.db.Query(`
+	limit := parseRecentItemsLimit(c.Query("limit"), 50)
+	rows, err := server.db.Query(fmt.Sprintf(`
 		SELECT r.id::text, r.scope_label, r.requested_at, r.completed_at, r.success_count, r.failed_count, r.row_count, r.entity_ids, r.report, COALESCE(u.full_name, '')
 		FROM patch_run_reports r
 		LEFT JOIN users u ON u.id = r.actor_id
 		ORDER BY r.created_at DESC
-		LIMIT 50
-	`)
+		LIMIT %d
+	`, limit))
 	if err != nil {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
@@ -3910,7 +3917,7 @@ func (server *apiServer) executeTerminalFunction(c *gin.Context) {
 	switch normalizedFunction {
 	case "state", "state.apply", "state.sls":
 		mode = string(terminalCommandModeState)
-		output, runErr := server.salt.RunState(c.Request.Context(), target, trimmedArgs[0])
+		output, runErr := server.salt.RunNamedState(c.Request.Context(), target, normalizedFunction, trimmedArgs[0])
 		if runErr != nil {
 			server.recordOperationalAlert(asset, claims.UserID, "terminal", "high", "Terminal function failed", runErr.Error())
 			httpx.Error(c, http.StatusBadGateway, runErr.Error())

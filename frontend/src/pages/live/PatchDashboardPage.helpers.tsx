@@ -1,5 +1,5 @@
 import { assetPresenceState } from '../../components/users/userDisplayUtils';
-import type { PatchRunReport, PatchRunReportDateRange, PatchRunReportSort } from '../../lib/patchReports';
+import type { PatchRunReport, PatchRunReportDateRange, PatchRunReportSort, PatchRunReportSummary } from '../../lib/patchReports';
 
 export interface PatchMetrics {
   total: number;
@@ -28,7 +28,14 @@ export interface PatchDevice {
   } | null;
 }
 
-export type PatchWorkspaceView = 'systems' | 'terminal';
+export type PatchWorkspaceView = 'dashboard' | 'terminal' | 'automation' | 'logs' | 'reports';
+
+export interface PatchDashboardActivityWindow {
+  key: '1d' | '7d' | '30d';
+  label: string;
+  runs: number;
+  systemsUpdated: number;
+}
 
 const REPORT_DATE_RANGES: PatchRunReportDateRange[] = ['all', '7d', '30d', '90d'];
 const REPORT_SORT_OPTIONS: PatchRunReportSort[] = ['newest', 'oldest', 'most-failures', 'most-successes'];
@@ -109,6 +116,35 @@ export function formatReportTimestamp(value: string) {
   return parsed.toLocaleString();
 }
 
+export function buildPatchDashboardActivityWindows(reports: PatchRunReportSummary[], now = new Date()) {
+  const nowValue = now.getTime();
+  const windows: Array<Pick<PatchDashboardActivityWindow, 'key' | 'label'> & { durationMs: number }> = [
+    { key: '1d', label: 'Last 1 day', durationMs: 24 * 60 * 60 * 1000 },
+    { key: '7d', label: 'Last 7 days', durationMs: 7 * 24 * 60 * 60 * 1000 },
+    { key: '30d', label: 'Last 30 days', durationMs: 30 * 24 * 60 * 60 * 1000 },
+  ];
+
+  return windows.map((window) => {
+    const matchingReports = reports.filter((report) => {
+      const timestamp = Date.parse(report.completedAt || report.requestedAt || '');
+      return Number.isFinite(timestamp) && timestamp >= nowValue - window.durationMs && timestamp <= nowValue;
+    });
+
+    return {
+      key: window.key,
+      label: window.label,
+      runs: matchingReports.length,
+      systemsUpdated: matchingReports.reduce((sum, report) => sum + Math.max(report.successCount, 0), 0),
+    } satisfies PatchDashboardActivityWindow;
+  });
+}
+
+export function selectRecentCompletedPatchReports(reports: PatchRunReportSummary[], limit = 10) {
+  return reports
+    .filter((report) => report.successCount > 0)
+    .slice(0, limit);
+}
+
 export function renderPackageChangeSummary(row: PatchRunReport['rows'][number]) {
   if (row.packageChanges.length > 0) {
     return (
@@ -165,26 +201,35 @@ export function parseReportSort(value: string | null): PatchRunReportSort {
 
 export function parsePatchWorkspaceView(value: string | null, canViewReports: boolean): PatchWorkspaceView {
   const normalizedValue = (value || '').trim().toLowerCase();
-  if (normalizedValue === 'systems' || normalizedValue === 'devices' || normalizedValue === 'department') {
-    return 'systems';
+  if (normalizedValue === 'dashboard' || normalizedValue === 'systems' || normalizedValue === 'devices' || normalizedValue === 'department') {
+    return 'dashboard';
   }
   if (!canViewReports) {
-    return 'systems';
+    return 'dashboard';
   }
   if (
     normalizedValue === 'terminal'
     || normalizedValue === 'console'
-    || normalizedValue === 'reports'
-    || normalizedValue === 'history'
-    || normalizedValue === 'job-history'
-    || normalizedValue === 'terminal-history'
     || normalizedValue === 'scripts'
     || normalizedValue === 'script-studio'
-    || normalizedValue === 'automation'
   ) {
     return 'terminal';
   }
-  return 'systems';
+  if (normalizedValue === 'automation') {
+    return 'automation';
+  }
+  if (
+    normalizedValue === 'logs'
+    || normalizedValue === 'history'
+    || normalizedValue === 'job-history'
+    || normalizedValue === 'terminal-history'
+  ) {
+    return 'logs';
+  }
+  if (normalizedValue === 'reports' || normalizedValue === 'archive') {
+    return 'reports';
+  }
+  return 'dashboard';
 }
 
 export function getPatchProgressValue(score: number) {

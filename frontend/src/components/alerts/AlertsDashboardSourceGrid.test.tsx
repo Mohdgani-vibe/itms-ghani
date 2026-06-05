@@ -24,6 +24,10 @@ describe('AlertsDashboardSourceGrid', () => {
             riskScore: 72,
             lastScanLabel: '5/8/2026, 8:00:00 AM',
             sparklineValues: [2, 4, 3, 7],
+            departmentCount: 4,
+            affectedDepartmentCount: 3,
+            affectedDepartmentPercent: 75,
+            fixedRatePercent: 67,
           },
           {
             source: 'clamav',
@@ -41,6 +45,10 @@ describe('AlertsDashboardSourceGrid', () => {
             riskScore: 16,
             lastScanLabel: 'Unknown time',
             sparklineValues: [0, 1, 1, 0],
+            departmentCount: 2,
+            affectedDepartmentCount: 1,
+            affectedDepartmentPercent: 50,
+            fixedRatePercent: 89,
           },
         ]}
         formatNumber={(value) => String(value ?? 0)}
@@ -59,6 +67,11 @@ describe('AlertsDashboardSourceGrid', () => {
     expect(markup).toContain('Last scan');
     expect(markup).toContain('5/8/2026, 8:00:00 AM');
     expect(markup).toContain('Risk 72');
+    expect(markup).toContain('Departments with findings');
+    expect(markup).toContain('3/4');
+    expect(markup).toContain('75% of current department scope');
+    expect(markup).toContain('Systems passing');
+    expect(markup).toContain('89%');
     expect(markup).toContain('View Alerts');
   });
 });

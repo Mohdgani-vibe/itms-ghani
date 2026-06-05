@@ -1,6 +1,7 @@
 package api
 
 import (
+	"database/sql"
 	"encoding/json"
 	"net/http"
 	"regexp"
@@ -509,6 +510,26 @@ func TestRouterListPatchRunReportsRejectsAuditorRole(t *testing.T) {
 	assertRouteResult(t, mock, recorder, http.StatusForbidden, "list patch reports auditor role")
 }
 
+func TestRouterListPatchRunReportsHonorsLimitQuery(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/patch/reports?limit=7", "")
+	defer cleanup()
+
+	mock.ExpectQuery(`(?s)SELECT r\.id::text.*LIMIT 7`).
+		WillReturnRows(sqlmock.NewRows([]string{"id", "scope_label", "requested_at", "completed_at", "success_count", "failed_count", "row_count", "entity_ids", "report", "requested_by"}).
+			AddRow("report-1", "Finance rollout", time.Date(2026, 5, 15, 8, 55, 0, 0, time.UTC), time.Date(2026, 5, 15, 9, 1, 0, 0, time.UTC), 8, 1, 9, []byte(`["entity-1"]`), []byte(`{"rows":[{"department":"Finance"}]}`), "Alex Kumar"))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "list patch reports limit query")
+
+	var body []map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal: %v", err)
+	}
+	if len(body) != 1 {
+		t.Fatalf("len(body) = %d, want 1", len(body))
+	}
+}
+
 func TestRouterGetPatchRunReportRejectsAuditorRole(t *testing.T) {
 	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "auditor", "auditor-1", "entity-1", http.MethodGet, "/api/patch/reports/report-1", "")
 	defer cleanup()
@@ -634,6 +655,306 @@ func TestRouterAssignRequestAllowsVisibleAssignee(t *testing.T) {
 
 	router.ServeHTTP(recorder, request)
 	assertRouteResult(t, mock, recorder, http.StatusOK, "assign request route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsRequestRouteOutsideTicketAssignees(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"ticketAssigneeIds":["owner-1"],"requestTypeRoutes":[{"match":"hardware","assigneeId":"owner-2"}]}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "owner-1", "it_team", true)
+	expectActiveWorkflowUserLookup(mock, "owner-2", "it_team", true)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsRequestFallbackOutsideTicketAssignees(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"ticketAssigneeIds":["owner-1"],"requestFallbackAssigneeId":"owner-2"}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "owner-1", "it_team", true)
+	expectActiveWorkflowUserLookup(mock, "owner-2", "it_team", true)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings request fallback route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsMissingTicketAssignee(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"ticketAssigneeIds":["owner-missing"]}`)
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT r.name, u.is_active
+		FROM users u
+		JOIN roles r ON r.id = u.role_id
+		WHERE u.id = $1::uuid
+	`)).WithArgs("owner-missing").WillReturnError(sql.ErrNoRows)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings missing ticket assignee route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsEmployeeRole(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "employee", "employee-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{}`)
+	defer cleanup()
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusForbidden, "update workflow settings employee role")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsInvalidPayload(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"ticketAssigneeIds":`)
+	defer cleanup()
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings invalid payload route")
+}
+
+func TestRouterUpdateWorkflowSettingsNormalizesAndPersistsRoutes(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"ticketAssigneeIds":[" owner-1 ","owner-1"],"requestTypeRoutes":[{"match":" Hardware   Request ","assigneeId":" owner-1 "},{"match":"hardware request","assigneeId":"owner-1"},{"match":"   ","assigneeId":"owner-2"}]}`)
+	defer cleanup()
+
+	expectedSettings := normalizeWorkflowSettings(workflowSettings{
+		TicketAssigneeIDs: []string{" owner-1 ", "owner-1"},
+		RequestTypeRoutes: []workflowRoute{
+			{Match: " Hardware   Request ", AssigneeID: " owner-1 "},
+			{Match: "hardware request", AssigneeID: "owner-1"},
+			{Match: "   ", AssigneeID: "owner-2"},
+		},
+	})
+	expectedSavedPayload, err := json.Marshal(expectedSettings)
+	if err != nil {
+		t.Fatalf("json.Marshal saved settings: %v", err)
+	}
+
+	updatedAt := time.Date(2026, time.June, 2, 11, 45, 0, 0, time.UTC)
+	returnedSettings := expectedSettings
+	returnedSettings.UpdatedAt = updatedAt.Format(time.RFC3339)
+	expectedAuditDetail, err := json.Marshal(returnedSettings)
+	if err != nil {
+		t.Fatalf("json.Marshal audit settings: %v", err)
+	}
+
+	expectActiveWorkflowUserLookup(mock, "owner-1", "it_team", true)
+	expectActiveWorkflowUserLookup(mock, "owner-1", "it_team", true)
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		INSERT INTO settings (key, value, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (key)
+		DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+		RETURNING updated_at
+	`)).WithArgs("workflow_settings", string(expectedSavedPayload)).WillReturnRows(sqlmock.NewRows([]string{"updated_at"}).AddRow(updatedAt))
+	expectAuditInsert(mock, "user-1", "entity-1", "settings_changed", "settings", workflowSettingsKey, string(expectedAuditDetail))
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "update workflow settings success route")
+
+	var body workflowSettingsResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal response: %v", err)
+	}
+	if len(body.TicketAssigneeIDs) != 1 || body.TicketAssigneeIDs[0] != "owner-1" {
+		t.Fatalf("ticket assignee ids = %+v, want normalized owner-1", body.TicketAssigneeIDs)
+	}
+	if len(body.RequestTypeRoutes) != 1 || body.RequestTypeRoutes[0] != (workflowRoute{Match: "hardware request", AssigneeID: "owner-1"}) {
+		t.Fatalf("request type routes = %+v, want normalized deduplicated route", body.RequestTypeRoutes)
+	}
+	if body.RequestFallbackAssigneeID != nil {
+		t.Fatalf("request fallback assignee = %#v, want nil", body.RequestFallbackAssigneeID)
+	}
+	if body.PatchWindowStart != "22:00" || body.PatchWindowEnd != "06:00" {
+		t.Fatalf("patch window = %s-%s, want 22:00-06:00", body.PatchWindowStart, body.PatchWindowEnd)
+	}
+	if body.UpdatedAt != updatedAt.Format(time.RFC3339) {
+		t.Fatalf("updatedAt = %q, want %q", body.UpdatedAt, updatedAt.Format(time.RFC3339))
+	}
+}
+
+func TestRouterUpdateWorkflowSettingsReturnsInternalServerErrorWhenSaveFails(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{}`)
+	defer cleanup()
+
+	expectedSavedPayload, err := json.Marshal(normalizeWorkflowSettings(workflowSettings{}))
+	if err != nil {
+		t.Fatalf("json.Marshal saved settings: %v", err)
+	}
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		INSERT INTO settings (key, value, updated_at)
+		VALUES ($1, $2, NOW())
+		ON CONFLICT (key)
+		DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()
+		RETURNING updated_at
+	`)).WithArgs("workflow_settings", string(expectedSavedPayload)).WillReturnError(sql.ErrConnDone)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusInternalServerError, "update workflow settings save failure route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsNonITChatMember(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"chatMemberIds":["member-1"]}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "member-1", "employee", true)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings non-it chat member route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsChatRouteOutsideChatMembers(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"chatMemberIds":["member-1"],"chatSubjectRoutes":[{"match":"vpn","assigneeId":"member-2"}]}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "member-1", "it_team", true)
+	expectActiveWorkflowUserLookup(mock, "member-2", "it_team", true)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings chat route membership route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsChatFallbackOutsideChatMembers(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"chatMemberIds":["member-1"],"chatFallbackAssigneeId":"member-2"}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "member-1", "it_team", true)
+	expectActiveWorkflowUserLookup(mock, "member-2", "it_team", true)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings chat fallback route")
+}
+
+func TestRouterUpdateWorkflowSettingsRejectsInactiveChatMember(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodPut, "/api/settings/workflow", `{"chatMemberIds":["member-1"]}`)
+	defer cleanup()
+
+	expectActiveWorkflowUserLookup(mock, "member-1", "it_team", false)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusBadRequest, "update workflow settings inactive chat member route")
+}
+
+func TestRouterGetWorkflowSettingsFallsBackToDefaultsForMalformedStoredJSON(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/settings/workflow", "")
+	defer cleanup()
+
+	expectWorkflowSettingsLookup(mock, `{"requestAutoAssignEnabled":`)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "get workflow settings malformed payload route")
+
+	var body workflowSettingsResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal response: %v", err)
+	}
+	if body.RequestAutoAssignEnabled {
+		t.Fatal("requestAutoAssignEnabled = true, want false")
+	}
+	if !body.ChatAutoCreateEnabled {
+		t.Fatal("chatAutoCreateEnabled = false, want true")
+	}
+	if body.RequestFallbackAssigneeID != nil {
+		t.Fatalf("request fallback assignee = %#v, want nil", body.RequestFallbackAssigneeID)
+	}
+	if body.ChatFallbackAssigneeID != nil {
+		t.Fatalf("chat fallback assignee = %#v, want nil", body.ChatFallbackAssigneeID)
+	}
+	if len(body.TicketAssigneeIDs) != 0 || len(body.ChatMemberIDs) != 0 || len(body.RequestTypeRoutes) != 0 || len(body.RequestSubjectRoutes) != 0 || len(body.ChatSubjectRoutes) != 0 {
+		t.Fatalf("workflow settings lists = %+v, want empty lists", body)
+	}
+	if body.PatchWindowStart != "22:00" || body.PatchWindowEnd != "06:00" {
+		t.Fatalf("patch window = %s-%s, want 22:00-06:00", body.PatchWindowStart, body.PatchWindowEnd)
+	}
+	if body.UpdatedAt != "" {
+		t.Fatalf("updatedAt = %q, want empty string", body.UpdatedAt)
+	}
+}
+
+func TestRouterGetWorkflowSettingsReturnsDefaultsWhenRecordMissing(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/settings/workflow", "")
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT value, updated_at FROM settings WHERE key = $1`)).
+		WithArgs("workflow_settings").
+		WillReturnError(sql.ErrNoRows)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "get workflow settings missing record route")
+
+	var body workflowSettingsResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal response: %v", err)
+	}
+	if body.RequestAutoAssignEnabled {
+		t.Fatal("requestAutoAssignEnabled = true, want false")
+	}
+	if !body.ChatAutoCreateEnabled {
+		t.Fatal("chatAutoCreateEnabled = false, want true")
+	}
+	if body.RequestFallbackAssigneeID != nil || body.ChatFallbackAssigneeID != nil {
+		t.Fatalf("fallback assignees = %#v / %#v, want nils", body.RequestFallbackAssigneeID, body.ChatFallbackAssigneeID)
+	}
+	if len(body.TicketAssigneeIDs) != 0 || len(body.ChatMemberIDs) != 0 || len(body.RequestTypeRoutes) != 0 || len(body.RequestSubjectRoutes) != 0 || len(body.ChatSubjectRoutes) != 0 {
+		t.Fatalf("workflow settings lists = %+v, want empty lists", body)
+	}
+	if body.PatchWindowStart != "22:00" || body.PatchWindowEnd != "06:00" {
+		t.Fatalf("patch window = %s-%s, want 22:00-06:00", body.PatchWindowStart, body.PatchWindowEnd)
+	}
+	if body.UpdatedAt != "" {
+		t.Fatalf("updatedAt = %q, want empty string", body.UpdatedAt)
+	}
+}
+
+func TestRouterGetWorkflowSettingsNormalizesStoredSettings(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/settings/workflow", "")
+	defer cleanup()
+
+	expectWorkflowSettingsLookup(mock, `{"requestFallbackAssigneeId":" owner-1 ","ticketAssigneeIds":[" owner-1 ","owner-1"],"requestTypeRoutes":[{"match":" Hardware   Request ","assigneeId":" owner-1 "},{"match":"hardware request","assigneeId":"owner-1"}],"patchAllowedRings":[" broad ","broad","invalid"],"patchDepartmentRings":[{"match":" Finance ","ring":" broad "},{"match":"finance","ring":"broad"},{"match":"IT","ring":"standard"}]}`)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusOK, "get workflow settings normalized route")
+
+	var body workflowSettingsResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &body); err != nil {
+		t.Fatalf("json.Unmarshal response: %v", err)
+	}
+	if body.RequestFallbackAssigneeID != "owner-1" {
+		t.Fatalf("request fallback assignee = %#v, want owner-1", body.RequestFallbackAssigneeID)
+	}
+	if len(body.TicketAssigneeIDs) != 1 || body.TicketAssigneeIDs[0] != "owner-1" {
+		t.Fatalf("ticket assignee ids = %+v, want normalized owner-1", body.TicketAssigneeIDs)
+	}
+	if len(body.RequestTypeRoutes) != 1 || body.RequestTypeRoutes[0] != (workflowRoute{Match: "hardware request", AssigneeID: "owner-1"}) {
+		t.Fatalf("request type routes = %+v, want normalized deduplicated route", body.RequestTypeRoutes)
+	}
+	if len(body.PatchAllowedRings) != 1 || body.PatchAllowedRings[0] != "broad" {
+		t.Fatalf("patch allowed rings = %+v, want normalized broad", body.PatchAllowedRings)
+	}
+	if len(body.PatchDepartmentRings) != 1 || body.PatchDepartmentRings[0] != (patchDepartmentRing{Match: "finance", Ring: "broad"}) {
+		t.Fatalf("patch department rings = %+v, want normalized finance broad", body.PatchDepartmentRings)
+	}
+	if body.UpdatedAt == "" {
+		t.Fatal("updatedAt = empty, want stored timestamp")
+	}
+}
+
+func TestRouterGetWorkflowSettingsReturnsInternalServerErrorWhenLookupFails(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "it_team", "user-1", "entity-1", http.MethodGet, "/api/settings/workflow", "")
+	defer cleanup()
+
+	mock.ExpectQuery(regexp.QuoteMeta(`SELECT value, updated_at FROM settings WHERE key = $1`)).
+		WithArgs("workflow_settings").
+		WillReturnError(sql.ErrConnDone)
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusInternalServerError, "get workflow settings lookup failure route")
+}
+
+func TestRouterGetWorkflowSettingsRejectsEmployeeRole(t *testing.T) {
+	mock, recorder, router, request, cleanup := newRoleRouteRequest(t, "employee", "employee-1", "entity-1", http.MethodGet, "/api/settings/workflow", "")
+	defer cleanup()
+
+	router.ServeHTTP(recorder, request)
+	assertRouteResult(t, mock, recorder, http.StatusForbidden, "get workflow settings employee role")
 }
 
 func TestRouterAssetSSHWebsocketKeepsClaimsForEntityScope(t *testing.T) {

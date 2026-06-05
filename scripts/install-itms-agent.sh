@@ -23,6 +23,8 @@ CLAMAV_TIMER="/etc/systemd/system/itms-clamav-scan.timer"
 
 SERVER_URL=""
 INGEST_TOKEN=""
+INGEST_TOKEN_FILE=""
+PROMPT_INGEST_TOKEN=0
 CATEGORY="auto"
 ASSIGNED_TO_EMAIL=""
 ASSIGNED_TO_NAME=""
@@ -51,15 +53,16 @@ SALT_BOOTSTRAP_VERSION="${ITMS_SALT_BOOTSTRAP_VERSION:-3006}"
 REQUIRE_SALT="${ITMS_REQUIRE_SALT:-false}"
 
 usage() {
-  cat <<'EOF2'
+  cat <<'EOF'
 Usage:
-  sudo ./scripts/install-itms-agent.sh --server-url http://itms.example.com:3001 --token <inventory_ingest_token> [options]
+  sudo ./scripts/install-itms-agent.sh --server-url http://itms.example.com:3001 --token-file /path/to/inventory-ingest-token [options]
 
-  curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s -- --server-url http://itms.example.com --token <inventory_ingest_token> [options]
+  curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s -- --server-url http://itms.example.com --token-file /path/to/inventory-ingest-token [options]
 
 Required:
   --server-url URL         ITMS backend base URL or full ingest endpoint
-  --token TOKEN            INVENTORY_INGEST_TOKEN configured on the backend
+  --token-file FILE        Read INVENTORY_INGEST_TOKEN from FILE
+  --prompt-token           Prompt for INVENTORY_INGEST_TOKEN without echo
 
 Optional:
   --category NAME          Asset category reported to ITMS, default: auto (detect laptop/desktop/vm)
@@ -87,15 +90,75 @@ Optional:
 
 Environment overrides:
   ITMS_SALT_BOOTSTRAP_VERSION  Salt release passed to bootstrap-salt, default: 3006
-EOF2
+EOF
 }
 
 log() {
   printf '[itms-bootstrap] %s\n' "$*"
 }
 
+log_stderr() {
+  printf '[itms-bootstrap] %s\n' "$*" >&2
+}
+
+read_value_file() {
+  local file_path="$1"
+  local value
+
+  if [[ ! -f "$file_path" ]]; then
+    printf 'Value file not found: %s\n' "$file_path" >&2
+    exit 1
+  fi
+
+  value="$(cat -- "$file_path")"
+  printf '%s' "${value%$'\r'}"
+}
+
+read_secret_prompt() {
+  local label="$1"
+  local value
+
+  if [[ -r /dev/tty ]]; then
+    read -r -s -p "$label: " value < /dev/tty
+    printf '\n' >&2
+    printf '%s' "$value"
+    return 0
+  fi
+
+  if ! IFS= read -r value; then
+    printf 'Cannot read %s from stdin.\n' "$label" >&2
+    exit 1
+  fi
+
+  printf '%s' "$value"
+}
+
 package_exists() {
-  apt-cache show "$1" >/dev/null 2>&1
+  case "$PACKAGE_MANAGER" in
+    apt)
+      apt-cache show "$1" >/dev/null 2>&1
+      ;;
+    dnf|yum)
+      "$PACKAGE_MANAGER" info "$1" >/dev/null 2>&1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+package_installed() {
+  case "$PACKAGE_MANAGER" in
+    apt)
+      dpkg-query -W -f='${Status}' "$1" 2>/dev/null | grep -q 'install ok installed'
+      ;;
+    dnf|yum)
+      rpm -q "$1" >/dev/null 2>&1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
 }
 
 append_if_available() {
@@ -108,25 +171,36 @@ append_if_available() {
 }
 
 install_salt_minion() {
-  if ! package_exists "salt-minion"; then
-    log 'Salt Minion package is not available from current apt sources. Trying the Salt bootstrap installer.'
+  local salt_package="salt-minion"
+
+  if ! package_exists "$salt_package"; then
+    log 'Salt Minion package is not available from current package sources. Trying the Salt bootstrap installer.'
     install_salt_minion_with_bootstrap
     return $?
   fi
 
-  if dpkg-query -W -f='${Status}' salt-minion 2>/dev/null | grep -q 'install ok installed'; then
+  if package_installed "$salt_package"; then
     return 0
   fi
 
-  if package_exists "salt-common"; then
-    if apt-get install -y salt-common salt-minion; then
-      return 0
-    fi
-  elif apt-get install -y salt-minion; then
-    return 0
-  fi
+  case "$PACKAGE_MANAGER" in
+    apt)
+      if package_exists "salt-common"; then
+        if apt-get install -y salt-common "$salt_package"; then
+          return 0
+        fi
+      elif apt-get install -y "$salt_package"; then
+        return 0
+      fi
+      ;;
+    dnf|yum)
+      if "$PACKAGE_MANAGER" install -y "$salt_package"; then
+        return 0
+      fi
+      ;;
+  esac
 
-  log 'Salt Minion installation via apt failed. Trying the Salt bootstrap installer.'
+  log 'Salt Minion installation via the native package manager failed. Trying the Salt bootstrap installer.'
   install_salt_minion_with_bootstrap
 }
 
@@ -152,7 +226,7 @@ install_salt_minion_with_bootstrap() {
   log "Installing Salt Minion via bootstrap-salt stable ${SALT_BOOTSTRAP_VERSION}"
   if bash "$bootstrap_script" stable "$SALT_BOOTSTRAP_VERSION"; then
     rm -f "$bootstrap_script"
-    if dpkg-query -W -f='${Status}' salt-minion 2>/dev/null | grep -q 'install ok installed'; then
+    if package_installed "salt-minion"; then
       return 0
     fi
     log 'Salt bootstrap installer finished but salt-minion is still not installed.'
@@ -171,7 +245,7 @@ require_root() {
   fi
 }
 
-require_ubuntu() {
+detect_linux_platform() {
   if [[ ! -f /etc/os-release ]]; then
     printf 'Unsupported Linux distribution: /etc/os-release not found.\n' >&2
     exit 1
@@ -181,10 +255,78 @@ require_ubuntu() {
   . /etc/os-release
   case "${ID:-}" in
     ubuntu|debian)
+      PACKAGE_MANAGER="apt"
+      LINUX_DISTRO_FAMILY="debian"
+      ;;
+    fedora)
+      PACKAGE_MANAGER="dnf"
+      LINUX_DISTRO_FAMILY="rpm"
+      ;;
+    centos|rhel|rocky|almalinux)
+      if command -v dnf >/dev/null 2>&1; then
+        PACKAGE_MANAGER="dnf"
+      else
+        PACKAGE_MANAGER="yum"
+      fi
+      LINUX_DISTRO_FAMILY="rpm"
       ;;
     *)
-      printf 'This installer currently supports Ubuntu or Debian only. Detected: %s\n' "${PRETTY_NAME:-unknown}" >&2
+      printf 'This installer currently supports Ubuntu, Debian, Fedora, CentOS, and Red Hat family systems. Detected: %s\n' "${PRETTY_NAME:-unknown}" >&2
       exit 1
+      ;;
+  esac
+}
+
+configure_package_plan() {
+  INSTALL_PACKAGES=(python3 ca-certificates curl unzip clamav)
+
+  case "$PACKAGE_MANAGER" in
+    apt)
+      INSTALL_PACKAGES+=(python3-requests gnupg apt-transport-https clamav-daemon)
+      ;;
+    dnf|yum)
+      INSTALL_PACKAGES+=(python3-requests gnupg2)
+      if package_exists "clamd"; then
+        INSTALL_PACKAGES+=(clamd)
+      fi
+      ;;
+  esac
+
+  if append_if_available "openscap-scanner"; then
+    :
+  else
+    log 'OpenSCAP scanner package is not available from current package sources. Continuing without it.'
+  fi
+
+  if ! append_if_available "scap-security-guide"; then
+    if ! append_if_available "ssg-base"; then
+      log 'SCAP content package is not available from current package sources. Continuing without it.'
+    fi
+  fi
+
+  if [[ "$USE_HARDINFO_FALLBACK" == "true" ]]; then
+    if ! append_if_available "hardinfo"; then
+      log 'hardinfo package is not available from current package sources. Continuing without hardinfo fallback.'
+      USE_HARDINFO_FALLBACK="false"
+    fi
+  fi
+}
+
+install_base_packages() {
+  case "$PACKAGE_MANAGER" in
+    apt)
+      export DEBIAN_FRONTEND=noninteractive
+      log 'Installing Debian-family packages'
+      apt-get update
+      apt-get install -y "${INSTALL_PACKAGES[@]}"
+      ;;
+    dnf)
+      log 'Installing RPM-family packages with dnf'
+      dnf install -y "${INSTALL_PACKAGES[@]}"
+      ;;
+    yum)
+      log 'Installing RPM-family packages with yum'
+      yum install -y "${INSTALL_PACKAGES[@]}"
       ;;
   esac
 }
@@ -272,9 +414,9 @@ configure_salt_minion() {
   fi
 
   install -d -m 0755 /etc/salt/minion.d
-  cat > /etc/salt/minion.d/itms.conf <<EOF2
+  cat > /etc/salt/minion.d/itms.conf <<EOF
 master: $SALT_MASTER
-EOF2
+EOF
 }
 
 configure_wazuh_agent() {
@@ -331,6 +473,11 @@ address.text = manager
 for unsupported_agent in list(target_root.findall('agent')):
     target_root.remove(unsupported_agent)
 
+if group:
+  agent_cfg = ET.SubElement(target_root, 'agent')
+  groups = ET.SubElement(agent_cfg, 'groups')
+  groups.text = group
+
 if wrapped_root is None:
     tree.write(config_path, encoding='unicode', xml_declaration=False)
 else:
@@ -341,7 +488,7 @@ else:
 PY
 
   if [[ -n "$WAZUH_GROUP" ]]; then
-    log 'Wazuh group assignment is handled during package installation. The runtime config rewrite keeps ossec.conf limited to supported client settings.'
+    log "Wazuh group assignment configured in ossec.conf: $WAZUH_GROUP"
   fi
 }
 
@@ -353,6 +500,7 @@ detect_openscap_datastream() {
 
   local candidates=()
   if [[ -f /etc/os-release ]]; then
+    # shellcheck disable=SC1091
     . /etc/os-release
     local version_id="${VERSION_ID%%.*}"
     candidates+=(
@@ -383,6 +531,7 @@ openscap_platform_id() {
     return 1
   fi
 
+  # shellcheck disable=SC1091
   . /etc/os-release
   if [[ -z "${ID:-}" || -z "${VERSION_ID:-}" ]]; then
     return 1
@@ -445,7 +594,7 @@ resolve_openscap_profile() {
   local profile
 
   if ! command -v oscap >/dev/null 2>&1; then
-    log 'OpenSCAP profile auto-detection skipped because oscap is not installed.'
+    log_stderr 'OpenSCAP profile auto-detection skipped because oscap is not installed.'
     return 1
   fi
 
@@ -461,7 +610,7 @@ resolve_openscap_profile() {
   )
 
   if [[ ${#available_profiles[@]} -eq 0 ]]; then
-    log "OpenSCAP profiles could not be read from ${datastream}."
+    log_stderr "OpenSCAP profiles could not be read from ${datastream}."
     return 1
   fi
 
@@ -472,7 +621,7 @@ resolve_openscap_profile() {
         return 0
       fi
     done
-    log "Requested OpenSCAP profile ${requested_profile} is not available in ${datastream}. Falling back to an available profile."
+    log_stderr "Requested OpenSCAP profile ${requested_profile} is not available in ${datastream}. Falling back to an available profile."
   fi
 
   if [[ "$category_normalized" == "server" ]]; then
@@ -526,13 +675,14 @@ install_openscap_runner() {
   fi
   log "Using OpenSCAP profile ${OPENSCAP_PROFILE}"
   install -d -m 0755 "$INSTALL_DIR" "$OPENSCAP_RESULTS_DIR"
-  cat > "$OPENSCAP_RUNNER" <<'EOF2'
+  cat > "$OPENSCAP_RUNNER" <<'EOF'
 #!/usr/bin/env bash
 set -uo pipefail
 
 ENV_FILE="/etc/itms-agent.env"
 if [[ -f "$ENV_FILE" ]]; then
   set -a
+  # shellcheck disable=SC1090
   . "$ENV_FILE"
   set +a
 fi
@@ -572,7 +722,7 @@ if [[ "${ITMS_INCLUDE_OPENSCAP_REPORT:-true}" == "true" && -f "$RESULTS_FILE" ]]
 fi
 
 exit "$SCAN_EXIT"
-EOF2
+EOF
   chmod 0755 "$OPENSCAP_RUNNER"
 }
 
@@ -581,7 +731,7 @@ write_openscap_units() {
     return
   fi
 
-  cat > "$OPENSCAP_SERVICE" <<EOF2
+  cat > "$OPENSCAP_SERVICE" <<EOF
 [Unit]
 Description=Run ITMS OpenSCAP scan
 After=network-online.target
@@ -593,9 +743,9 @@ ExecStart=$OPENSCAP_RUNNER
 
 [Install]
 WantedBy=multi-user.target
-EOF2
+EOF
 
-  cat > "$OPENSCAP_TIMER" <<EOF2
+  cat > "$OPENSCAP_TIMER" <<EOF
 [Unit]
 Description=Run ITMS OpenSCAP scan every $OPENSCAP_SCAN_HOURS hours
 
@@ -606,11 +756,11 @@ Unit=itms-openscap-scan.service
 
 [Install]
 WantedBy=timers.target
-EOF2
+EOF
 }
 
 write_clamav_units() {
-  cat > "$CLAMAV_SERVICE" <<EOF2
+  cat > "$CLAMAV_SERVICE" <<EOF
 [Unit]
 Description=Run ITMS ClamAV scan and report
 After=network-online.target
@@ -623,9 +773,9 @@ ExecStart=/usr/bin/python3 $COLLECTOR_TARGET --include-clamav-report
 
 [Install]
 WantedBy=multi-user.target
-EOF2
+EOF
 
-  cat > "$CLAMAV_TIMER" <<EOF2
+  cat > "$CLAMAV_TIMER" <<EOF
 [Unit]
 Description=Run ITMS ClamAV scan every day at 12:00
 
@@ -636,36 +786,63 @@ Unit=itms-clamav-scan.service
 
 [Install]
 WantedBy=timers.target
-EOF2
+EOF
 }
 
 install_wazuh_agent() {
-  if dpkg-query -W -f='${Status}' wazuh-manager 2>/dev/null | grep -q 'install ok installed'; then
+  if package_installed "wazuh-manager"; then
     log 'Wazuh manager is already installed on this host. Skipping wazuh-agent to avoid replacing the manager role.'
     return
   fi
 
-  if [[ ! -f /etc/apt/sources.list.d/wazuh.list ]]; then
-    curl -fsSL https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
-    echo 'deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main' > /etc/apt/sources.list.d/wazuh.list
-    apt-get update
-  fi
-
-  if dpkg-query -W -f='${Status}' wazuh-agent 2>/dev/null | grep -q 'install ok installed'; then
+  if package_installed "wazuh-agent"; then
     return
   fi
 
-  if [[ -n "$WAZUH_MANAGER" ]]; then
-    WAZUH_MANAGER="$WAZUH_MANAGER" WAZUH_AGENT_GROUP="$WAZUH_GROUP" apt-get install -y wazuh-agent
-    return
-  fi
+  case "$PACKAGE_MANAGER" in
+    apt)
+      if [[ ! -f /etc/apt/sources.list.d/wazuh.list ]]; then
+        curl -fsSL https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor -o /usr/share/keyrings/wazuh.gpg
+        echo 'deb [signed-by=/usr/share/keyrings/wazuh.gpg] https://packages.wazuh.com/4.x/apt/ stable main' > /etc/apt/sources.list.d/wazuh.list
+        apt-get update
+      fi
 
-  apt-get install -y wazuh-agent
+      if [[ -n "$WAZUH_MANAGER" ]]; then
+        WAZUH_MANAGER="$WAZUH_MANAGER" WAZUH_AGENT_GROUP="$WAZUH_GROUP" apt-get install -y wazuh-agent
+        return
+      fi
+
+      apt-get install -y wazuh-agent
+      ;;
+    dnf|yum)
+      if [[ ! -f /etc/yum.repos.d/wazuh.repo ]]; then
+        rpm --import https://packages.wazuh.com/key/GPG-KEY-WAZUH
+        cat > /etc/yum.repos.d/wazuh.repo <<'EOF'
+[wazuh]
+gpgcheck=1
+gpgkey=https://packages.wazuh.com/key/GPG-KEY-WAZUH
+enabled=1
+name=EL-$releasever - Wazuh
+baseurl=https://packages.wazuh.com/4.x/yum/
+protect=1
+EOF
+        "$PACKAGE_MANAGER" makecache -y >/dev/null 2>&1 || true
+      fi
+
+      if [[ -n "$WAZUH_MANAGER" ]]; then
+        WAZUH_MANAGER="$WAZUH_MANAGER" WAZUH_AGENT_GROUP="$WAZUH_GROUP" "$PACKAGE_MANAGER" install -y wazuh-agent
+        return
+      fi
+
+      "$PACKAGE_MANAGER" install -y wazuh-agent
+      ;;
+  esac
+
   log 'Wazuh agent installed without a configured manager. Pass --wazuh-manager to connect it during bootstrap.'
 }
 
 write_systemd_units() {
-  cat > "$SYSTEMD_SERVICE" <<EOF2
+  cat > "$SYSTEMD_SERVICE" <<EOF
 [Unit]
 Description=Push ITMS inventory snapshot
 After=network-online.target
@@ -678,9 +855,9 @@ ExecStart=/usr/bin/python3 $COLLECTOR_TARGET
 
 [Install]
 WantedBy=multi-user.target
-EOF2
+EOF
 
-  cat > "$SYSTEMD_TIMER" <<EOF2
+  cat > "$SYSTEMD_TIMER" <<EOF
 [Unit]
 Description=Run ITMS inventory refresh every $REFRESH_HOURS hours
 
@@ -691,7 +868,7 @@ Unit=itms-inventory-refresh.service
 
 [Install]
 WantedBy=timers.target
-EOF2
+EOF
 }
 
 run_initial_inventory_push() {
@@ -700,7 +877,6 @@ run_initial_inventory_push() {
     /usr/bin/python3
     "$COLLECTOR_TARGET"
     --server-url "$SERVER_URL"
-    --token "$INGEST_TOKEN"
     --category "$CATEGORY"
     --notes "$NOTES"
   )
@@ -728,6 +904,7 @@ run_initial_inventory_push() {
   fi
 
   set -a
+  # shellcheck disable=SC1090
   . "$ENV_FILE"
   set +a
   "${collector_args[@]}"
@@ -754,9 +931,13 @@ parse_args() {
         SERVER_URL="${2:-}"
         shift 2
         ;;
-      --token)
-        INGEST_TOKEN="${2:-}"
+      --token-file)
+        INGEST_TOKEN_FILE="${2:-}"
         shift 2
+        ;;
+      --prompt-token)
+        PROMPT_INGEST_TOKEN=1
+        shift
         ;;
       --category)
         CATEGORY="${2:-}"
@@ -826,6 +1007,10 @@ parse_args() {
         USE_HARDINFO_FALLBACK="true"
         shift
         ;;
+      --require-salt)
+        REQUIRE_SALT="true"
+        shift
+        ;;
       --collector-url)
         COLLECTOR_URL="${2:-}"
         shift 2
@@ -842,6 +1027,12 @@ parse_args() {
     esac
   done
 
+  if [[ -n "$INGEST_TOKEN_FILE" ]]; then
+    INGEST_TOKEN="$(read_value_file "$INGEST_TOKEN_FILE")"
+  elif [[ "$PROMPT_INGEST_TOKEN" -eq 1 ]]; then
+    INGEST_TOKEN="$(read_secret_prompt "Inventory ingest token")"
+  fi
+
   if [[ -z "$SERVER_URL" || -z "$INGEST_TOKEN" ]]; then
     usage >&2
     exit 1
@@ -856,52 +1047,29 @@ parse_args() {
     printf '--openscap-scan-hours must be a positive integer.\n' >&2
     exit 1
   fi
+
+  case "${REQUIRE_SALT,,}" in
+    true|false)
+      ;;
+    *)
+      printf '--require-salt must resolve to true or false.\n' >&2
+      exit 1
+      ;;
+  esac
 }
 
 main() {
   parse_args "$@"
   require_root
-  require_ubuntu
-
-  export DEBIAN_FRONTEND=noninteractive
+  detect_linux_platform
 
   prompt_if_missing "Employee name" ASSIGNED_TO_NAME
   prompt_if_missing "Employee email" ASSIGNED_TO_EMAIL
   prompt_if_missing "Employee ID" EMPLOYEE_CODE
   prompt_if_missing "Employee department" DEPARTMENT_NAME
 
-  INSTALL_PACKAGES=(
-    python3
-    python3-requests
-    ca-certificates
-    curl
-    gnupg
-    apt-transport-https
-    unzip
-    clamav
-    clamav-daemon
-  )
-
-  if ! append_if_available "openscap-scanner"; then
-    log 'OpenSCAP scanner package is not available from current apt sources. Continuing without it.'
-  fi
-
-  if ! append_if_available "scap-security-guide"; then
-    if ! append_if_available "ssg-base"; then
-      log 'SCAP content package is not available from current apt sources. Continuing without it.'
-    fi
-  fi
-
-  if [[ "$USE_HARDINFO_FALLBACK" == "true" ]]; then
-    if ! append_if_available "hardinfo"; then
-      log 'hardinfo package is not available from current apt sources. Continuing without hardinfo fallback.'
-      USE_HARDINFO_FALLBACK="false"
-    fi
-  fi
-
-  log 'Installing Ubuntu packages'
-  apt-get update
-  apt-get install -y "${INSTALL_PACKAGES[@]}"
+  configure_package_plan
+  install_base_packages
 
   salt_install_succeeded=false
   if [[ -n "$SALT_MASTER" ]]; then
@@ -909,8 +1077,11 @@ main() {
     if install_salt_minion; then
       salt_install_succeeded=true
     else
-      log 'Salt Minion installation failed while --salt-master was provided. Aborting bootstrap because Salt enrollment is required for this path.'
-      exit 1
+      if [[ "${REQUIRE_SALT,,}" == "true" ]]; then
+        log 'Salt Minion installation failed and Salt is marked as required for this bootstrap. Aborting.'
+        exit 1
+      fi
+      log 'Salt Minion installation failed while --salt-master was provided. Continuing without Salt because --require-salt was not set.'
     fi
   else
     log 'Installing Salt minion when available'

@@ -9,6 +9,7 @@ vi.hoisted(() => {
 });
 
 import {
+  buildPatchDashboardActivityWindows,
   buildDepartmentPresenceSummary,
   buildPatchMetrics,
   formatPatchStatusLabel,
@@ -19,6 +20,7 @@ import {
   parseReportDateRange,
   parseReportSort,
   renderPackageChangeSummary,
+  selectRecentCompletedPatchReports,
   shouldShowReportRowMessage,
 } from './PatchDashboardPage.helpers';
 
@@ -148,5 +150,61 @@ describe('PatchDashboardPage helpers', () => {
     expect(parseReportSort('most-failures')).toBe('most-failures');
     expect(parseReportSort('bad-value')).toBe('newest');
     expect(parseReportSort(null)).toBe('newest');
+  });
+
+  it('builds dashboard activity windows and recent completed reports', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-01T12:00:00Z'));
+
+    const reports = [
+      {
+        id: 'report-1',
+        scopeLabel: 'Today rollout',
+        requestedAt: '2026-06-01T08:00:00Z',
+        completedAt: '2026-06-01T08:15:00Z',
+        successCount: 4,
+        failedCount: 0,
+        rowCount: 4,
+        departments: ['IT'],
+      },
+      {
+        id: 'report-2',
+        scopeLabel: 'Week rollout',
+        requestedAt: '2026-05-29T08:00:00Z',
+        completedAt: '2026-05-29T08:20:00Z',
+        successCount: 3,
+        failedCount: 1,
+        rowCount: 4,
+        departments: ['IT'],
+      },
+      {
+        id: 'report-3',
+        scopeLabel: 'Month rollout',
+        requestedAt: '2026-05-10T08:00:00Z',
+        completedAt: '2026-05-10T08:40:00Z',
+        successCount: 2,
+        failedCount: 0,
+        rowCount: 2,
+        departments: ['Ops'],
+      },
+      {
+        id: 'report-4',
+        scopeLabel: 'Failed rollout',
+        requestedAt: '2026-06-01T09:00:00Z',
+        completedAt: '2026-06-01T09:05:00Z',
+        successCount: 0,
+        failedCount: 2,
+        rowCount: 2,
+        departments: ['Ops'],
+      },
+    ] as never;
+
+    expect(buildPatchDashboardActivityWindows(reports)).toEqual([
+      { key: '1d', label: 'Last 1 day', runs: 2, systemsUpdated: 4 },
+      { key: '7d', label: 'Last 7 days', runs: 3, systemsUpdated: 7 },
+      { key: '30d', label: 'Last 30 days', runs: 4, systemsUpdated: 9 },
+    ]);
+
+    expect(selectRecentCompletedPatchReports(reports, 2).map((report) => report.id)).toEqual(['report-1', 'report-2']);
   });
 });
