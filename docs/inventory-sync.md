@@ -18,7 +18,7 @@ The backend now includes:
 - A scheduled inventory sync service in `backend/internal/inventorysync/service.go`
 - Persistent run tracking in `inventory_sync_runs`
 - A protected status endpoint at `/api/inventory-sync/status`
-- A protected manual trigger endpoint at `/api/inventory-sync/run` for demo and operator use
+- A protected manual trigger endpoint at `/api/inventory-sync/run` for operator use
 - A token-protected direct ingest endpoint at `/api/inventory-sync/ingest`
 - Live device-detail mapping from synced compute details to the UI
 - A shared import pipeline used by both the scheduled pull and direct ingest paths
@@ -162,7 +162,7 @@ If you want one command on the endpoint that installs the supported tools and re
 Ubuntu or Debian:
 
 ```bash
-sudo ./scripts/install-itms-agent.sh \
+sudo bash ./scripts/install-itms-agent.sh \
   --server-url http://itms.example.com:3001 \
   --token-file /root/itms-ingest-token \
   --category laptop \

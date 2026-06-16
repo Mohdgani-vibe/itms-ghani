@@ -3,6 +3,14 @@ import type { ChatChannel, DirectoryUser } from '../components/chat/types';
 const CHAT_MESSAGE_PAGE_SIZE = 100;
 export const CHAT_CHANNEL_PAGE_SIZE = 50;
 
+export interface ChatWorkspaceLocationState {
+   channelId: string;
+   query: string;
+   kindFilter: 'all' | 'support' | 'operations';
+   statusFilter: 'all' | 'open' | 'closed';
+   channelPage: number;
+}
+
 export function deriveChatPermissions(role: string, chatAutoCreateEnabled: boolean) {
    const isAuditor = role === 'auditor';
    const isEmployee = role === 'employee';
@@ -44,6 +52,52 @@ export function buildChatMessagesUrl(channelId: string, page: number) {
    return `/api/chat/channels/${channelId}/messages?paginate=1&page=${page}&page_size=${CHAT_MESSAGE_PAGE_SIZE}`;
 }
 
+export function buildChatWorkspaceHref(basePath: string, channelId?: string | null) {
+   if (!channelId) {
+      return `${basePath}/chat`;
+   }
+
+   const params = new URLSearchParams({ channel: channelId });
+   return `${basePath}/chat?${params.toString()}`;
+}
+
+export function parseChatWorkspaceSearch(search: string): ChatWorkspaceLocationState {
+   const params = new URLSearchParams(search);
+   const kindFilter = params.get('kind');
+   const statusFilter = params.get('status');
+   const pageValue = Number.parseInt(params.get('page') || '', 10);
+
+   return {
+      channelId: params.get('channel')?.trim() || '',
+      query: params.get('search')?.trim() || '',
+      kindFilter: kindFilter === 'support' || kindFilter === 'operations' ? kindFilter : 'all',
+      statusFilter: statusFilter === 'all' || statusFilter === 'closed' ? statusFilter : 'open',
+      channelPage: Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1,
+   };
+}
+
+export function buildChatWorkspaceSearch(state: ChatWorkspaceLocationState) {
+   const params = new URLSearchParams();
+
+   if (state.channelId) {
+      params.set('channel', state.channelId);
+   }
+   if (state.query.trim()) {
+      params.set('search', state.query.trim());
+   }
+   if (state.kindFilter !== 'all') {
+      params.set('kind', state.kindFilter);
+   }
+   if (state.statusFilter !== 'open') {
+      params.set('status', state.statusFilter);
+   }
+   if (state.channelPage > 1) {
+      params.set('page', String(state.channelPage));
+   }
+
+   return params.toString();
+}
+
 export function hasOlderChatMessages(messageCount: number, totalMessages: number) {
    return messageCount < totalMessages;
 }
@@ -62,6 +116,18 @@ export function resolveChatMemberName<T extends { id: string; fullName: string }
 
 export function selectNextActiveChatChannelId(channels: ChatChannel[], currentActiveChannelId: string) {
    return channels.some((channel) => channel.id === currentActiveChannelId) ? currentActiveChannelId : channels[0]?.id || '';
+}
+
+export function selectPreferredActiveChatChannelId(
+   channels: ChatChannel[],
+   currentActiveChannelId: string,
+   requestedChannelId: string,
+) {
+   if (requestedChannelId && channels.some((channel) => channel.id === requestedChannelId)) {
+      return requestedChannelId;
+   }
+
+   return selectNextActiveChatChannelId(channels, currentActiveChannelId);
 }
 
 export function filterEligibleChatTeammates(teammates: DirectoryUser[], chatMemberIds: string[]) {

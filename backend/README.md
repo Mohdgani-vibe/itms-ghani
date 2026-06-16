@@ -80,14 +80,13 @@ bash ../scripts/start-itms-backend.sh
 If Docker is not installed yet on this Ubuntu server, run the one-shot installer from the repo root:
 
 ```bash
-chmod +x scripts/install-docker-and-start-itms.sh
-./scripts/install-docker-and-start-itms.sh
+bash scripts/install-docker-and-start-itms.sh
 ```
 
 To start the stack in the background instead of attaching to logs:
 
 ```bash
-./scripts/install-docker-and-start-itms.sh --detach
+bash scripts/install-docker-and-start-itms.sh --detach
 ```
 
 If you are using legacy `docker-compose` v1 directly on this host and `docker-compose up -d --build backend` fails with `KeyError: 'ContainerConfig'`, remove the stale ITMS service containers first and then recreate them. The named Postgres volume keeps the database data intact:
@@ -104,63 +103,56 @@ For normal day-to-day local recovery on this host, prefer `bash ../scripts/start
 After startup, verify the stack from the repo root:
 
 ```bash
-chmod +x scripts/verify-itms-stack.sh
-./scripts/verify-itms-stack.sh --sudo
+bash scripts/verify-itms-stack.sh --sudo
 ```
 
 To verify live Salt, Wazuh, ClamAV, and OpenSCAP integration flows from this host:
 
 ```bash
-chmod +x scripts/verify-itms-security-integrations.sh scripts/setup-itms-openscap-content.sh
-./scripts/verify-itms-security-integrations.sh
+bash scripts/verify-itms-security-integrations.sh
 ```
 
 To install only the recurring host-side OpenSCAP scan runner and timer:
 
 ```bash
-chmod +x scripts/install-itms-openscap-runner.sh
-sudo ./scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --prompt-token
+sudo bash scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --prompt-token
 ```
 
 If passwordless or interactive sudo is not available, you can install a user-level timer instead:
 
 ```bash
-chmod +x scripts/install-itms-openscap-user-runner.sh
-./scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token-file /path/to/itms-ingest-token
+bash scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token-file /path/to/itms-ingest-token
 ```
 
 To inspect the active OpenSCAP timer state together with the latest ITMS OpenSCAP alert for this host:
 
 ```bash
-chmod +x scripts/check-itms-openscap-status.sh
-./scripts/check-itms-openscap-status.sh
-./scripts/check-itms-openscap-status.sh --json
+bash scripts/check-itms-openscap-status.sh
+bash scripts/check-itms-openscap-status.sh --json
 ```
 
 To run the full deployment readiness suite in one command:
 
 ```bash
-chmod +x scripts/check-itms-release-readiness.sh
-./scripts/check-itms-release-readiness.sh
-./scripts/check-itms-release-readiness.sh --with-live-integrations
+bash scripts/check-itms-release-readiness.sh
+bash scripts/check-itms-release-readiness.sh --with-live-integrations
 ```
+
+Before running the readiness suite, make sure `backend/.env` and `backend/.env.secrets` exist. The wrapper now checks those files up front because `backend/docker-compose.yml` requires both.
 
 To acknowledge or resolve the latest unresolved OpenSCAP alert for this host:
 
 ```bash
-chmod +x scripts/manage-itms-openscap-alert.sh
-./scripts/manage-itms-openscap-alert.sh --action acknowledge --dry-run
-./scripts/manage-itms-openscap-alert.sh --action resolve
+bash scripts/manage-itms-openscap-alert.sh --action acknowledge --dry-run
+bash scripts/manage-itms-openscap-alert.sh --action resolve
 ```
 
 To publish the built frontend behind nginx on this Ubuntu host:
 
 ```bash
-chmod +x scripts/install-itms-nginx.sh
-./scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
-./scripts/install-itms-nginx.sh YOUR_SERVER_IP
-chmod +x scripts/smoke-test-itms-nginx.sh
-./scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
+bash scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
+bash scripts/install-itms-nginx.sh YOUR_SERVER_IP
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
 ```
 
 Equivalent Make targets from the repo root:
@@ -181,19 +173,17 @@ After the live rollout, use `scripts/smoke-test-itms-nginx.sh` to verify nginx s
 Then run an authenticated API smoke test with the seeded admin:
 
 ```bash
-chmod +x scripts/smoke-test-itms-api.sh
-./scripts/smoke-test-itms-api.sh
+bash scripts/smoke-test-itms-api.sh
 ```
 
 To validate the live role matrix for the primary portals, run:
 
 ```bash
-chmod +x scripts/smoke-test-itms-role-matrix.sh
 API_BASE_URL=http://YOUR_SERVER_IP \
 IT_TEAM_PASSWORD='PortalIT123!' \
 AUDITOR_PASSWORD='PortalAU123!' \
 EMPLOYEE_PASSWORD='PortalEM123!' \
-./scripts/smoke-test-itms-role-matrix.sh
+bash scripts/smoke-test-itms-role-matrix.sh
 ```
 
 This script verifies the expected allow/deny boundary for `super_admin`, `it_team`, `auditor`, and `employee` against the live API and exits nonzero if any endpoint drifts.

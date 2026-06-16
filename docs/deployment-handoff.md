@@ -160,32 +160,28 @@ Notes for those templates:
 Start backend plus Postgres. This installer handles Docker Engine, Buildx, and the Compose plugin automatically on Ubuntu:
 
 ```bash
-chmod +x scripts/install-docker-and-start-itms.sh
-./scripts/install-docker-and-start-itms.sh --detach
+bash scripts/install-docker-and-start-itms.sh --detach
 ```
 
 Publish the frontend behind nginx. This script installs `nginx` and `rsync` if they are missing, builds the frontend, and proxies `/api` and `/ws` to `127.0.0.1:3001`:
 
 ```bash
-chmod +x scripts/install-itms-nginx.sh
-sudo ./scripts/install-itms-nginx.sh YOUR_SERVER_IP
+sudo bash scripts/install-itms-nginx.sh YOUR_SERVER_IP
 ```
 
 Validate the app stack:
 
 ```bash
-chmod +x scripts/verify-itms-stack.sh scripts/smoke-test-itms-nginx.sh scripts/smoke-test-itms-api.sh
-./scripts/verify-itms-stack.sh --sudo
-./scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
-./scripts/smoke-test-itms-api.sh
+bash scripts/verify-itms-stack.sh --sudo
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
+bash scripts/smoke-test-itms-api.sh
 ```
 
 If the second server also needs Salt, OpenSCAP, or Wazuh, install the server integrations. The integration installer updates `backend/.env` and `backend/.env.secrets` with the generated Salt and Wazuh credentials:
 
 ```bash
-chmod +x scripts/install-itms-server-integrations.sh scripts/check-itms-server-integrations.sh
-sudo SERVER_HOST=YOUR_SERVER_IP ./scripts/install-itms-server-integrations.sh
-./scripts/check-itms-server-integrations.sh
+sudo SERVER_HOST=YOUR_SERVER_IP bash scripts/install-itms-server-integrations.sh
+bash scripts/check-itms-server-integrations.sh
 ```
 
 Notes for a fresh server:
@@ -225,14 +221,14 @@ Standard readiness:
 
 ```bash
 cd /home/itteam/itms
-./scripts/check-itms-release-readiness.sh
+bash scripts/check-itms-release-readiness.sh
 ```
 
 Readiness with live integrations:
 
 ```bash
 cd /home/itteam/itms
-./scripts/check-itms-release-readiness.sh --with-live-integrations
+bash scripts/check-itms-release-readiness.sh --with-live-integrations
 ```
 
 Expected result:
@@ -251,7 +247,7 @@ After the live frontend rollout, verify the nginx-served site and proxied API:
 cd /home/itteam/itms
 make nginx-deploy-dry-run
 make nginx-deploy
-./scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
 make nginx-smoke-test
 make nginx-rollout
 ```

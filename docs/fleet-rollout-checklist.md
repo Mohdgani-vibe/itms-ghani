@@ -235,7 +235,7 @@ Move from pilot to larger rings only when all of these are true:
 ### Linux bootstrap
 
 ```bash
-sudo ./scripts/install-itms-agent.sh \
+sudo bash ./scripts/install-itms-agent.sh \
   --server-url http://itms.example.com \
   --token-file /root/itms-ingest-token \
   --salt-master YOUR_SERVER_IP \

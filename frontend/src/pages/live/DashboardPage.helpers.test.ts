@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  buildRecentChatPanelItems,
   buildPatchTrend,
   buildTrend,
   buildTrendFrame,
@@ -230,5 +231,44 @@ describe('DashboardPage helpers', () => {
 
     expect(previousSummary.weeklyTotal).toBe(3);
     expect(previousSummary.peakDay).toMatchObject({ label: 'Mon', total: 3 });
+  });
+
+  it('builds recent chat panel items with preview and fallback labels', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-09T12:00:00Z'));
+
+    const items = buildRecentChatPanelItems([
+      {
+        id: 'chat-1',
+        name: 'VPN Support',
+        kind: 'support',
+        latestMessage: {
+          authorName: 'Employee One',
+          body: 'Need help with VPN',
+          createdAt: '2026-05-09T11:30:00Z',
+        },
+      },
+      {
+        id: 'chat-2',
+        title: 'Ops Queue',
+        kind: 'operations',
+      },
+    ]);
+
+    expect(items).toHaveLength(2);
+    expect(items[0]).toMatchObject({
+      id: 'chat-1',
+      title: 'VPN Support',
+      meta: 'Employee One: Need help with VPN',
+      badge: 'Support',
+    });
+    expect(items[0]?.timestamp).toBe('30m ago');
+    expect(items[1]).toMatchObject({
+      id: 'chat-2',
+      title: 'Ops Queue',
+      meta: 'operations chat channel',
+      badge: 'Operations',
+      timestamp: 'Waiting for activity',
+    });
   });
 });

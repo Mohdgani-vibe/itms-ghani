@@ -55,7 +55,7 @@ REQUIRE_SALT="${ITMS_REQUIRE_SALT:-false}"
 usage() {
   cat <<'EOF'
 Usage:
-  sudo ./scripts/install-itms-agent.sh --server-url http://itms.example.com:3001 --token-file /path/to/inventory-ingest-token [options]
+  sudo bash ./scripts/install-itms-agent.sh --server-url http://itms.example.com:3001 --token-file /path/to/inventory-ingest-token [options]
 
   curl -fsSL http://itms.example.com/installers/install-itms-agent.sh | sudo bash -s -- --server-url http://itms.example.com --token-file /path/to/inventory-ingest-token [options]
 

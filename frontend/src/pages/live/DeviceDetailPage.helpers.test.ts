@@ -78,6 +78,13 @@ describe('DeviceDetailPage helpers', () => {
     expect(alertSourceLabel('openscap')).toBe('OpenSCAP Hardening');
     expect(alertSourceLabel('clamav')).toBe('ClamScan');
     expect(alertSourceLabel('')).toBe('Unknown source');
+    expect(softwareSourceLabel('apt')).toBe('APT');
+    expect(softwareSourceLabel('snap')).toBe('Snap');
+    expect(softwareSourceLabel('flatpak')).toBe('Flatpak');
+    expect(softwareSourceLabel('appimage')).toBe('AppImage');
+    expect(softwareSourceLabel('pip')).toBe('pip');
+    expect(softwareSourceLabel('npm')).toBe('npm');
+    expect(softwareSourceLabel('cargo')).toBe('cargo');
     expect(softwareSourceLabel('registry')).toBe('Registry');
     expect(softwareSourceLabel('snapd')).toBe('snapd');
     expect(softwareSourceLabel(undefined)).toBe('Unknown source');

@@ -5,7 +5,9 @@ import { apiRequest } from '../../lib/api';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
 import type { PatchRunReportSummary } from '../../lib/patchReports';
 import { getStoredSession } from '../../lib/session';
+import RecentChatPanel from './RecentChatPanel';
 import {
+  buildRecentChatPanelItems,
   buildPatchTrend,
   buildTrend,
   calculatePercentChange,
@@ -27,7 +29,7 @@ import {
 
 const ANNOUNCEMENTS_UPDATED_EVENT = 'itms:announcements-updated';
 const CHAT_UPDATED_EVENT = 'itms:chat-updated';
-const TREND_SAMPLE_SIZE = 1000;
+const TREND_FETCH_LIMIT = 1000;
 
 interface ListResponse<TItem> {
   items?: TItem[];
@@ -211,12 +213,12 @@ export default function DashboardPage() {
 
         if (portal === 'audit') {
           const [alertsData, devicesData, usersData, announcementsData, clamavAlertsData, auditData] = await Promise.all([
-            apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`),
-            apiRequest<ListResponse<SimpleItem>>(`/api/devices?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`),
-            apiRequest<ListResponse<SimpleItem>>(`/api/users?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`),
+            apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`),
+            apiRequest<ListResponse<SimpleItem>>(`/api/devices?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`),
+            apiRequest<ListResponse<SimpleItem>>(`/api/users?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`),
             apiRequest<ListResponse<SimpleItem>>('/api/announcements?paginate=1&page=1&page_size=5'),
-            apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}&source=clamav`).catch(() => ({ items: [], total: 0 })),
-            apiRequest<{ items?: AuditRecord[] }>(`/api/audit?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}&action=login&module=access`).catch(() => ({ items: [] })),
+            apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}&source=clamav`).catch(() => ({ items: [], total: 0 })),
+            apiRequest<{ items?: AuditRecord[] }>(`/api/audit?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}&action=login&module=access`).catch(() => ({ items: [] })),
           ]);
 
           if (cancelledRef?.cancelled) {
@@ -258,18 +260,18 @@ export default function DashboardPage() {
         }
 
         const [usersData, requestsData, announcementsData, chatData, gatepassData, auditData, chatTicketData, clamavAlertsData, alertsWeeklyData, inventoryWeeklyData, patchReportsData, devicesData] = await Promise.all([
-          apiRequest<ListResponse<SimpleItem>>(`/api/users?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`),
+          apiRequest<ListResponse<SimpleItem>>(`/api/users?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`),
           apiRequest<ListResponse<SimpleItem>>('/api/requests?paginate=1&page=1&page_size=5'),
           apiRequest<ListResponse<SimpleItem>>('/api/announcements?paginate=1&page=1&page_size=5'),
           apiRequest<ListResponse<SimpleItem>>('/api/chat/channels?paginate=1&page=1&page_size=5'),
-          apiRequest<ListResponse<SimpleItem>>(`/api/gatepass?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`),
-          apiRequest<{ items?: AuditRecord[] }>(`/api/audit?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}&action=login&module=access`).catch(() => ({ items: [] })),
+          apiRequest<ListResponse<SimpleItem>>(`/api/gatepass?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`),
+          apiRequest<{ items?: AuditRecord[] }>(`/api/audit?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}&action=login&module=access`).catch(() => ({ items: [] })),
           portal === 'admin' ? apiRequest<{ items?: ChatTicketSummaryItem[] }>('/api/chat/tickets/summary').catch(() => ({ items: [] })) : Promise.resolve({ items: [] }),
-          apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}&source=clamav`).catch(() => ({ items: [], total: 0 })),
-          apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`).catch(() => ({ items: [], total: 0 })),
-          apiRequest<InventoryModuleAssetsResponse>(`/api/inventory/module/assets?page=1&page_size=${TREND_SAMPLE_SIZE}`).catch(() => ({ items: [], total: 0 })),
+          apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}&source=clamav`).catch(() => ({ items: [], total: 0 })),
+          apiRequest<ListResponse<SimpleItem>>(`/api/alerts?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`).catch(() => ({ items: [], total: 0 })),
+          apiRequest<InventoryModuleAssetsResponse>(`/api/inventory/module/assets?page=1&page_size=${TREND_FETCH_LIMIT}`).catch(() => ({ items: [], total: 0 })),
           apiRequest<PatchRunReportSummary[]>('/api/patch/reports').catch(() => []),
-          apiRequest<ListResponse<SimpleItem>>(`/api/devices?paginate=1&page=1&page_size=${TREND_SAMPLE_SIZE}`).catch(() => ({ items: [], total: 0 })),
+          apiRequest<ListResponse<SimpleItem>>(`/api/devices?paginate=1&page=1&page_size=${TREND_FETCH_LIMIT}`).catch(() => ({ items: [], total: 0 })),
         ]);
 
         if (cancelledRef?.cancelled) {
@@ -527,6 +529,8 @@ export default function DashboardPage() {
     timestamp: getSectionItemTimestamp(item, 'default'),
   }));
 
+  const chatSidePanelItems = buildRecentChatPanelItems(recentChats);
+
   const clamavSidePanelItems = recentClamavAlerts.map((item) => ({
 	id: item.id,
 	title: getSectionItemTitle(item, 'default'),
@@ -563,6 +567,15 @@ export default function DashboardPage() {
           items: chatTicketPanelItems,
         },
         {
+          eyebrow: 'Recent Chats',
+          title: 'Chat Activity',
+          description: 'Latest support conversations and portal threads visible in this workspace.',
+          badge: 'Live',
+          loadingText: 'Loading recent chat activity...',
+          emptyText: 'No recent chat activity yet.',
+          items: chatSidePanelItems,
+        },
+        {
           eyebrow: 'Threat Review',
           title: 'ClamScan Watch',
           description: 'Latest ClamAV findings reported by endpoint scans across the workspace.',
@@ -591,6 +604,15 @@ export default function DashboardPage() {
             loadingText: 'Loading request activity...',
             emptyText: 'No recent request records found.',
             items: requestSidePanelItems,
+          },
+          {
+            eyebrow: 'Recent Chats',
+            title: 'Chat Activity',
+            description: 'Latest support conversations and portal threads visible in this workspace.',
+            badge: 'Live',
+            loadingText: 'Loading recent chat activity...',
+            emptyText: 'No recent chat activity yet.',
+            items: chatSidePanelItems,
           },
           {
               eyebrow: 'Threat Review',
@@ -650,6 +672,15 @@ export default function DashboardPage() {
               loadingText: 'Loading your request activity...',
               emptyText: 'No recent requests yet.',
               items: requestSidePanelItems,
+            },
+            {
+              eyebrow: 'Recent Chats',
+              title: 'My Chat Activity',
+              description: 'Latest support conversations and replies tied to your account.',
+              badge: 'Live',
+              loadingText: 'Loading your recent chat activity...',
+              emptyText: 'No recent chat activity yet.',
+              items: chatSidePanelItems,
             },
             {
               eyebrow: 'Recent Announcements',
@@ -846,6 +877,25 @@ export default function DashboardPage() {
       helper: 'Assigned users with no device heartbeat in the last 24 hours',
     },
   ], [activeUsersToday, inventoryTotal, offlineUsersCount]);
+  const recentChatPanel = portal === 'emp'
+    ? {
+        eyebrow: 'Recent Chats',
+        title: 'My Support Chats',
+        description: 'Latest support conversations and replies tied to your employee account.',
+        actionLabel: 'Open My Chat',
+        totalLabel: 'visible chats',
+        loadingText: 'Loading your recent chat activity...',
+        emptyText: 'No recent chat activity yet.',
+      }
+    : {
+        eyebrow: 'Recent Chats',
+        title: 'Chat Activity',
+        description: 'Latest support conversations and portal threads visible from this dashboard.',
+        actionLabel: 'Open Chat',
+        totalLabel: 'visible channels',
+        loadingText: 'Loading recent chat activity...',
+        emptyText: 'No recent chat activity yet.',
+      };
   const trendWindowLabel = `${trendWindowDays}-day`;
   const trendWindowLabelCapitalized = `${trendWindowDays}-Day`;
   const showChartsOnly = true;
@@ -973,6 +1023,16 @@ export default function DashboardPage() {
             </div>
           ))}
         </section>
+      ) : null}
+
+      {showChartsOnly && portal !== 'audit' ? (
+        <RecentChatPanel
+          basePath={basePath}
+          loading={loading}
+          total={chatTotal}
+          panel={recentChatPanel}
+          items={chatSidePanelItems}
+        />
       ) : null}
 
       {!showChartsOnly ? <div className={`grid gap-4 sm:grid-cols-2 ${cardsGridClass}`}>

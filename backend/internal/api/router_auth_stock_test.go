@@ -48,7 +48,7 @@ func TestRouterInventoryImportTemplateIncludesCategoryColumn(t *testing.T) {
 		t.Fatalf("template body = %q, want category-aware header row", body)
 	}
 	if !strings.Contains(body, "ITEM001,Laptop,Laptop,ASSET001,SN123456") {
-		t.Fatalf("template body = %q, want sample row aligned with category column", body)
+		t.Fatalf("template body = %q, want example row aligned with category column", body)
 	}
 }
 

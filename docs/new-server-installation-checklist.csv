@@ -1,0 +1,62 @@
+step,phase,title,run_as,working_directory,command,notes
+1,prep,Install clone prerequisites,root,/,"apt-get update && apt-get install -y git curl ca-certificates",Required before cloning the repository.
+2,prep,Install Node.js 22,root,/,"curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && apt-get install -y nodejs",Required before frontend build and nginx deployment.
+3,prep,Clone repository,root,/home/itms,"git clone https://github.com/Mohdgani-vibe/zerodha-itms.git /home/itms/itms",Clone the validated repository before continuing.
+4,prep,Create backend env,root,/home/itms/itms,"cat > backend/.env <<'EOF'
+BACKEND_ADDR=:3001
+PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
+FRONTEND_ORIGIN=http://YOUR_SERVER_IP
+DEFAULT_ADMIN_EMAIL=admin@zerodha.com
+DEFAULT_ADMIN_NAME=ITMS Admin
+SALT_MASTER_HOST=YOUR_SERVER_IP
+WAZUH_MANAGER_HOST=YOUR_SERVER_IP
+EOF","Replace YOUR_SERVER_IP with the new server IP or public host value."
+5,prep,Create backend secrets,root,/home/itms/itms,"cat > backend/.env.secrets <<'EOF'
+DEFAULT_ADMIN_PASSWORD=YOUR_STRONG_ADMIN_PASSWORD
+JWT_SECRET=YOUR_LONG_RANDOM_JWT_SECRET
+SALT_API_PASSWORD=YOUR_STRONG_SALT_PASSWORD
+WAZUH_API_PASSWORD=YOUR_STRONG_WAZUH_PASSWORD
+EOF","Passwords must satisfy ITMS password policy: 12+ chars, upper, lower, number, symbol."
+6,stack,Install Docker and start backend,root,/home/itms/itms,"bash scripts/install-docker-and-start-itms.sh --detach",Installs Docker Engine and starts backend plus Postgres.
+7,stack,Verify backend stack,root,/home/itms/itms,"bash scripts/verify-itms-stack.sh --sudo",Confirms Docker containers and API health.
+8,frontend,Deploy nginx frontend,root,/home/itms/itms,"bash scripts/install-itms-nginx.sh YOUR_DOMAIN_OR_IP",Use the public IP or domain that nginx should serve.
+9,frontend,Smoke test nginx,root,/home/itms/itms,"bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP",Confirms login page and proxied API health.
+10,integrations,Install Salt Wazuh OpenSCAP,root,/home/itms/itms,"ITMS_ROOT=/home/itms/itms SALT_API_PASSWORD='YOUR_STRONG_SALT_PASSWORD' WAZUH_API_PASSWORD='YOUR_STRONG_WAZUH_PASSWORD' bash scripts/install-itms-server-integrations.sh",Installs host-side integrations and writes backend env values.
+11,integrations,Recreate backend,root,/home/itms/itms,"docker compose -f backend/docker-compose.yml up -d --force-recreate backend",Reloads integration configuration into the backend container.
+12,integrations,Install ClamAV,root,/home/itms/itms,"apt-get update && apt-get install -y clamav clamav-daemon || true",Needed for full security verification.
+13,validation,Run API smoke test,root,/home/itms/itms,"bash scripts/smoke-test-itms-api.sh",Validates core application endpoints and optional feature handling.
+14,validation,Run security verification,root,/home/itms/itms,"bash scripts/verify-itms-security-integrations.sh --wazuh-agent-id 000",Validates Salt Wazuh ClamAV and OpenSCAP on the host.
+15,login,Open application,user,browser,"http://YOUR_SERVER_IP",Log in with admin@zerodha.com and the DEFAULT_ADMIN_PASSWORD value used at first startup.
+16,recovery,Reset admin password if DB already existed,root,/home/itms/itms/backend,"docker run --rm --network backend_default -v '$PWD':/src -w /src --env-file .env --env-file .env.secrets -e 'DATABASE_URL=postgres://postgres:postgres@postgres:5432/itms?sslmode=disable' golang:1.23 /usr/local/go/bin/go run ./cmd/sync_default_admin_password",Use only when env password changed after the database was initialized.
+17,validation,Test admin login by API,root,/home/itms/itms,"curl -sS -X POST http://127.0.0.1:3001/api/auth/login -H 'Content-Type: application/json' --data '{\"email\":\"admin@zerodha.com\",\"password\":\"YOUR_STRONG_ADMIN_PASSWORD\"}'",Successful response returns a JWT token and super_admin user payload.
+step,phase,title,run_as,working_directory,command,notes
+1,prep,Install clone prerequisites,root,/,"apt-get update && apt-get install -y git curl ca-certificates",Required before cloning the repository.
+2,prep,Install Node.js 22,root,/,"curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - && apt-get install -y nodejs",Required before frontend build and nginx deployment.
+3,prep,Clone repository,root,/home/itms,"git clone https://github.com/Mohdgani-vibe/zerodha-itms.git /home/itms/itms",Clone the validated repository before continuing.
+4,prep,Create backend env,root,/home/itms/itms,"cat > backend/.env <<'EOF'
+BACKEND_ADDR=:3001
+PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
+FRONTEND_ORIGIN=http://YOUR_SERVER_IP
+DEFAULT_ADMIN_EMAIL=admin@zerodha.com
+DEFAULT_ADMIN_NAME=ITMS Admin
+SALT_MASTER_HOST=YOUR_SERVER_IP
+WAZUH_MANAGER_HOST=YOUR_SERVER_IP
+EOF","Replace YOUR_SERVER_IP with the new server IP or public host value."
+5,prep,Create backend secrets,root,/home/itms/itms,"cat > backend/.env.secrets <<'EOF'
+DEFAULT_ADMIN_PASSWORD=YOUR_STRONG_ADMIN_PASSWORD
+JWT_SECRET=YOUR_LONG_RANDOM_JWT_SECRET
+SALT_API_PASSWORD=YOUR_STRONG_SALT_PASSWORD
+WAZUH_API_PASSWORD=YOUR_STRONG_WAZUH_PASSWORD
+EOF","Passwords must satisfy ITMS password policy: 12+ chars, upper, lower, number, symbol."
+6,stack,Install Docker and start backend,root,/home/itms/itms,"bash scripts/install-docker-and-start-itms.sh --detach",Installs Docker Engine and starts backend plus Postgres.
+7,stack,Verify backend stack,root,/home/itms/itms,"bash scripts/verify-itms-stack.sh --sudo",Confirms Docker containers and API health.
+8,frontend,Deploy nginx frontend,root,/home/itms/itms,"bash scripts/install-itms-nginx.sh YOUR_DOMAIN_OR_IP",Use the public IP or domain that nginx should serve.
+9,frontend,Smoke test nginx,root,/home/itms/itms,"bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP",Confirms login page and proxied API health.
+10,integrations,Install Salt Wazuh OpenSCAP,root,/home/itms/itms,"ITMS_ROOT=/home/itms/itms SALT_API_PASSWORD='YOUR_STRONG_SALT_PASSWORD' WAZUH_API_PASSWORD='YOUR_STRONG_WAZUH_PASSWORD' bash scripts/install-itms-server-integrations.sh",Installs host-side integrations and writes backend env values.
+11,integrations,Recreate backend,root,/home/itms/itms,"docker compose -f backend/docker-compose.yml up -d --force-recreate backend",Reloads integration configuration into the backend container.
+12,integrations,Install ClamAV,root,/home/itms/itms,"apt-get update && apt-get install -y clamav clamav-daemon || true",Needed for full security verification.
+13,validation,Run API smoke test,root,/home/itms/itms,"bash scripts/smoke-test-itms-api.sh",Validates core application endpoints and optional feature handling.
+14,validation,Run security verification,root,/home/itms/itms,"bash scripts/verify-itms-security-integrations.sh --wazuh-agent-id 000",Validates Salt Wazuh ClamAV and OpenSCAP on the host.
+15,login,Open application,user,browser,"http://YOUR_SERVER_IP",Log in with admin@zerodha.com and the DEFAULT_ADMIN_PASSWORD value used at first startup.
+16,recovery,Reset admin password if DB already existed,root,/home/itms/itms/backend,"docker run --rm --network backend_default -v '$PWD':/src -w /src --env-file .env --env-file .env.secrets -e 'DATABASE_URL=postgres://postgres:postgres@postgres:5432/itms?sslmode=disable' golang:1.23 /usr/local/go/bin/go run ./cmd/sync_default_admin_password",Use only when env password changed after the database was initialized.
+17,validation,Test admin login by API,root,/home/itms/itms,"curl -sS -X POST http://127.0.0.1:3001/api/auth/login -H 'Content-Type: application/json' --data '{\"email\":\"admin@zerodha.com\",\"password\":\"YOUR_STRONG_ADMIN_PASSWORD\"}'",Successful response returns a JWT token and super_admin user payload.

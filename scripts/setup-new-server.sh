@@ -7,12 +7,15 @@ SERVER_NAME=""
 DB_NAME="itms"
 DB_USER="itms_user"
 DB_PASSWORD=""
+DB_PORT="5432"
 PUBLIC_SERVER_URL=""
 GO_VERSION="1.22.12"
 NODE_MAJOR="22"
 ADMIN_EMAIL="admin@zerodha.com"
 ADMIN_PASSWORD=""
 JWT_SECRET=""
+BACKEND_PORT="3001"
+SKIP_NGINX=0
 
 usage() {
   cat <<'EOF'
@@ -25,10 +28,13 @@ Options:
   --app-dir PATH          Install path. Default: ~/itms
   --db-name NAME          PostgreSQL database name. Default: itms
   --db-user USER          PostgreSQL user. Default: itms_user
+  --db-port PORT          PostgreSQL port in DATABASE_URL and restore step. Default: 5432
   --db-password VALUE     PostgreSQL password. If omitted, prompt securely
   --admin-email EMAIL     Admin email. Default: admin@zerodha.com
   --admin-password VALUE  Admin password. If omitted, prompt securely
   --jwt-secret VALUE      JWT secret. If omitted, prompt securely
+  --backend-port PORT     Backend listen port and nginx upstream. Default: 3001
+  --skip-nginx            Skip nginx configuration and nginx-based verification
   --help                  Show this help message
 EOF
 }
@@ -38,6 +44,10 @@ require_command() {
     echo "Missing required command: $1" >&2
     exit 1
   fi
+}
+
+urlencode() {
+  python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$1"
 }
 
 prompt_secret() {
@@ -76,6 +86,10 @@ parse_args() {
         DB_USER="$2"
         shift 2
         ;;
+      --db-port)
+        DB_PORT="$2"
+        shift 2
+        ;;
       --db-password)
         DB_PASSWORD="$2"
         shift 2
@@ -91,6 +105,14 @@ parse_args() {
       --jwt-secret)
         JWT_SECRET="$2"
         shift 2
+        ;;
+      --backend-port)
+        BACKEND_PORT="$2"
+        shift 2
+        ;;
+      --skip-nginx)
+        SKIP_NGINX=1
+        shift
         ;;
       --help|-h)
         usage
@@ -174,39 +196,44 @@ setup_postgres() {
     prompt_secret "Enter PostgreSQL password for ${DB_USER}" DB_PASSWORD
   fi
 
-  sudo -u postgres psql <<EOF
+  (cd /tmp && sudo -u postgres psql) <<EOF
 DO
 \$do\$
 BEGIN
    IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
       CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASSWORD}';
+   ELSE
+      ALTER ROLE ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
    END IF;
 END
 \$do\$;
 EOF
 
-  if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'" | grep -q 1; then
-    sudo -u postgres createdb -O "$DB_USER" "$DB_NAME"
+  if ! (cd /tmp && sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='${DB_NAME}'") | grep -q 1; then
+    (cd /tmp && sudo -u postgres createdb -O "$DB_USER" "$DB_NAME")
   fi
 }
 
 write_env_files() {
+  local db_password_encoded
+
   if [[ -z "$ADMIN_PASSWORD" ]]; then
     prompt_secret "Enter DEFAULT_ADMIN_PASSWORD" ADMIN_PASSWORD
   fi
   if [[ -z "$JWT_SECRET" ]]; then
     prompt_secret "Enter JWT_SECRET" JWT_SECRET
   fi
+  db_password_encoded="$(urlencode "$DB_PASSWORD")"
 
   cd "$APP_DIR/backend"
   cp .env.example .env
   cp .env.secrets.example .env.secrets
 
   cat > .env <<EOF
-BACKEND_ADDR=:3001
+BACKEND_ADDR=:${BACKEND_PORT}
 ITMS_ENFORCE_SECURITY=false
 FRONTEND_ORIGIN=${PUBLIC_SERVER_URL}
-DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}?sslmode=disable
+DATABASE_URL=postgres://${DB_USER}:${db_password_encoded}@localhost:${DB_PORT}/${DB_NAME}?sslmode=disable
 MIGRATION_DIR=db/postgres_migrations
 INVENTORY_SYNC_ENABLED=false
 INVENTORY_SYNC_SOURCE_TYPE=json
@@ -254,7 +281,7 @@ GOOGLE_REDIRECT_URL=${PUBLIC_SERVER_URL}/api/auth/google/callback
 GOOGLE_HOSTED_DOMAIN=zerodha.com
 DEFAULT_ADMIN_EMAIL=${ADMIN_EMAIL}
 DEFAULT_ADMIN_PASSWORD=
-DEFAULT_ADMIN_NAME=ITMS Admin
+DEFAULT_ADMIN_NAME='ITMS Admin'
 EOF
 
   cat > .env.secrets <<EOF
@@ -272,6 +299,23 @@ SSH_TERMINAL_PRIVATE_KEY=
 EOF
 }
 
+sync_imported_admin_password() {
+  local backup_file="$APP_DIR/database/backup.sql"
+
+  if [[ ! -f "$backup_file" ]]; then
+    return 0
+  fi
+
+  (
+    cd "$APP_DIR/backend"
+    set -a
+    source ./.env
+    source ./.env.secrets
+    set +a
+    GOTOOLCHAIN=local go run ./cmd/sync_default_admin_password
+  )
+}
+
 restore_database() {
   local backup_file="$APP_DIR/database/backup.sql"
 
@@ -280,7 +324,7 @@ restore_database() {
     return 0
   fi
 
-  PGPASSWORD="$DB_PASSWORD" psql -h localhost -U "$DB_USER" -d "$DB_NAME" < "$backup_file"
+  PGPASSWORD="$DB_PASSWORD" psql -h localhost -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" < "$backup_file"
 }
 
 build_frontend() {
@@ -309,6 +353,10 @@ start_backend_pm2() {
 }
 
 configure_nginx() {
+  if [[ "$SKIP_NGINX" -eq 1 ]]; then
+    return 0
+  fi
+
   sudo tee /etc/nginx/sites-available/itms >/dev/null <<EOF
 server {
     listen 80;
@@ -322,7 +370,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass http://127.0.0.1:3001/api/;
+      proxy_pass http://127.0.0.1:${BACKEND_PORT}/api/;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
@@ -331,7 +379,7 @@ server {
     }
 
     location /ws/ {
-        proxy_pass http://127.0.0.1:3001/ws/;
+      proxy_pass http://127.0.0.1:${BACKEND_PORT}/ws/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -339,7 +387,7 @@ server {
     }
 
     location /installers/ {
-        proxy_pass http://127.0.0.1:3001/installers/;
+      proxy_pass http://127.0.0.1:${BACKEND_PORT}/installers/;
         proxy_http_version 1.1;
         proxy_set_header Host \$host;
     }
@@ -356,8 +404,10 @@ EOF
 verify_setup() {
   require_command curl
 
-  curl -fsS http://127.0.0.1:3001/api/health
-  curl -fsS "${PUBLIC_SERVER_URL}/api/health"
+  curl -fsS "http://127.0.0.1:${BACKEND_PORT}/api/health"
+  if [[ "$SKIP_NGINX" -ne 1 ]]; then
+    curl -fsS "${PUBLIC_SERVER_URL}/api/health"
+  fi
   pm2 status
 }
 
@@ -372,6 +422,7 @@ main() {
   setup_postgres
   write_env_files
   restore_database
+  sync_imported_admin_password
   build_frontend
   write_backend_wrapper
   start_backend_pm2
@@ -380,8 +431,11 @@ main() {
 
   echo
   echo "Server setup complete."
-  echo "Frontend: ${PUBLIC_SERVER_URL}/login"
-  echo "Health: ${PUBLIC_SERVER_URL}/api/health"
+  if [[ "$SKIP_NGINX" -ne 1 ]]; then
+    echo "Frontend: ${PUBLIC_SERVER_URL}/login"
+    echo "Health: ${PUBLIC_SERVER_URL}/api/health"
+  fi
+  echo "Backend direct health: http://127.0.0.1:${BACKEND_PORT}/api/health"
 }
 
 main "$@"

@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: start start-detached stop restart status smoke-test installer-smoke-test nginx-deploy-dry-run nginx-deploy nginx-smoke-test nginx-rollout teleport-env-check teleport-sync-dry-run teleport-ready teleport-generate-secrets teleport-login teleport-manual-steps teleport-sync teleport-status
+.PHONY: start start-detached stop restart status smoke-test chat-smoke-test chat-live-smoke-test installer-smoke-test nginx-deploy-dry-run nginx-deploy nginx-smoke-test nginx-chat-smoke-test nginx-rollout teleport-env-check teleport-sync-dry-run teleport-ready teleport-generate-secrets teleport-login teleport-manual-steps teleport-sync teleport-status
 
 start:
 	bash scripts/start-itms.sh
@@ -22,6 +22,12 @@ status:
 smoke-test:
 	bash scripts/smoke-test-itms-api.sh
 
+chat-smoke-test:
+	bash scripts/smoke-test-itms-chat.sh
+
+chat-live-smoke-test:
+	bash scripts/smoke-test-itms-chat-live.sh
+
 installer-smoke-test:
 	bash scripts/smoke-test-itms-installer.sh
 
@@ -33,6 +39,9 @@ nginx-deploy:
 
 nginx-smoke-test:
 	bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
+
+nginx-chat-smoke-test:
+	bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP --with-chat
 
 nginx-rollout: nginx-deploy-dry-run nginx-deploy nginx-smoke-test
 

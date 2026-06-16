@@ -71,7 +71,7 @@ describe('TerminalConsoleView', () => {
           allowedCommands: ['hostname', 'uptime'],
           presetCommands: ['hostname'],
           presetGroups: [{ label: 'System', commands: ['hostname'] }],
-          blockedExamples: ['rm -rf /tmp/demo'],
+          blockedExamples: ['rm -rf /tmp/workspace'],
           restrictions: ['Only approved read-only diagnostic commands are allowed.'],
         },
       },
@@ -94,7 +94,7 @@ describe('TerminalConsoleView', () => {
     expect(markup).toContain('Allowed Tools');
     expect(markup).toContain('hostname, uptime');
     expect(markup).toContain('Blocked Examples');
-    expect(markup).toContain('rm -rf /tmp/demo');
+    expect(markup).toContain('rm -rf /tmp/workspace');
     expect(markup).toContain('Recent Commands');
     expect(markup).toContain('Target is not connected');
   });

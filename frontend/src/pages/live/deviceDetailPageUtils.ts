@@ -176,12 +176,24 @@ export function alertSourceLabel(source: string) {
 
 export function softwareSourceLabel(source?: string | null) {
   switch ((source || '').trim().toLowerCase()) {
+    case 'apt':
+      return 'APT';
     case 'dpkg':
       return 'dpkg';
+    case 'snap':
+      return 'Snap';
     case 'snapd':
       return 'snapd';
     case 'flatpak':
-      return 'flatpak';
+      return 'Flatpak';
+    case 'appimage':
+      return 'AppImage';
+    case 'pip':
+      return 'pip';
+    case 'npm':
+      return 'npm';
+    case 'cargo':
+      return 'cargo';
     case 'registry':
       return 'Registry';
     default:

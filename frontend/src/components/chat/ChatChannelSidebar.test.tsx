@@ -56,4 +56,39 @@ describe('ChatChannelSidebar', () => {
     expect(markup).toContain('Need help with VPN');
     expect(markup).toContain('Employee One · Apr 27 09:15');
   });
+
+  it('renders the active status and queue filters from props', () => {
+    const markup = renderToStaticMarkup(
+      <ChatChannelSidebar
+        query="vpn"
+        statusFilter="closed"
+        kindFilter="operations"
+        isManager
+        canCreateChat
+        newChannelName=""
+        newChannelMessage=""
+        creatingChannel={false}
+        loadingChannels={false}
+        visibleChannels={[]}
+        activeChannelId=""
+        channelPage={1}
+        totalChannels={0}
+        pageSize={50}
+        formatDateTime={() => 'today'}
+        onQueryChange={() => {}}
+        onStatusFilterChange={() => {}}
+        onKindFilterChange={() => {}}
+        onStartFreshChat={() => {}}
+        onNewChannelNameChange={() => {}}
+        onNewChannelMessageChange={() => {}}
+        onCreateSupportChat={() => {}}
+        onSelectChannel={() => {}}
+        onChannelPageChange={() => {}}
+      />,
+    );
+
+    expect(markup).toContain('Archived</button>');
+    expect(markup).toContain('border-emerald-200 bg-emerald-50 text-emerald-800');
+    expect(markup).toContain('operations</button>');
+  });
 });

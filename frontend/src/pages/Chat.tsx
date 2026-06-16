@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ChatChannelSidebar from '../components/chat/ChatChannelSidebar';
 import ChatControlSidebar from '../components/chat/ChatControlSidebar';
 import ChatCloseModals from '../components/chat/ChatCloseModals';
@@ -9,6 +10,7 @@ import { sortByRecentChatActivity } from '../lib/chat';
 import { getStoredSession } from '../lib/session';
 import {
    CHAT_CHANNEL_PAGE_SIZE,
+   buildChatWorkspaceSearch,
    buildChatChannelsUrl,
    buildChatMessagesUrl,
    deriveChatChannelActionPermissions,
@@ -19,8 +21,9 @@ import {
    filterOwnerCandidates,
    findActiveChatChannel,
    hasOlderChatMessages,
+   parseChatWorkspaceSearch,
    resolveChatMemberName,
-   selectNextActiveChatChannelId,
+   selectPreferredActiveChatChannelId,
 } from './chatUtils';
 import { formatDateTime, mergeMessages, normalizeWorkflowSettings } from '../components/chat/chatUtils';
 import type { AddChatMembersResponse, ChatChannel, ChatMessage, CloseChatResponse, CreateChatChannelResponse, DirectoryUser, PaginatedChatChannelsResponse, PaginatedChatMessagesResponse, PaginatedUsersResponse, PendingTeammateAction, RemoveChatMemberResponse, ReopenChatResponse, UpdateChatOwnerResponse, WorkflowSettings } from '../components/chat/types';
@@ -29,7 +32,11 @@ import { useChatMessaging } from '../components/chat/useChatMessaging';
 const CHAT_UPDATED_EVENT = 'itms:chat-updated';
 
 export default function Chat() {
+   const location = useLocation();
+   const navigate = useNavigate();
    const session = getStoredSession();
+   const locationState = parseChatWorkspaceSearch(location.search);
+   const requestedChannelId = locationState.channelId;
 
    const role = session?.user.role || '';
    const [workflowSettings, setWorkflowSettings] = useState<WorkflowSettings>(() => normalizeWorkflowSettings());
@@ -37,14 +44,14 @@ export default function Chat() {
       role,
       workflowSettings.chatAutoCreateEnabled,
    );
-   const [query, setQuery] = useState('');
+   const [query, setQuery] = useState(locationState.query);
    const [draft, setDraft] = useState('');
-   const [kindFilter, setKindFilter] = useState<'all' | 'support' | 'operations'>('all');
-   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('open');
+   const [kindFilter, setKindFilter] = useState<'all' | 'support' | 'operations'>(locationState.kindFilter);
+   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>(locationState.statusFilter);
    const [newChannelName, setNewChannelName] = useState('');
    const [newChannelMessage, setNewChannelMessage] = useState('');
    const [channels, setChannels] = useState<ChatChannel[]>([]);
-   const [channelPage, setChannelPage] = useState(1);
+   const [channelPage, setChannelPage] = useState(locationState.channelPage);
    const [totalChannels, setTotalChannels] = useState(0);
    const [messages, setMessages] = useState<ChatMessage[]>([]);
    const [messagePage, setMessagePage] = useState(1);
@@ -54,7 +61,12 @@ export default function Chat() {
    const [pendingTeammateAction, setPendingTeammateAction] = useState<PendingTeammateAction | null>(null);
    const [selectedOwnerId, setSelectedOwnerId] = useState<string | null>(null);
    const [selectedBackupOwnerId, setSelectedBackupOwnerId] = useState<string | null>(null);
-   const [activeChannelId, setActiveChannelId] = useState('');
+   const [activeChannelId, setActiveChannelId] = useState(requestedChannelId);
+   const requestedChannelIdRef = useRef(new URLSearchParams(location.search).get('channel')?.trim() || '');
+   const didHydrateFiltersRef = useRef(false);
+   const pendingLocationSearchRef = useRef('');
+   const applyingLocationSearchRef = useRef(false);
+   const latestChannelRequestRef = useRef(0);
    const [loadingChannels, setLoadingChannels] = useState(true);
    const [loadingMessages, setLoadingMessages] = useState(false);
    const [loadingOlderMessages, setLoadingOlderMessages] = useState(false);
@@ -68,22 +80,92 @@ export default function Chat() {
    const [closeResult, setCloseResult] = useState<CloseChatResponse | null>(null);
    const [error, setError] = useState('');
    const [notice, setNotice] = useState('');
+   const buildFilterSearch = useCallback(
+      (nextQuery: string, nextKindFilter: 'all' | 'support' | 'operations', nextStatusFilter: 'all' | 'open' | 'closed', nextChannelPage: number) =>
+         buildChatWorkspaceSearch({
+            channelId: '',
+            query: nextQuery,
+            kindFilter: nextKindFilter,
+            statusFilter: nextStatusFilter,
+            channelPage: nextChannelPage,
+         }),
+      [],
+   );
+
+   useEffect(() => {
+      if (!requestedChannelId) {
+         requestedChannelIdRef.current = '';
+         return;
+      }
+      if (requestedChannelId !== activeChannelId) {
+         requestedChannelIdRef.current = requestedChannelId;
+      }
+   }, [activeChannelId, location.search]);
+
+   useEffect(() => {
+      if (!requestedChannelId || requestedChannelId === activeChannelId) {
+         return;
+      }
+      if (!loadingChannels && !channels.some((channel) => channel.id === requestedChannelId)) {
+         return;
+      }
+      setActiveChannelId(requestedChannelId);
+   }, [activeChannelId, channels, loadingChannels, requestedChannelId]);
+
+   useEffect(() => {
+      const nextFilterSearch = buildFilterSearch(query, kindFilter, statusFilter, channelPage);
+      const locationFilterSearch = buildFilterSearch(
+         locationState.query,
+         locationState.kindFilter,
+         locationState.statusFilter,
+         locationState.channelPage,
+      );
+
+      if (locationFilterSearch === nextFilterSearch) {
+         pendingLocationSearchRef.current = '';
+         applyingLocationSearchRef.current = false;
+         return;
+      }
+
+      pendingLocationSearchRef.current = locationFilterSearch;
+      applyingLocationSearchRef.current = true;
+      if (requestedChannelId) {
+         requestedChannelIdRef.current = requestedChannelId;
+         setActiveChannelId(requestedChannelId);
+      }
+      setQuery(locationState.query);
+      setKindFilter(locationState.kindFilter);
+      setStatusFilter(locationState.statusFilter);
+      setChannelPage(locationState.channelPage);
+   }, [buildFilterSearch, channelPage, kindFilter, locationState, query, requestedChannelId, statusFilter]);
 
    const loadChannels = useCallback(async () => {
+      const requestId = latestChannelRequestRef.current + 1;
+      latestChannelRequestRef.current = requestId;
+
       try {
          setLoadingChannels(true);
          setError('');
          const data = await apiRequest<PaginatedChatChannelsResponse>(
             buildChatChannelsUrl(channelPage, query, kindFilter, statusFilter),
          );
+         if (requestId !== latestChannelRequestRef.current) {
+            return;
+         }
          const nextChannels = Array.isArray(data.items) ? sortByRecentChatActivity(data.items) : [];
+         const requestedChannelId = requestedChannelIdRef.current;
          setChannels(nextChannels);
          setTotalChannels(data.total || nextChannels.length);
-         setActiveChannelId((current) => selectNextActiveChatChannelId(nextChannels, current));
+         setActiveChannelId((current) => selectPreferredActiveChatChannelId(nextChannels, current, requestedChannelId));
       } catch (requestError) {
+         if (requestId !== latestChannelRequestRef.current) {
+            return;
+         }
          setError(requestError instanceof Error ? requestError.message : 'Failed to load chat channels');
       } finally {
-         setLoadingChannels(false);
+         if (requestId === latestChannelRequestRef.current) {
+            setLoadingChannels(false);
+         }
       }
    }, [channelPage, kindFilter, query, statusFilter]);
 
@@ -156,6 +238,13 @@ export default function Chat() {
    }, [isEmployee, isManager, loadChannels, loadTeammates, loadWorkflowSettings]);
 
    useEffect(() => {
+      if (applyingLocationSearchRef.current) {
+         return;
+      }
+      if (!didHydrateFiltersRef.current) {
+         didHydrateFiltersRef.current = true;
+         return;
+      }
       setChannelPage(1);
    }, [kindFilter, query, statusFilter]);
 
@@ -183,10 +272,72 @@ export default function Chat() {
    }, [activeChannel?.backupOwner?.id, activeChannel?.id, activeChannel?.primaryOwner?.id]);
 
    useEffect(() => {
-      if (!visibleChannels.some((channel) => channel.id === activeChannelId)) {
-         setActiveChannelId(selectNextActiveChatChannelId(visibleChannels, activeChannelId));
+      if (visibleChannels.length === 0) {
+         return;
       }
-   }, [activeChannelId, visibleChannels]);
+      if (
+         requestedChannelId
+         && requestedChannelId === activeChannelId
+         && !visibleChannels.some((channel) => channel.id === requestedChannelId)
+      ) {
+         return;
+      }
+      if (
+         requestedChannelId
+         && requestedChannelId !== activeChannelId
+         && (applyingLocationSearchRef.current || loadingChannels)
+      ) {
+         return;
+      }
+      if (!visibleChannels.some((channel) => channel.id === activeChannelId)) {
+         setActiveChannelId(selectPreferredActiveChatChannelId(visibleChannels, activeChannelId, requestedChannelIdRef.current));
+      }
+   }, [activeChannelId, loadingChannels, requestedChannelId, visibleChannels]);
+
+   useEffect(() => {
+      if (!requestedChannelId || requestedChannelId === activeChannelId) {
+         return;
+      }
+      if (!visibleChannels.some((channel) => channel.id === requestedChannelId)) {
+         return;
+      }
+      setActiveChannelId(requestedChannelId);
+   }, [activeChannelId, requestedChannelId, visibleChannels]);
+
+   useEffect(() => {
+      const syncedChannelId = activeChannelId || requestedChannelId || requestedChannelIdRef.current;
+      const nextSearch = buildChatWorkspaceSearch({
+         channelId: syncedChannelId,
+         query,
+         kindFilter,
+         statusFilter,
+         channelPage,
+      });
+      const currentSearch = location.search.startsWith('?') ? location.search.slice(1) : location.search;
+      const nextFilterSearch = buildFilterSearch(query, kindFilter, statusFilter, channelPage);
+
+      if (pendingLocationSearchRef.current) {
+         if (pendingLocationSearchRef.current === nextFilterSearch) {
+            pendingLocationSearchRef.current = '';
+            applyingLocationSearchRef.current = false;
+         }
+         return;
+      }
+
+      if (
+         requestedChannelId
+         && requestedChannelId !== activeChannelId
+         && (loadingChannels || visibleChannels.some((channel) => channel.id === requestedChannelId))
+      ) {
+         return;
+      }
+
+      if (currentSearch === nextSearch) {
+         return;
+      }
+
+      void navigate(`${location.pathname}${nextSearch ? `?${nextSearch}` : ''}`, { replace: true });
+   }, [activeChannelId, buildFilterSearch, channelPage, kindFilter, loadingChannels, location.pathname, location.search, navigate, query, requestedChannelId, statusFilter, visibleChannels]);
 
    const {
       socketReady,

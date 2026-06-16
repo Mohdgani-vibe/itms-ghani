@@ -247,6 +247,8 @@ echo
 echo "Checking patch endpoints ..."
 patch_dashboard_payload="$(api_json GET "$API_BASE_URL/api/patch/dashboard" "$token")"
 printf '%s' "$patch_dashboard_payload" | json_require_keys failed pending rebootPending total upToDate
+install_config_payload="$(api_json GET "$API_BASE_URL/api/integrations/install-config" "$token")"
+ssh_configured="$(printf '%s' "$install_config_payload" | python3 -c 'import json, sys; print(str(bool(json.load(sys.stdin).get("sshConfigured"))))')"
 
 patch_devices_payload="$(api_json GET "$API_BASE_URL/api/patch/devices" "$token")"
 patch_devices_count="$(printf '%s' "$patch_devices_payload" | json_len)"
@@ -290,7 +292,7 @@ if [[ -n "$terminal_hostname" ]]; then
   expect_http_error "404" "$missing_terminal_status" "$missing_terminal_body" "terminal target not found" "terminal target missing validation"
 fi
 
-if [[ -n "$ssh_asset_id" ]]; then
+if [[ -n "$ssh_asset_id" && "$ssh_configured" == "True" ]]; then
   ssh_target_payload="$(api_json GET "$API_BASE_URL/api/ssh/assets/$ssh_asset_id" "$token")"
   printf '%s' "$ssh_target_payload" | json_require_keys assetId address username reachable keyFingerprint usernames
 
@@ -531,9 +533,11 @@ if [[ -n "$terminal_hostname" ]]; then
 else
   echo "terminal target path: skipped (no device hostname available)"
 fi
-if [[ -n "$ssh_asset_id" ]]; then
+if [[ -n "$ssh_asset_id" && "$ssh_configured" == "True" ]]; then
   echo "ssh target path: ok ($ssh_asset_id)"
   echo "ssh target missing path: ok"
+elif [[ -n "$ssh_asset_id" ]]; then
+  echo "ssh target path: skipped (ssh terminal is not configured on the server)"
 else
   echo "ssh target path: skipped (no device id available)"
 fi

@@ -109,8 +109,7 @@ If Google SSO is not being enabled yet, leave `GOOGLE_CLIENT_ID` and `GOOGLE_CLI
 ## 4. Start Backend And Postgres
 
 ```bash
-chmod +x scripts/install-docker-and-start-itms.sh
-./scripts/install-docker-and-start-itms.sh --detach
+bash scripts/install-docker-and-start-itms.sh --detach
 ```
 
 This step installs Docker Engine, Buildx, and the Compose plugin automatically on Ubuntu.
@@ -118,8 +117,7 @@ This step installs Docker Engine, Buildx, and the Compose plugin automatically o
 ## 5. Publish Frontend Through nginx
 
 ```bash
-chmod +x scripts/install-itms-nginx.sh
-sudo ./scripts/install-itms-nginx.sh YOUR_SERVER_NAME_OR_IP
+sudo bash scripts/install-itms-nginx.sh YOUR_SERVER_NAME_OR_IP
 ```
 
 This step installs `nginx` and `rsync` if they are missing, builds the frontend, copies `frontend/dist`, and proxies `/api` and `/ws` to `127.0.0.1:3001`.
@@ -127,10 +125,9 @@ This step installs `nginx` and `rsync` if they are missing, builds the frontend,
 ## 6. Validate Stack Health
 
 ```bash
-chmod +x scripts/verify-itms-stack.sh scripts/smoke-test-itms-nginx.sh scripts/smoke-test-itms-api.sh
-./scripts/verify-itms-stack.sh --sudo
-./scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_NAME_OR_IP
-./scripts/smoke-test-itms-api.sh
+bash scripts/verify-itms-stack.sh --sudo
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_NAME_OR_IP
+bash scripts/smoke-test-itms-api.sh
 ```
 
 Expected results:
@@ -145,9 +142,8 @@ Expected results:
 If this server should host Salt, OpenSCAP, or Wazuh too:
 
 ```bash
-chmod +x scripts/install-itms-server-integrations.sh scripts/check-itms-server-integrations.sh
-sudo SERVER_HOST=YOUR_SERVER_IP ./scripts/install-itms-server-integrations.sh
-./scripts/check-itms-server-integrations.sh
+sudo SERVER_HOST=YOUR_SERVER_IP bash scripts/install-itms-server-integrations.sh
+bash scripts/check-itms-server-integrations.sh
 ```
 
 This step installs Salt packages, OpenSCAP packages when available, and optional Wazuh packages, then updates `backend/.env` and `backend/.env.secrets` with the generated integration values.
@@ -157,14 +153,13 @@ This step installs Salt packages, OpenSCAP packages when available, and optional
 Run the broader readiness suite after the base stack is healthy:
 
 ```bash
-chmod +x scripts/check-itms-release-readiness.sh
-./scripts/check-itms-release-readiness.sh
+bash scripts/check-itms-release-readiness.sh
 ```
 
 If live integrations are enabled on this server:
 
 ```bash
-./scripts/check-itms-release-readiness.sh --with-live-integrations
+bash scripts/check-itms-release-readiness.sh --with-live-integrations
 ```
 
 ## Notes

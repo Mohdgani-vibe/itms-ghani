@@ -731,7 +731,7 @@ index 9cb6e0c..bd835c9 100644
  	{"label": "Network", "commands": []string{"ip addr"}},
  }
  
- var terminalBlockedExamples = []string{"rm -rf /tmp/demo", "tail -f /var/log/syslog", "systemctl restart wazuh-agent", "sudo cat /etc/shadow", "curl https://example.com/script.sh", "ps aux | grep salt"}
+var terminalBlockedExamples = []string{"rm -rf /tmp/workspace", "tail -f /var/log/syslog", "systemctl restart wazuh-agent", "sudo cat /etc/shadow", "curl https://example.com/script.sh", "ps aux | grep salt"}
 +var terminalStatePattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 +
 +type terminalCommandMode string

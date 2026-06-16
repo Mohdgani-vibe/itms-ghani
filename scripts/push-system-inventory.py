@@ -2,6 +2,7 @@
 
 import argparse
 import datetime
+import gzip
 import getpass
 import json
 import os
@@ -21,6 +22,26 @@ from pathlib import Path
 
 
 AGENT_ENV_FILE = Path(os.getenv("ITMS_AGENT_ENV_FILE", "/etc/itms-agent.env"))
+
+USER_APT_EXCLUDE_PATTERN = re.compile(
+    r"^lib|^linux-|^grub|^shim|^init$|^login$|^dash$|^bash$|^gzip$"
+    r"|^grep$|^sed$|^gawk$|^ncurses|^bsdutils$|^diffutils$|^findutils$"
+    r"|^hostname$|^lvm2$|^cryptsetup$|^efibootmgr$|^language-pack"
+    r"|^wbritish$|^wamerican$|^ubuntu-minimal$|^ubuntu-standard$"
+    r"|^ubuntu-desktop|^ubuntu-wallpapers$|^ca-certificates$|^gnupg$"
+    r"|^gpg$|^dbus|^apt-transport-https$|^apt$|^dpkg$|^perl|^python3$"
+    r"|^tzdata$|^locales|^adduser$|^passwd$|^sudo$|^coreutils$"
+    r"|^util-linux|^mount$|^tar$|^xz-utils$|^bzip2$|^less$|^nano$"
+    r"|^netbase$|^iproute2$|^iputils|^net-tools$|^ifupdown|^systemd"
+    r"|^udev$|^dconf-|^gsettings-|^glib|^gtk|^xserver-xorg-input-wacom$"
+    r"|^xfonts|^fonts-|^build-essential$|^gcc$|^g\+\+$|^make$|^cmake$"
+    r"|^libc6-dev$|^libcap-dev$|^libx11-dev$|^libxrandr-dev$|^libevdev"
+    r"|^libgtk|^libm17n|^libmarisa|^libopencc|^libotf|^libpinyin"
+    r"|^libchewing|^ssh$|^expect$|^wget$|^curl$|^python3-",
+    re.IGNORECASE,
+)
+
+DPKG_INSTALL_PATTERN = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+\S+\s+install\s+(\S+?)(?::\S+)?\s")
 
 
 def run_command(command, timeout=15):
@@ -628,6 +649,12 @@ def collect_installed_software(limit):
         return []
 
     priority_terms = (
+        "chrome",
+        "google-chrome",
+        "netbird",
+        "anydesk",
+        "rustdesk",
+        "wps",
         "salt",
         "wazuh",
         "openscap",
@@ -638,21 +665,11 @@ def collect_installed_software(limit):
     )
     source_entries = []
 
-    dpkg_entries = []
-    dpkg_output = run_command(["dpkg-query", "-W", "-f=${binary:Package}\t${Version}\n"])
-    if dpkg_output:
-        for line in dpkg_output.splitlines():
-            parts = line.split("\t", 1)
-            if not parts or not parts[0].strip():
-                continue
-            dpkg_entries.append({
-                "name": parts[0].strip(),
-                "version": parts[1].strip() if len(parts) > 1 else "",
-                "install_date": "",
-                "source": "dpkg",
-            })
-    if dpkg_entries:
-        source_entries.append(dpkg_entries)
+    install_dates = collect_dpkg_install_dates()
+
+    apt_entries = collect_user_apt_packages(install_dates)
+    if apt_entries:
+        source_entries.append(apt_entries)
 
     snap_entries = []
     snap_output = run_command(["snap", "list"])
@@ -665,26 +682,105 @@ def collect_installed_software(limit):
                 "name": fields[0].strip(),
                 "version": fields[1].strip() if len(fields) > 1 else "",
                 "install_date": "",
-                "source": "snapd",
+                "source": "snap",
             })
     if snap_entries:
         source_entries.append(snap_entries)
 
     flatpak_entries = []
-    flatpak_output = run_command(["flatpak", "list", "--app", "--columns=application,version"])
+    flatpak_output = run_command(["flatpak", "list", "--app", "--columns=name,application,version"])
     if flatpak_output:
         for line in flatpak_output.splitlines():
-            parts = line.split("\t", 1)
-            if not parts or not parts[0].strip():
+            parts = line.split("\t")
+            if not parts:
+                continue
+            app_name = parts[0].strip() if len(parts) > 0 else ""
+            app_id = parts[1].strip() if len(parts) > 1 else ""
+            version = parts[2].strip() if len(parts) > 2 else ""
+            name = app_name or app_id
+            if not name:
                 continue
             flatpak_entries.append({
-                "name": parts[0].strip(),
-                "version": parts[1].strip() if len(parts) > 1 else "",
+                "name": name,
+                "version": version,
                 "install_date": "",
                 "source": "flatpak",
             })
     if flatpak_entries:
         source_entries.append(flatpak_entries)
+
+    appimage_entries = []
+    appimage_output = run_command(["find", str(Path.home()), "-name", "*.AppImage"], timeout=30)
+    if appimage_output:
+        for line in appimage_output.splitlines():
+            app_path = line.strip()
+            if not app_path:
+                continue
+            appimage_entries.append({
+                "name": Path(app_path).name,
+                "version": "",
+                "install_date": "",
+                "source": "appimage",
+            })
+    if appimage_entries:
+        source_entries.append(appimage_entries)
+
+    pip_entries = []
+    pip_output = run_command(["pip3", "list", "--user", "--format=json"])
+    if pip_output:
+        try:
+            for item in json.loads(pip_output):
+                name = str(item.get("name", "")).strip()
+                if not name:
+                    continue
+                pip_entries.append({
+                    "name": name,
+                    "version": str(item.get("version", "")).strip(),
+                    "install_date": "",
+                    "source": "pip",
+                })
+        except json.JSONDecodeError:
+            pass
+    if pip_entries:
+        source_entries.append(pip_entries)
+
+    npm_entries = []
+    npm_output = run_command(["npm", "list", "-g", "--depth=0", "--json"], timeout=30)
+    if npm_output:
+        try:
+            dependencies = json.loads(npm_output).get("dependencies", {})
+            for name, item in dependencies.items():
+                normalized_name = str(name or "").strip()
+                if not normalized_name:
+                    continue
+                npm_entries.append({
+                    "name": normalized_name,
+                    "version": str((item or {}).get("version", "")).strip(),
+                    "install_date": "",
+                    "source": "npm",
+                })
+        except json.JSONDecodeError:
+            pass
+    if npm_entries:
+        source_entries.append(npm_entries)
+
+    cargo_entries = []
+    cargo_output = run_command(["cargo", "install", "--list"], timeout=30)
+    if cargo_output:
+        for line in cargo_output.splitlines():
+            if not line or line.startswith(" "):
+                continue
+            match = re.match(r"^(?P<name>[^\s]+)\s+v?(?P<version>[^:]+):$", line.strip())
+            if not match:
+                continue
+            cargo_entries.append({
+                "name": match.group("name").strip(),
+                "version": match.group("version").strip(),
+                "install_date": "",
+                "source": "cargo",
+            })
+    if cargo_entries:
+        source_entries.append(cargo_entries)
 
     prioritized = []
     regular = []
@@ -705,6 +801,75 @@ def collect_installed_software(limit):
     if len(software) < limit:
         software.extend(regular[: limit - len(software)])
     return software
+
+
+def collect_dpkg_install_dates():
+    install_dates = {}
+    log_paths = sorted(Path("/var/log").glob("dpkg.log*"))
+    for log_path in log_paths:
+        try:
+            if log_path.suffix == ".gz":
+                with gzip.open(log_path, "rt", encoding="utf-8", errors="ignore") as handle:
+                    lines = handle
+                    for line in lines:
+                        match = DPKG_INSTALL_PATTERN.match(line)
+                        if not match:
+                            continue
+                        install_dates[match.group(2).strip()] = match.group(1)
+            else:
+                for line in log_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+                    match = DPKG_INSTALL_PATTERN.match(line)
+                    if not match:
+                        continue
+                    install_dates[match.group(2).strip()] = match.group(1)
+        except OSError:
+            continue
+    return install_dates
+
+
+def collect_user_apt_packages(install_dates):
+    manual_output = run_command(["apt-mark", "showmanual"], timeout=20)
+    if not manual_output:
+        return []
+
+    system_pkg_output = run_command([
+        "apt-cache",
+        "depends",
+        "--recurse",
+        "--no-recommends",
+        "--no-suggests",
+        "ubuntu-minimal",
+        "ubuntu-standard",
+        "ubuntu-desktop-minimal",
+    ], timeout=30)
+    system_packages = set()
+    for line in system_pkg_output.splitlines():
+        value = line.strip()
+        if not value or value.startswith("<") or not re.match(r"^\w", value):
+            continue
+        system_packages.add(value)
+
+    apt_query_output = run_command(["dpkg-query", "-W", "-f=${binary:Package}\t${Version}\n"], timeout=30)
+    versions = {}
+    for line in apt_query_output.splitlines():
+        package, _, version = line.partition("\t")
+        package = package.strip()
+        if package:
+            versions[package] = version.strip()
+
+    entries = []
+    for package in sorted({line.strip() for line in manual_output.splitlines() if line.strip()}):
+        if package in system_packages:
+            continue
+        if USER_APT_EXCLUDE_PATTERN.search(package):
+            continue
+        entries.append({
+            "name": package,
+            "version": versions.get(package, ""),
+            "install_date": install_dates.get(package, ""),
+            "source": "apt",
+        })
+    return entries
 
 
 def collect_clamav_report(scan_paths, timeout):

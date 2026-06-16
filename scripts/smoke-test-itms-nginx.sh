@@ -5,6 +5,7 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BACKEND_ENV_FILE="$REPO_ROOT/backend/.env"
 BASE_URL="${BASE_URL:-}"
 SKIP_SERVICE_CHECK=0
+WITH_CHAT_SMOKE=0
 
 usage() {
   cat <<'EOF'
@@ -14,6 +15,7 @@ Usage:
 Options:
   --base-url URL           Override the nginx-served base URL to verify
   --skip-service-check     Skip systemctl nginx service checks
+  --with-chat              Also run the live chat route smoke test against the same base URL
   --help                   Show this message
 EOF
 }
@@ -38,6 +40,10 @@ parse_args() {
         ;;
       --skip-service-check)
         SKIP_SERVICE_CHECK=1
+        shift
+        ;;
+      --with-chat)
+        WITH_CHAT_SMOKE=1
         shift
         ;;
       --help|-h)
@@ -132,6 +138,11 @@ main() {
 
   log_step "Checking published Linux installer at ${resolved_base_url}/installers/install-itms-agent.sh"
   expect_http_ok "${resolved_base_url}/installers/install-itms-agent.sh" 'Linux installer'
+
+  if [[ "$WITH_CHAT_SMOKE" -eq 1 ]]; then
+    log_step 'Running live chat route smoke test'
+    bash "$REPO_ROOT/scripts/smoke-test-itms-chat-live.sh" --base-url "$resolved_base_url"
+  fi
 
   log_step 'nginx smoke test completed successfully'
 }

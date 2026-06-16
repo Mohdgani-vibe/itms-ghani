@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { buildChatChannelsUrl, buildChatMessagesUrl, deriveChatChannelActionPermissions, deriveChatPermissions, filterAvailableTeammates, filterBackupOwnerCandidates, filterEligibleChatTeammates, filterOwnerCandidates, findActiveChatChannel, hasOlderChatMessages, resolveChatMemberName, selectNextActiveChatChannelId } from './chatUtils';
+import { buildChatChannelsUrl, buildChatMessagesUrl, buildChatWorkspaceHref, buildChatWorkspaceSearch, deriveChatChannelActionPermissions, deriveChatPermissions, filterAvailableTeammates, filterBackupOwnerCandidates, filterEligibleChatTeammates, filterOwnerCandidates, findActiveChatChannel, hasOlderChatMessages, parseChatWorkspaceSearch, resolveChatMemberName, selectNextActiveChatChannelId, selectPreferredActiveChatChannelId } from './chatUtils';
 
 describe('Chat helpers', () => {
   it('derives manager and auditor permissions correctly', () => {
@@ -44,6 +44,42 @@ describe('Chat helpers', () => {
     expect(buildChatMessagesUrl('channel-42', 3)).toBe(
       '/api/chat/channels/channel-42/messages?paginate=1&page=3&page_size=100',
     );
+  });
+
+  it('builds chat workspace links with an optional channel deep link', () => {
+    expect(buildChatWorkspaceHref('/it')).toBe('/it/chat');
+    expect(buildChatWorkspaceHref('/it', 'channel-42')).toBe('/it/chat?channel=channel-42');
+  });
+
+  it('parses and rebuilds chat workspace search state', () => {
+    expect(parseChatWorkspaceSearch('?channel=channel-2&search=vpn&kind=operations&status=closed&page=3')).toEqual({
+      channelId: 'channel-2',
+      query: 'vpn',
+      kindFilter: 'operations',
+      statusFilter: 'closed',
+      channelPage: 3,
+    });
+    expect(parseChatWorkspaceSearch('?kind=invalid&status=invalid&page=0')).toEqual({
+      channelId: '',
+      query: '',
+      kindFilter: 'all',
+      statusFilter: 'open',
+      channelPage: 1,
+    });
+    expect(buildChatWorkspaceSearch({
+      channelId: 'channel-2',
+      query: 'vpn',
+      kindFilter: 'operations',
+      statusFilter: 'closed',
+      channelPage: 3,
+    })).toBe('channel=channel-2&search=vpn&kind=operations&status=closed&page=3');
+    expect(buildChatWorkspaceSearch({
+      channelId: '',
+      query: '',
+      kindFilter: 'all',
+      statusFilter: 'open',
+      channelPage: 1,
+    })).toBe('');
   });
 
   it('detects when older chat messages remain available', () => {
@@ -138,6 +174,17 @@ describe('Chat helpers', () => {
     expect(selectNextActiveChatChannelId(channels, 'channel-2')).toBe('channel-2');
     expect(selectNextActiveChatChannelId(channels, 'missing')).toBe('channel-1');
     expect(selectNextActiveChatChannelId([], 'missing')).toBe('');
+  });
+
+  it('prefers a requested channel when it is visible', () => {
+    const channels = [
+      { id: 'channel-1', name: 'Support 1', kind: 'support', members: [] },
+      { id: 'channel-2', name: 'Ops 1', kind: 'operations', members: [] },
+    ];
+
+    expect(selectPreferredActiveChatChannelId(channels, '', 'channel-2')).toBe('channel-2');
+    expect(selectPreferredActiveChatChannelId(channels, '', 'missing')).toBe('channel-1');
+    expect(selectPreferredActiveChatChannelId(channels, 'channel-1', 'missing')).toBe('channel-1');
   });
 
   it('resolves chat member names with a fallback label', () => {

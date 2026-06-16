@@ -99,11 +99,9 @@ If dependencies are missing, the helper installs them before starting preview.
 Build and install the frontend behind nginx from the repo root:
 
 ```bash
-chmod +x scripts/install-itms-nginx.sh
-./scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
-./scripts/install-itms-nginx.sh YOUR_SERVER_IP
-chmod +x scripts/smoke-test-itms-nginx.sh
-./scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
+bash scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
+bash scripts/install-itms-nginx.sh YOUR_SERVER_IP
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP
 ```
 
 Equivalent Make targets from the repo root:
@@ -133,12 +131,11 @@ After a live nginx deployment, run `scripts/smoke-test-itms-nginx.sh` to verify 
 To validate live role access across the four primary portals after deployment, run the role-matrix smoke test with the non-admin role passwords:
 
 ```bash
-chmod +x scripts/smoke-test-itms-role-matrix.sh
 API_BASE_URL=http://YOUR_SERVER_IP \
 IT_TEAM_PASSWORD='YOUR_IT_TEAM_PASSWORD' \
 AUDITOR_PASSWORD='YOUR_AUDITOR_PASSWORD' \
 EMPLOYEE_PASSWORD='YOUR_EMPLOYEE_PASSWORD' \
-./scripts/smoke-test-itms-role-matrix.sh
+bash scripts/smoke-test-itms-role-matrix.sh
 ```
 
 The role-matrix script validates expected allowed and forbidden dashboard-related API access for `super_admin`, `it_team`, `auditor`, and `employee` accounts, and exits nonzero if the live permission model drifts.
@@ -159,14 +156,13 @@ Frontend-specific implementation and bundle notes are documented in `frontend/RE
 If Docker is not installed yet, use the one-shot Ubuntu installer from the repo root:
 
 ```bash
-chmod +x scripts/install-docker-and-start-itms.sh
-./scripts/install-docker-and-start-itms.sh
+bash scripts/install-docker-and-start-itms.sh
 ```
 
 For detached startup:
 
 ```bash
-./scripts/install-docker-and-start-itms.sh --detach
+bash scripts/install-docker-and-start-itms.sh --detach
 ```
 
 If you are invoking legacy `docker-compose` v1 directly on this host and `cd backend && docker-compose up -d --build backend` fails with `KeyError: 'ContainerConfig'`, remove the stale ITMS service containers first and then recreate them. The named Postgres volume keeps the database data intact:
@@ -183,83 +179,75 @@ For normal day-to-day recovery on this host, prefer `bash scripts/start-itms.sh`
 After the stack starts, verify service and API health:
 
 ```bash
-chmod +x scripts/verify-itms-stack.sh
-./scripts/verify-itms-stack.sh --sudo
+bash scripts/verify-itms-stack.sh --sudo
 ```
 
 To verify the live Salt, Wazuh, ClamAV, and OpenSCAP workflows against the current host:
 
 ```bash
-chmod +x scripts/verify-itms-security-integrations.sh scripts/setup-itms-openscap-content.sh
-./scripts/verify-itms-security-integrations.sh
+bash scripts/verify-itms-security-integrations.sh
 ```
 
 The verifier auto-uses passwordless sudo for OpenSCAP when available. To force or disable that behavior explicitly:
 
 ```bash
-./scripts/verify-itms-security-integrations.sh --openscap-sudo always
-./scripts/verify-itms-security-integrations.sh --openscap-sudo never
+bash scripts/verify-itms-security-integrations.sh --openscap-sudo always
+bash scripts/verify-itms-security-integrations.sh --openscap-sudo never
 ```
 
 If Ubuntu or Debian package sources do not include the SCAP datastream you need, fetch it into the current user's ITMS content directory:
 
 ```bash
-chmod +x scripts/setup-itms-openscap-content.sh
-./scripts/setup-itms-openscap-content.sh --print-path
+bash scripts/setup-itms-openscap-content.sh --print-path
 ```
 
 To install a persistent host-side OpenSCAP scan timer without running the full agent bootstrap:
 
 ```bash
-chmod +x scripts/install-itms-openscap-runner.sh
-sudo ./scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
+sudo bash scripts/install-itms-openscap-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
 ```
 
 If root-level installation is not available, install a user-level OpenSCAP timer instead:
 
 ```bash
-chmod +x scripts/install-itms-openscap-user-runner.sh
-./scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
+bash scripts/install-itms-openscap-user-runner.sh --server-url http://YOUR_SERVER_IP:3001 --token "$INVENTORY_INGEST_TOKEN"
 ```
 
 To check the current OpenSCAP timer state and latest ingested OpenSCAP alert in one command:
 
 ```bash
-chmod +x scripts/check-itms-openscap-status.sh
-./scripts/check-itms-openscap-status.sh
-./scripts/check-itms-openscap-status.sh --json
+bash scripts/check-itms-openscap-status.sh
+bash scripts/check-itms-openscap-status.sh --json
 ```
 
 To run the full deployment readiness suite in one command:
 
 ```bash
-chmod +x scripts/check-itms-release-readiness.sh
-./scripts/check-itms-release-readiness.sh
-./scripts/check-itms-release-readiness.sh --with-live-integrations
+bash scripts/check-itms-release-readiness.sh
+bash scripts/check-itms-release-readiness.sh --with-live-integrations
 ```
+
+Before running the readiness suite, make sure `backend/.env` and `backend/.env.secrets` exist. The wrapper now checks those files up front because `backend/docker-compose.yml` requires both.
 
 The readiness suite now includes the Linux installer smoke test and an nginx frontend deployment dry-run.
 
 To acknowledge or resolve the latest unresolved OpenSCAP alert for this host:
 
 ```bash
-chmod +x scripts/manage-itms-openscap-alert.sh
-./scripts/manage-itms-openscap-alert.sh --action acknowledge --dry-run
-./scripts/manage-itms-openscap-alert.sh --action resolve
+bash scripts/manage-itms-openscap-alert.sh --action acknowledge --dry-run
+bash scripts/manage-itms-openscap-alert.sh --action resolve
 ```
 
 Then run the API smoke test:
 
 ```bash
-chmod +x scripts/smoke-test-itms-api.sh
-./scripts/smoke-test-itms-api.sh
+bash scripts/smoke-test-itms-api.sh
 ```
 
 To verify that the Linux bootstrap installer source, deployed web copy, and live download are still aligned:
 
 ```bash
-chmod +x scripts/smoke-test-itms-installer.sh
-./scripts/smoke-test-itms-installer.sh
+bash scripts/smoke-test-itms-installer.sh
 ```
 
 The Linux bootstrap installer now keeps Salt optional by default even when `--salt-master` is provided. If a rollout must fail when Salt cannot be installed, pass `--require-salt` or set `ITMS_REQUIRE_SALT=true` explicitly.

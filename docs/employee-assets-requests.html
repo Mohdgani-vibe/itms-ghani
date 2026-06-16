@@ -51,10 +51,10 @@
         'Other'
       ];
 
-      const SAMPLE_ASSETS = {
+      const PREVIEW_ASSETS = {
         devices: [
           {
-            id: 'device-demo-001',
+            id: 'device-preview-001',
             assetTag: 'IT-LTP-2041',
             hostname: 'blr-eng-mbp-14',
             serialNumber: 'C02ZX8X3LVDQ',
@@ -64,7 +64,7 @@
             warrantyBadge: 'healthy'
           },
           {
-            id: 'device-demo-002',
+            id: 'device-preview-002',
             assetTag: 'IT-MON-7781',
             hostname: 'dell-u2723qe-01',
             serialNumber: 'CN0Q8L7R9',
@@ -76,7 +76,7 @@
         ],
         items: [
           {
-            id: 'item-demo-001',
+            id: 'item-preview-001',
             itemCode: 'STK-HDP-221',
             name: 'USB-C Dock',
             serialNumber: 'DK44P19',
@@ -88,9 +88,9 @@
         ]
       };
 
-      const SAMPLE_REQUESTS = [
+      const PREVIEW_REQUESTS = [
         {
-          id: 'req-demo-001',
+          id: 'req-preview-001',
           type: 'Software install',
           title: 'Install JetBrains Toolbox',
           description: 'Need JetBrains Toolbox to manage IntelliJ and DataGrip updates.',
@@ -104,7 +104,7 @@
           ]
         },
         {
-          id: 'req-demo-002',
+          id: 'req-preview-002',
           type: 'Peripheral request',
           title: 'Replace damaged charger',
           description: 'Current USB-C charger overheats under load.',
@@ -158,8 +158,8 @@
         const params = useMemo(() => new URLSearchParams(window.location.search), []);
         const [apiBase, setApiBase] = useState(params.get('apiBase') || window.location.origin.replace(/\/$/, ''));
         const [token, setToken] = useState(params.get('token') || window.localStorage.getItem('itms_token') || '');
-        const [assets, setAssets] = useState(SAMPLE_ASSETS);
-        const [requests, setRequests] = useState(SAMPLE_REQUESTS);
+        const [assets, setAssets] = useState(PREVIEW_ASSETS);
+        const [requests, setRequests] = useState(PREVIEW_REQUESTS);
         const [loading, setLoading] = useState(true);
         const [submitting, setSubmitting] = useState(false);
         const [error, setError] = useState('');
@@ -195,9 +195,9 @@
             setAssets(assetData);
             setRequests(requestData);
           } catch (requestError) {
-            setAssets(SAMPLE_ASSETS);
-            setRequests(SAMPLE_REQUESTS);
-            setError(requestError instanceof Error ? `${requestError.message}. Showing sample data instead.` : 'Failed to load employee data. Showing sample data instead.');
+            setAssets(PREVIEW_ASSETS);
+            setRequests(PREVIEW_REQUESTS);
+            setError(requestError instanceof Error ? `${requestError.message}. Showing preview data instead.` : 'Failed to load employee data. Showing preview data instead.');
           } finally {
             setLoading(false);
           }
@@ -291,8 +291,8 @@
                       <button type="submit" className="rounded-2xl bg-orange-400 px-5 py-3 text-sm font-extrabold text-slate-950 transition hover:bg-orange-300">
                         Reload Live Data
                       </button>
-                      <button type="button" onClick={() => { setAssets(SAMPLE_ASSETS); setRequests(SAMPLE_REQUESTS); setLoading(false); setError(''); }} className="rounded-2xl border border-slate-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800">
-                        Use Sample Data
+                      <button type="button" onClick={() => { setAssets(PREVIEW_ASSETS); setRequests(PREVIEW_REQUESTS); setLoading(false); setError(''); }} className="rounded-2xl border border-slate-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800">
+                        Use Preview Data
                       </button>
                     </div>
                   </div>

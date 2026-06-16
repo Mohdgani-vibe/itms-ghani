@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ITMS New Server Installation Guide</title>
+  <style>
+    :root {
+      --ink: #13212b;
+      --muted: #5b6b73;
+      --line: #d6dde2;
+      --paper: #ffffff;
+      --accent: #0f6a73;
+      --accent-soft: #e8f5f3;
+      --warn: #6e4d00;
+      --warn-soft: #fff6da;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background: #eef2f4;
+      line-height: 1.45;
+    }
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 12mm auto;
+      background: var(--paper);
+      padding: 16mm;
+      box-shadow: 0 8px 30px rgba(19,33,43,.12);
+    }
+    h1, h2, h3 { margin: 0 0 8px; line-height: 1.15; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 18px; margin-top: 20px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    h3 { font-size: 14px; margin-top: 14px; }
+    p { margin: 8px 0; }
+    .lede { color: var(--muted); font-size: 14px; }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin: 10px 0;
+      background: #fcfdfd;
+    }
+    .accent { background: var(--accent-soft); border-color: #bfded9; }
+    .warn { background: var(--warn-soft); border-color: #ead7a1; }
+    code, pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 12px;
+    }
+    pre {
+      margin: 8px 0 0;
+      white-space: pre-wrap;
+      background: #f6f8f9;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px;
+      overflow-wrap: anywhere;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 7px 8px;
+      vertical-align: top;
+      text-align: left;
+    }
+    th { background: #f1f5f7; }
+    ul { margin: 8px 0 0 18px; padding: 0; }
+    li { margin: 4px 0; }
+    .footer { margin-top: 24px; font-size: 11px; color: var(--muted); }
+    @page { size: A4; margin: 12mm; }
+    @media print {
+      body { background: white; }
+      .page { margin: 0; width: auto; min-height: auto; box-shadow: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <h1>ITMS New Server Installation Guide</h1>
+    <p class="lede">Repo-native deployment checklist for a fresh Ubuntu host running the full ITMS stack: backend, Postgres, nginx frontend, Salt, Wazuh, ClamAV, and OpenSCAP.</p>
+
+      <section class="card accent">
+    <h2>Quick Start</h2>
+    <p>Use this minimal flow when you just want the shortest copy-paste path on a fresh server.</p>
+    <h3>1. Install prerequisites</h3>
+    <pre>sudo apt-get update
+  sudo apt-get install -y git curl ca-certificates
+  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+  sudo apt-get install -y nodejs</pre>
+    <h3>2. Clone the repository</h3>
+    <pre>git clone https://github.com/Mohdgani-vibe/zerodha-itms.git /home/itms/itms
+  cd /home/itms/itms</pre>
+    <h3>3. Run the single installer</h3>
+    <pre>SERVER_IP=YOUR_SERVER_IP \
+  SERVER_NAME=YOUR_DOMAIN_OR_IP \
+  DEFAULT_ADMIN_PASSWORD='YOUR_STRONG_ADMIN_PASSWORD' \
+  JWT_SECRET='YOUR_LONG_RANDOM_JWT_SECRET' \
+  SALT_API_PASSWORD='YOUR_STRONG_SALT_PASSWORD' \
+  WAZUH_API_PASSWORD='YOUR_STRONG_WAZUH_PASSWORD' \
+  bash docs/install-itms-all-in-one.sh</pre>
+      </section>
+
+    <section class="card accent">
+      <h2>Before You Start</h2>
+      <p>Use a fresh Ubuntu server with outbound internet access and a sudo-capable user account.</p>
+      <ul>
+        <li>Required before cloning: <strong>git</strong>, <strong>curl</strong>, <strong>ca-certificates</strong></li>
+        <li>Required before frontend deployment: <strong>Node.js 22+</strong> and <strong>npm</strong></li>
+        <li>Installed by the repo scripts: Docker Engine, Docker Compose plugin, nginx, Salt, Wazuh, OpenSCAP packages, and optionally ClamAV</li>
+        <li>Open inbound port <strong>80</strong> for the web UI. Use <strong>SERVER_NAME</strong> when serving by domain instead of raw IP.</li>
+      </ul>
+    </section>
+
+    <section class="card accent">
+      <h2>Seeded Login</h2>
+      <p>For a fresh database, the seeded super admin user is <strong>admin@zerodha.com</strong>.</p>
+      <p>The password is the value of <strong>DEFAULT_ADMIN_PASSWORD</strong> from <strong>backend/.env.secrets</strong> at first startup.</p>
+    </section>
+
+    <section class="card accent">
+      <h2>Any IP Support</h2>
+      <p>The all-in-one installer works on any server IP. By default it auto-detects the host IP and uses that value for backend and frontend configuration.</p>
+      <p>If you want a specific IP or domain, run it with <strong>SERVER_IP</strong> and optionally <strong>SERVER_NAME</strong>.</p>
+      <pre>SERVER_IP=YOUR_SERVER_IP SERVER_NAME=YOUR_DOMAIN_OR_IP bash docs/install-itms-all-in-one.sh</pre>
+    </section>
+
+    <section>
+      <h2>Repository</h2>
+      <pre>sudo apt-get update
+sudo apt-get install -y git curl ca-certificates</pre>
+      <pre>curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs</pre>
+      <pre>git clone https://github.com/Mohdgani-vibe/zerodha-itms.git /home/itms/itms</pre>
+      <pre>cd /home/itms/itms</pre>
+    </section>
+
+    <section>
+      <h2>Single File Install</h2>
+      <pre>cd /home/itms/itms
+SERVER_IP=YOUR_SERVER_IP \
+SERVER_NAME=YOUR_DOMAIN_OR_IP \
+DEFAULT_ADMIN_PASSWORD='YOUR_STRONG_ADMIN_PASSWORD' \
+JWT_SECRET='YOUR_LONG_RANDOM_JWT_SECRET' \
+SALT_API_PASSWORD='YOUR_STRONG_SALT_PASSWORD' \
+WAZUH_API_PASSWORD='YOUR_STRONG_WAZUH_PASSWORD' \
+bash docs/install-itms-all-in-one.sh</pre>
+      <p>If <code>SERVER_IP</code> is omitted, the script tries to detect the current host IP automatically.</p>
+    </section>
+
+    <section>
+      <h2>Config Files To Update</h2>
+      <p>On a new server, only two backend config files must be set before first startup.</p>
+      <ul>
+        <li><strong>backend/.env</strong>: public URL, frontend origin, admin email and name, Salt host, Wazuh host</li>
+        <li><strong>backend/.env.secrets</strong>: admin password, JWT secret, Salt API password, Wazuh API password</li>
+      </ul>
+      <p>If you use <code>docs/install-itms-all-in-one.sh</code>, the script writes both files for you from the environment variables you pass to it.</p>
+    </section>
+
+    <section>
+      <h2>Required Files</h2>
+      <h3>backend/.env</h3>
+      <pre>BACKEND_ADDR=:3001
+PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
+FRONTEND_ORIGIN=http://YOUR_SERVER_IP
+DEFAULT_ADMIN_EMAIL=admin@zerodha.com
+DEFAULT_ADMIN_NAME=ITMS Admin
+SALT_MASTER_HOST=YOUR_SERVER_IP
+WAZUH_MANAGER_HOST=YOUR_SERVER_IP</pre>
+      <h3>backend/.env.secrets</h3>
+      <pre>DEFAULT_ADMIN_PASSWORD=YOUR_STRONG_ADMIN_PASSWORD
+JWT_SECRET=YOUR_LONG_RANDOM_JWT_SECRET
+SALT_API_PASSWORD=YOUR_STRONG_SALT_PASSWORD
+WAZUH_API_PASSWORD=YOUR_STRONG_WAZUH_PASSWORD</pre>
+      <div class="card warn">
+        <strong>Password policy</strong>
+        <ul>
+          <li>At least 12 characters</li>
+          <li>At least one uppercase letter</li>
+          <li>At least one lowercase letter</li>
+          <li>At least one number</li>
+          <li>At least one symbol</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Installation Commands</h2>
+      <h3>1. Start backend and Postgres</h3>
+      <pre>cd /home/itms/itms
+bash scripts/install-docker-and-start-itms.sh --detach</pre>
+      <h3>2. Verify stack health</h3>
+      <pre>cd /home/itms/itms
+bash scripts/verify-itms-stack.sh --sudo</pre>
+      <h3>3. Publish frontend behind nginx</h3>
+      <pre>cd /home/itms/itms
+bash scripts/install-itms-nginx.sh YOUR_DOMAIN_OR_IP
+bash scripts/smoke-test-itms-nginx.sh --base-url http://YOUR_SERVER_IP</pre>
+      <h3>4. Install security integrations</h3>
+      <pre>cd /home/itms/itms
+sudo ITMS_ROOT=/home/itms/itms \
+  SALT_API_PASSWORD='YOUR_STRONG_SALT_PASSWORD' \
+  WAZUH_API_PASSWORD='YOUR_STRONG_WAZUH_PASSWORD' \
+  bash scripts/install-itms-server-integrations.sh</pre>
+      <h3>5. Reload backend configuration</h3>
+      <pre>cd /home/itms/itms
+docker compose -f backend/docker-compose.yml up -d --force-recreate backend</pre>
+      <h3>6. Install ClamAV for full verification</h3>
+      <pre>apt-get update
+apt-get install -y clamav clamav-daemon || true</pre>
+    </section>
+
+    <section>
+      <h2>Validation Commands</h2>
+      <pre>cd /home/itms/itms
+bash scripts/smoke-test-itms-api.sh
+bash scripts/verify-itms-security-integrations.sh --wazuh-agent-id 000</pre>
+      <p>Expected result: both scripts complete successfully, with SSH checks skipped if the SSH terminal is intentionally not configured.</p>
+    </section>
+
+    <section>
+      <h2>Admin Password Recovery</h2>
+      <p>If the database already existed and the env password changed later, the admin password must be synced explicitly.</p>
+      <pre>cd /home/itms/itms/backend
+docker run --rm \
+  --network backend_default \
+  -v "$PWD":/src \
+  -w /src \
+  --env-file .env \
+  --env-file .env.secrets \
+  -e 'DATABASE_URL=postgres://postgres:postgres@postgres:5432/itms?sslmode=disable' \
+  golang:1.23 \
+  /usr/local/go/bin/go run ./cmd/sync_default_admin_password</pre>
+      <p>Expected output: <code>Updated password hash for admin@zerodha.com.</code></p>
+    </section>
+
+    <section>
+      <h2>API Login Test</h2>
+      <pre>curl -sS -X POST http://127.0.0.1:3001/api/auth/login \
+  -H 'Content-Type: application/json' \
+  --data '{"email":"admin@zerodha.com","password":"YOUR_STRONG_ADMIN_PASSWORD"}'</pre>
+      <p>Expected result: a JSON payload with <code>token</code> and a <code>super_admin</code> user object.</p>
+    </section>
+
+    <section>
+      <h2>Todo Checklist</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Task</th><th>Done when</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Clone repo into <code>/home/itms/itms</code></td><td>Repo files are present on the server</td></tr>
+          <tr><td>2</td><td>Install git, curl, and Node.js 22+</td><td>The host can clone the repo and build the frontend</td></tr>
+          <tr><td>3</td><td>Create <code>backend/.env.secrets</code></td><td>Strong secrets are set before first startup</td></tr>
+          <tr><td>4</td><td>Create <code>backend/.env</code></td><td>Server IP or domain and admin values are set</td></tr>
+          <tr><td>5</td><td>Run Docker installer</td><td>Backend and Postgres containers are healthy</td></tr>
+          <tr><td>6</td><td>Deploy nginx frontend</td><td>Login page opens on the target IP or domain</td></tr>
+          <tr><td>7</td><td>Install Salt, Wazuh, OpenSCAP</td><td>Host services are running and backend env updated</td></tr>
+          <tr><td>8</td><td>Install ClamAV</td><td>Security verification can include ClamAV</td></tr>
+          <tr><td>9</td><td>Run smoke test</td><td>Core API checks complete successfully</td></tr>
+          <tr><td>10</td><td>Run security verification</td><td>Salt, Wazuh, ClamAV, and OpenSCAP verify successfully</td></tr>
+          <tr><td>11</td><td>Log in as admin</td><td>UI or API login works for <code>admin@zerodha.com</code></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <p class="footer">Generated from the current repo workflow on June 8, 2026. Source scripts: scripts/install-docker-and-start-itms.sh, scripts/install-itms-nginx.sh, scripts/install-itms-server-integrations.sh, scripts/smoke-test-itms-api.sh, scripts/verify-itms-security-integrations.sh.</p>
+  </main>
+</body>
+</html>

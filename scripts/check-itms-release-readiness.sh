@@ -21,6 +21,15 @@ log_step() {
   printf '\n[check-itms-release-readiness] %s\n' "$*"
 }
 
+require_file() {
+  local file_path="$1"
+
+  if [[ ! -f "$file_path" ]]; then
+    echo "Missing required file: $file_path" >&2
+    exit 1
+  fi
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -50,30 +59,37 @@ main() {
 
   cd "$REPO_ROOT"
 
+  log_step 'Checking required backend environment files'
+  require_file "$REPO_ROOT/backend/.env"
+  require_file "$REPO_ROOT/backend/.env.secrets"
+
   log_step 'Checking Docker stack health'
-  ./scripts/verify-itms-stack.sh
+  bash "$REPO_ROOT/scripts/verify-itms-stack.sh"
 
   log_step 'Running authenticated API smoke test'
-  ./scripts/smoke-test-itms-api.sh
+  bash "$REPO_ROOT/scripts/smoke-test-itms-api.sh"
 
   log_step 'Checking server integration readiness'
-  ./scripts/check-itms-server-integrations.sh
+  bash "$REPO_ROOT/scripts/check-itms-server-integrations.sh"
 
   log_step 'Checking integration API secrets'
-  ./scripts/rotate-itms-api-secrets.sh --check-only
+  bash "$REPO_ROOT/scripts/rotate-itms-api-secrets.sh" --check-only
 
   log_step 'Running Linux installer smoke test'
-  ./scripts/smoke-test-itms-installer.sh
+  bash "$REPO_ROOT/scripts/smoke-test-itms-installer.sh"
+
+  log_step 'Running chat route smoke test'
+  bash "$REPO_ROOT/scripts/smoke-test-itms-chat.sh" --skip-build
 
   log_step 'Running nginx frontend deploy dry-run'
-  ./scripts/install-itms-nginx.sh --dry-run YOUR_SERVER_IP
+  bash "$REPO_ROOT/scripts/install-itms-nginx.sh" --dry-run YOUR_SERVER_IP
 
   if [[ "$RUN_LIVE_INTEGRATIONS" -eq 1 ]]; then
     log_step 'Running live integration verification'
     if [[ -n "$LIVE_WAZUH_AGENT_ID" ]]; then
-      ./scripts/verify-itms-security-integrations.sh --wazuh-agent-id "$LIVE_WAZUH_AGENT_ID"
+      bash "$REPO_ROOT/scripts/verify-itms-security-integrations.sh" --wazuh-agent-id "$LIVE_WAZUH_AGENT_ID"
     else
-      ./scripts/verify-itms-security-integrations.sh
+      bash "$REPO_ROOT/scripts/verify-itms-security-integrations.sh"
     fi
   fi
 

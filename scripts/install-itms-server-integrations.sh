@@ -14,6 +14,8 @@ SALT_API_PORT="${SALT_API_PORT:-8000}"
 SALT_API_EAUTH="${SALT_API_EAUTH:-file}"
 SALT_API_USER="${SALT_API_USER:-itms-salt}"
 SALT_API_PASSWORD="${SALT_API_PASSWORD:-}"
+LOCAL_SALT_MASTER_HOST="${LOCAL_SALT_MASTER_HOST:-127.0.0.1}"
+SALT_MINION_ID="${SALT_MINION_ID:-$(hostname -s 2>/dev/null || hostname)}"
 SALT_API_AUTH_FILE="${SALT_API_AUTH_FILE:-/etc/salt/itms-api-users.conf}"
 SALT_REPO_FILE="/etc/apt/sources.list.d/salt.sources"
 SALT_REPO_KEYRING="/etc/apt/keyrings/salt-archive-keyring.pgp"
@@ -79,6 +81,16 @@ fix_salt_config_permissions() {
   fi
 }
 
+write_local_salt_minion_config() {
+  install -d -m 0755 /etc/salt/minion.d
+  printf '%s\n' "$SALT_MINION_ID" >/etc/salt/minion_id
+  rm -f /etc/salt/minion.d/zz-itms-local-master.conf
+  cat >/etc/salt/minion.d/itms.conf <<EOF
+master: ${LOCAL_SALT_MASTER_HOST}
+id: ${SALT_MINION_ID}
+EOF
+}
+
 write_salt_auth_config() {
   install -m 600 /dev/null "$SALT_API_AUTH_FILE"
   printf '%s:%s\n' "$SALT_API_USER" "$SALT_API_PASSWORD" >"$SALT_API_AUTH_FILE"
@@ -99,6 +111,7 @@ external_auth:
     ^filename: ${SALT_API_AUTH_FILE}
     ${SALT_API_USER}:
       - '@jobs'
+      - '@wheel'
       - test.ping
       - cmd.run_all
       - state.apply
@@ -210,6 +223,7 @@ fi
 ensure_salt_api_user
 
 write_salt_auth_config
+write_local_salt_minion_config
 fix_salt_config_permissions
 
 systemctl enable --now salt-master
@@ -220,6 +234,9 @@ if ! systemctl enable --now salt-api; then
   systemctl restart salt-master
   systemctl restart salt-api
 fi
+systemctl enable --now salt-minion
+systemctl restart salt-minion
+salt-key -y -a "$SALT_MINION_ID" >/dev/null 2>&1 || true
 
 if [[ "$INSTALL_WAZUH_MANAGER" == "true" ]]; then
   curl -fsSL https://packages.wazuh.com/key/GPG-KEY-WAZUH | gpg --dearmor >/usr/share/keyrings/wazuh.gpg
@@ -242,14 +259,14 @@ EOF
   elif [[ -f /var/ossec/api/configuration/security/rbac.db ]]; then
     WAZUH_API_PASSWORD="$WAZUH_API_PASSWORD" /var/ossec/framework/python/bin/python3 - <<'EOF'
 import asyncio
-  import os
+import os
 from wazuh.security import update_user
 from wazuh.core.cluster import utils as cluster_utils
 
 async def main():
     response = await cluster_utils.forward_function(
         update_user,
-      f_kwargs={'user_id': '1', 'password': os.environ['WAZUH_API_PASSWORD']},
+        f_kwargs={'user_id': '1', 'password': os.environ['WAZUH_API_PASSWORD']},
         request_type='local_master',
     )
     if isinstance(response, Exception):

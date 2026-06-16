@@ -2,9 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Briefcase, Building2, IdCard, Laptop, Mail, MapPin, Save, ShieldCheck } from 'lucide-react';
 import { apiRequest } from '../../lib/api';
+import type { ChatChannel, PaginatedChatChannelsResponse } from '../../components/chat/types';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import { sortByRecentChatActivity } from '../../lib/chat';
 import { getPreferredPortalPath, getShortName, getStoredSession, normalizeAuthUser, setStoredSession } from '../../lib/session';
 import { isProbeLikeUser } from '../../lib/userVisibility';
+import RecentChatPanel from './RecentChatPanel';
+import { buildRecentChatPanelItems } from './dashboardPageUtils';
 
 interface UserRecord {
   id: string;
@@ -50,11 +54,13 @@ export default function UserProfilePage() {
   const navigate = useNavigate();
   const location = useLocation();
   const session = getStoredSession();
-  const portalMatch = location.pathname.match(/^\/(admin|it|emp)(?:\/|$)/);
+  const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/);
   const basePath = portalMatch ? `/${portalMatch[1]}` : '/emp';
   const isSelfProfileRoute = location.pathname === '/emp/profile';
+  const isAuditor = session?.user.role === 'auditor';
   const targetUserId = id || (isSelfProfileRoute ? session?.user.id : undefined);
   const [user, setUser] = useState<UserRecord | null>(null);
+  const [recentChats, setRecentChats] = useState<ChatChannel[]>([]);
   const [options, setOptions] = useState<UserOptionsResponse>({ roles: [], departments: [], branches: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -84,15 +90,18 @@ export default function UserProfilePage() {
         setLoading(true);
         setError('');
 
-        const [userData, optionsData, assetsData] = await Promise.all([
-          apiRequest<ApiUserRecord>(isSelfProfileRoute ? '/api/me/profile' : `/api/users/${targetUserId}`),
+        const [userData, optionsData, assetsData, chatData] = await Promise.all([
+          apiRequest<ApiUserRecord>(isSelfProfileRoute ? '/api/me/profile' : '/api/users/' + targetUserId),
           apiRequest<UserOptionsResponse>('/api/users/meta/options'),
-          apiRequest<UserAssetsResponse>(isSelfProfileRoute ? '/api/me/assets' : `/api/users/${targetUserId}/assets`),
+          apiRequest<UserAssetsResponse>(isSelfProfileRoute ? '/api/me/assets' : '/api/users/' + targetUserId + '/assets'),
+          apiRequest<PaginatedChatChannelsResponse>('/api/chat/channels?paginate=1&page=1&page_size=10').catch(() => ({ items: [], total: 0, page: 1, pageSize: 10 })),
         ]);
 
         if (cancelled) {
           return;
         }
+
+        const profileChats = sortByRecentChatActivity((chatData.items || []).filter((channel) => channel.members.some((member) => member.id === userData.id)));
 
         setUser({
           id: userData.id,
@@ -124,6 +133,7 @@ export default function UserProfilePage() {
             })),
           ],
         });
+        setRecentChats(profileChats);
         setOptions(optionsData);
         setFormState({
           fullName: userData.full_name,
@@ -242,6 +252,7 @@ export default function UserProfilePage() {
   }
 
   const assetCount = user.assets?.length ?? 0;
+  const recentChatItems = buildRecentChatPanelItems(recentChats);
   const isProbeUser = isProbeLikeUser(user);
   const roleLabel = (user.role?.name || 'Employee').replaceAll('_', ' ');
   const statusClassName = user.status === 'active' ? 'bg-emerald-100 text-emerald-700 ring-emerald-200' : 'bg-zinc-200 text-zinc-700 ring-zinc-300';
@@ -249,8 +260,27 @@ export default function UserProfilePage() {
     { label: 'Employee ID', value: user.employeeCode, icon: IdCard },
     { label: 'Department', value: user.department?.name || 'Unassigned', icon: Building2 },
     { label: 'Role', value: roleLabel, icon: ShieldCheck },
-    { label: 'Assets', value: `${assetCount}`, icon: Laptop },
+    { label: 'Assets', value: String(assetCount), icon: Laptop },
   ];
+  const recentChatPanel = isSelfProfileRoute
+    ? {
+        eyebrow: 'Recent Chats',
+        title: 'My Support Chats',
+        description: 'Latest support conversations and replies tied to your employee account.',
+        actionLabel: 'Open My Chat',
+        totalLabel: 'visible chats',
+        loadingText: 'Loading your recent chat activity...',
+        emptyText: 'You have no recent chat activity yet.',
+      }
+    : {
+        eyebrow: 'Recent Chats',
+        title: 'User Chat Activity',
+        description: 'Latest support conversations and portal threads linked to ' + user.fullName + '.',
+        actionLabel: 'Open Chat',
+        totalLabel: 'visible channels',
+        loadingText: 'Loading recent chat activity...',
+        emptyText: user.fullName + ' has no recent chat activity yet.',
+      };
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-4 xl:px-2">
@@ -320,7 +350,18 @@ export default function UserProfilePage() {
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-sm text-rose-700">{error}</div> : null}
       {isProbeUser ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">This is a synthetic probe or smoke-test profile. It is kept only for history and should not be treated as a real employee account.</div> : null}
+      {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-900">Auditor access is read-only on user profiles. You can review identity, access, location, and assigned assets here, but profile edits and asset changes are disabled.</div> : null}
       {!canEditProfile ? <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-800">This profile cannot be edited from your current session.</div> : null}
+
+      {!isAuditor ? (
+        <RecentChatPanel
+          basePath={basePath}
+          loading={false}
+          total={recentChats.length}
+          panel={recentChatPanel}
+          items={recentChatItems}
+        />
+      ) : null}
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="rounded-[24px] border border-zinc-200 bg-white p-6 shadow-sm">

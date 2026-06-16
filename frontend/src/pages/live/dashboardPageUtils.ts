@@ -1,3 +1,4 @@
+import { chatPreviewText, type ChatLatestMessageLike } from '../../lib/chat';
 import type { PatchRunReportSummary } from '../../lib/patchReports';
 import { assetPresenceState } from '../../components/users/userDisplayUtils';
 
@@ -160,6 +161,26 @@ export function buildPatchTrend(reports: PatchRunReportSummary[], days: TrendWin
   };
 }
 
+interface RecentChatPanelItem extends SimpleItem {
+  latestMessage?: ChatLatestMessageLike;
+}
+
+function formatChatBadge(item: RecentChatPanelItem) {
+  if (item.status === 'closed') {
+    return 'Closed';
+  }
+  if (item.status === 'open') {
+    return 'Open';
+  }
+  if (item.kind === 'support') {
+    return 'Support';
+  }
+  if (item.kind === 'operations') {
+    return 'Operations';
+  }
+  return item.kind || undefined;
+}
+
 export function sumValuesForMonth(values: Array<string | null | undefined>, monthOffset = 0) {
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
@@ -317,4 +338,19 @@ export function countOfflineUsersFromDevices(devices: SimpleItem[]) {
   });
 
   return Array.from(userPresence.values()).filter((entry) => entry.hasOffline && !entry.hasRecent).length;
+}
+
+export function buildRecentChatPanelItems(chats: RecentChatPanelItem[]) {
+  return chats.map((item) => {
+    const fallbackLabel = item.kind ? `${item.kind} chat channel` : 'Chat channel';
+    const latestCreatedAt = item.latestMessage?.createdAt;
+
+    return {
+      id: item.id,
+      title: item.title || item.name || item.fullName || item.full_name || 'Untitled chat',
+      meta: chatPreviewText(item.latestMessage, fallbackLabel),
+      timestamp: latestCreatedAt ? formatRelativeWhen(latestCreatedAt) : 'Waiting for activity',
+      badge: formatChatBadge(item),
+    };
+  });
 }

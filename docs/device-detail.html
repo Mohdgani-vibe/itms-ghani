@@ -42,8 +42,8 @@
     <script type="text/babel">
       const { useEffect, useMemo, useState } = React;
 
-      const SAMPLE_DEVICE = {
-        id: 'device-demo-001',
+      const PREVIEW_DEVICE = {
+        id: 'device-preview-001',
         assetId: 'IT-LTP-2041',
         hostname: 'blr-eng-mbp-14',
         serialNumber: 'C02ZX8X3LVDQ',
@@ -57,7 +57,7 @@
         alertStatus: 'healthy',
         complianceScore: 96,
         user: {
-          id: 'user-demo-001',
+          id: 'user-preview-001',
           fullName: 'Anika Rao',
           email: 'anika.rao@example.com',
           employeeCode: 'ZR8421'
@@ -137,7 +137,7 @@
         const [deviceId, setDeviceId] = useState(params.get('id') || '');
         const [apiBase, setApiBase] = useState(params.get('apiBase') || window.location.origin.replace(/\/$/, ''));
         const [token, setToken] = useState(params.get('token') || window.localStorage.getItem('itms_token') || '');
-        const [device, setDevice] = useState(deviceId ? null : SAMPLE_DEVICE);
+        const [device, setDevice] = useState(deviceId ? null : PREVIEW_DEVICE);
         const [loading, setLoading] = useState(Boolean(deviceId));
         const [error, setError] = useState('');
 
@@ -145,7 +145,7 @@
 
         async function loadDevice(id) {
           if (!id) {
-            setDevice(SAMPLE_DEVICE);
+            setDevice(PREVIEW_DEVICE);
             setError('');
             setLoading(false);
             return;
@@ -164,8 +164,8 @@
 
             setDevice(payload);
           } catch (requestError) {
-            setDevice(SAMPLE_DEVICE);
-            setError(requestError instanceof Error ? `${requestError.message}. Showing sample data instead.` : 'Failed to load device. Showing sample data instead.');
+            setDevice(PREVIEW_DEVICE);
+            setError(requestError instanceof Error ? `${requestError.message}. Showing preview data instead.` : 'Failed to load device. Showing preview data instead.');
           } finally {
             setLoading(false);
           }
@@ -208,7 +208,7 @@
                     {sentence(device?.hostname, 'Unknown device')}
                   </h1>
                   <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 sm:text-base">
-                    Standalone React 18 device detail page. Pass <span className="font-bold text-slate-900">?id=DEVICE_ID</span> to fetch live data from the API, or open it as-is to preview the embedded sample state.
+                    Standalone React 18 device detail page. Pass <span className="font-bold text-slate-900">?id=DEVICE_ID</span> to fetch live data from the API, or open it as-is to preview the embedded fallback state.
                   </p>
 
                   <div className="mt-6 flex flex-wrap items-center gap-3 text-sm text-slate-600">
@@ -229,7 +229,7 @@
                   <div className="mt-5 space-y-4">
                     <label className="block">
                       <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-400">Device Id</span>
-                      <input value={deviceId} onChange={(event) => setDeviceId(event.target.value)} placeholder="example: device-demo-001" className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400" />
+                      <input value={deviceId} onChange={(event) => setDeviceId(event.target.value)} placeholder="example: device-preview-001" className="w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm text-white outline-none transition focus:border-cyan-400" />
                     </label>
                     <label className="block">
                       <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-slate-400">API Base</span>
@@ -243,8 +243,8 @@
                       <button type="submit" className="rounded-2xl bg-cyan-400 px-5 py-3 text-sm font-extrabold text-slate-950 transition hover:bg-cyan-300">
                         Load Device
                       </button>
-                      <button type="button" onClick={() => { setDeviceId(''); setDevice(SAMPLE_DEVICE); setError(''); setLoading(false); }} className="rounded-2xl border border-slate-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800">
-                        Use Sample Data
+                      <button type="button" onClick={() => { setDeviceId(''); setDevice(PREVIEW_DEVICE); setError(''); setLoading(false); }} className="rounded-2xl border border-slate-700 px-5 py-3 text-sm font-extrabold text-white transition hover:bg-slate-800">
+                        Use Preview Data
                       </button>
                     </div>
                   </div>

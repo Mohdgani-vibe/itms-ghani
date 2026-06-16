@@ -314,7 +314,14 @@ func seedRolesAndPermissions(db *sql.DB) error {
 
 func seedDefaultAdmin(db *sql.DB, config app.Config, hashPassword PasswordHasher) error {
 	var exists bool
-	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)`, strings.ToLower(config.DefaultAdminEmail)).Scan(&exists); err != nil {
+	if err := db.QueryRow(`
+		SELECT EXISTS(
+			SELECT 1
+			FROM users u
+			LEFT JOIN roles r ON r.id = u.role_id
+			WHERE lower(u.email) = $1 OR r.name = 'super_admin'
+		)
+	`, strings.ToLower(config.DefaultAdminEmail)).Scan(&exists); err != nil {
 		return fmt.Errorf("check default admin: %w", err)
 	}
 	if exists {
