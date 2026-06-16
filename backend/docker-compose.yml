@@ -1,16 +1,15 @@
-version: "3.9"
+version: '3.8'
 
 services:
   postgres:
-    image: postgres:16
+    image: postgres:15-alpine
     container_name: zerodha-itms-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-itms}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-itms}
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -37,10 +36,6 @@ services:
       BACKEND_ADDR: :3001
     ports:
       - "3001:3001"
-    volumes:
-      - ${SSH_TERMINAL_PRIVATE_KEY_PATH:-/dev/null}:${SSH_TERMINAL_PRIVATE_KEY_PATH:-/dev/null}:ro
-      - ${SSH_TERMINAL_CERTIFICATE_PATH:-/dev/null}:${SSH_TERMINAL_CERTIFICATE_PATH:-/dev/null}:ro
-      - ${SSH_TERMINAL_KNOWN_HOSTS_PATH:-/dev/null}:${SSH_TERMINAL_KNOWN_HOSTS_PATH:-/dev/null}:ro
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:3001/api/health >/dev/null || exit 1"]
       interval: 10s
