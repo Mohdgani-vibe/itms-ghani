@@ -1,4 +1,5 @@
 FROM golang:1.23 AS build
+ENV GOTOOLCHAIN=auto
 WORKDIR /app
 
 COPY go.mod go.sum ./

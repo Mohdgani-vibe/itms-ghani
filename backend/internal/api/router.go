@@ -990,11 +990,18 @@ func loadInstallerScript(fileName string) ([]byte, error) {
 func (server *apiServer) registerAuthRoutes(api *gin.RouterGroup) {
 	api.GET("/auth/providers", server.authProviders)
 	api.POST("/auth/login", server.login)
+	api.POST("/auth/login/verify-mfa", server.loginVerifyMFA)
 	api.POST("/auth/google", server.loginWithGoogleIDToken)
 	api.GET("/auth/google", server.googleRedirect)
 	api.GET("/auth/google/callback", server.googleCallback)
 	api.POST("/auth/logout", server.logout)
 	api.GET("/auth/me", middleware.AuthRequired(server.auth), server.me)
+	
+	// MFA endpoints (require authentication)
+	api.POST("/auth/mfa/setup", middleware.AuthRequired(server.auth), server.setupMFA)
+	api.POST("/auth/mfa/verify", middleware.AuthRequired(server.auth), server.verifyMFA)
+	api.POST("/auth/mfa/disable", middleware.AuthRequired(server.auth), server.disableMFA)
+	api.GET("/auth/mfa/status", middleware.AuthRequired(server.auth), server.getMFAStatus)
 }
 
 func (server *apiServer) authProviders(c *gin.Context) {
@@ -1050,6 +1057,19 @@ func (server *apiServer) login(c *gin.Context) {
 		return
 	}
 
+	// Check if MFA is enabled
+	if user.MFAEnabled {
+		// Password verified, but MFA required - don't issue token yet
+		server.authLimiter.Reset(limiterKey)
+		httpx.JSON(c, http.StatusOK, gin.H{
+			"mfaRequired": true,
+			"email":       user.Email,
+			"message":     "MFA verification required",
+		})
+		return
+	}
+
+	// No MFA - issue token immediately
 	server.authLimiter.Reset(limiterKey)
 	server.issueAuthResponse(c, user, "password")
 }
@@ -5935,16 +5955,19 @@ func (server *apiServer) exportAudit(c *gin.Context) {
 }
 
 type dbUser struct {
-	ID           string
-	EmpID        string
-	FullName     string
-	Email        string
-	EntityID     string
-	DeptID       string
-	LocationID   string
-	Role         string
-	PasswordHash string
-	IsActive     bool
+	ID             string
+	EmpID          string
+	FullName       string
+	Email          string
+	EntityID       string
+	DeptID         string
+	LocationID     string
+	Role           string
+	PasswordHash   string
+	IsActive       bool
+	MFAEnabled     bool
+	TOTPSecret     sql.NullString
+	MFABackupCodes []string
 }
 
 type dbAsset struct {
@@ -5988,10 +6011,12 @@ func (server *apiServer) fetchUser(predicate string, arg string) (dbUser, error)
 	var locationID sql.NullString
 	var passwordHash sql.NullString
 	err := server.db.QueryRow(`
-		SELECT u.id, u.emp_id, u.full_name, u.email, u.entity_id::text, u.dept_id::text, u.location_id::text, r.name, u.password_hash, u.is_active
+		SELECT u.id, u.emp_id, u.full_name, u.email, u.entity_id::text, u.dept_id::text, u.location_id::text, r.name, u.password_hash, u.is_active,
+		       COALESCE(u.mfa_enabled, false), u.totp_secret, COALESCE(u.mfa_backup_codes, '{}')
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
-		`+predicate, arg).Scan(&user.ID, &user.EmpID, &user.FullName, &user.Email, &entityID, &deptID, &locationID, &user.Role, &passwordHash, &user.IsActive)
+		`+predicate, arg).Scan(&user.ID, &user.EmpID, &user.FullName, &user.Email, &entityID, &deptID, &locationID, &user.Role, &passwordHash, &user.IsActive,
+		&user.MFAEnabled, &user.TOTPSecret, &user.MFABackupCodes)
 	if err != nil {
 		return user, err
 	}
