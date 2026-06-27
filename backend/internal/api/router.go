@@ -917,6 +917,8 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.GET("/assets/:id", server.getAsset)
 			protected.PATCH("/assets/:id", server.updateAsset)
 			protected.DELETE("/assets/:id", server.deleteAsset)
+			protected.PUT("/assets/:id/maintenance", server.setAssetMaintenance)
+			protected.PUT("/assets/maintenance/bulk", server.setBulkAssetMaintenance)
 			protected.POST("/assets/:id/assign", server.assignAsset)
 			protected.POST("/assets/:id/unassign", server.unassignAsset)
 			protected.GET("/assets/:id/history", server.getAssetHistory)
@@ -2920,7 +2922,7 @@ func (server *apiServer) listAssets(c *gin.Context) {
 	query := `
 		SELECT a.id, a.asset_tag, a.name, COALESCE(a.hostname, ''), a.category, a.is_compute, COALESCE(a.serial_number, ''), COALESCE(a.model, ''),
 			a.entity_id, e.short_code, COALESCE(a.assigned_to::text, ''), COALESCE(u.full_name, ''), COALESCE(a.dept_id::text, ''), COALESCE(d.name, ''),
-			COALESCE(a.location_id::text, ''), COALESCE(l.full_name, ''), COALESCE(a.purchase_date::text, ''), COALESCE(a.cost::text, ''), COALESCE(a.warranty_until::text, ''), a.status,
+			COALESCE(a.location_id::text, ''), COALESCE(l.full_name, ''), COALESCE(a.purchase_date::text, ''), COALESCE(a.cost::text, ''), COALESCE(a.warranty_until::text, ''), COALESCE(a.maintenance_until::text, ''), a.status,
 			a.condition, COALESCE(a.glpi_id, 0), COALESCE(a.salt_minion_id, ''), COALESCE(a.wazuh_agent_id, ''), COALESCE(a.notes, '')
 		FROM assets a
 		JOIN entities e ON e.id = a.entity_id
@@ -2942,10 +2944,10 @@ func (server *apiServer) listAssets(c *gin.Context) {
 	defer rows.Close()
 	result := make([]gin.H, 0)
 	for rows.Next() {
-		var id, assetTag, name, hostname, category, serial, model, entityRef, entityCode, assignedTo, assignedName, deptRef, deptName, locationRef, locationName, purchaseDate, cost, warrantyUntil, status, condition, saltMinionID, wazuhAgentID, notes string
+		var id, assetTag, name, hostname, category, serial, model, entityRef, entityCode, assignedTo, assignedName, deptRef, deptName, locationRef, locationName, purchaseDate, cost, warrantyUntil, maintenanceUntil, status, condition, saltMinionID, wazuhAgentID, notes string
 		var compute bool
 		var glpiID int
-		if err := rows.Scan(&id, &assetTag, &name, &hostname, &category, &compute, &serial, &model, &entityRef, &entityCode, &assignedTo, &assignedName, &deptRef, &deptName, &locationRef, &locationName, &purchaseDate, &cost, &warrantyUntil, &status, &condition, &glpiID, &saltMinionID, &wazuhAgentID, &notes); err != nil {
+		if err := rows.Scan(&id, &assetTag, &name, &hostname, &category, &compute, &serial, &model, &entityRef, &entityCode, &assignedTo, &assignedName, &deptRef, &deptName, &locationRef, &locationName, &purchaseDate, &cost, &warrantyUntil, &maintenanceUntil, &status, &condition, &glpiID, &saltMinionID, &wazuhAgentID, &notes); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -2955,7 +2957,7 @@ func (server *apiServer) listAssets(c *gin.Context) {
 		if middleware.CurrentClaims(c).Role == "employee" && assignedTo != middleware.CurrentClaims(c).UserID {
 			continue
 		}
-		result = append(result, gin.H{"id": id, "asset_tag": assetTag, "name": name, "hostname": emptyToNil(hostname), "category": category, "is_compute": compute, "serial_number": emptyToNil(serial), "model": emptyToNil(model), "entity_id": entityRef, "entity_code": entityCode, "assigned_to": emptyToNil(assignedTo), "assigned_name": emptyToNil(assignedName), "dept_id": emptyToNil(deptRef), "department": emptyToNil(deptName), "location_id": emptyToNil(locationRef), "location": emptyToNil(locationName), "purchase_date": emptyToNil(purchaseDate), "cost": emptyToNil(cost), "warranty_until": emptyToNil(warrantyUntil), "status": status, "condition": condition, "glpi_id": zeroToNil(glpiID), "salt_minion_id": emptyToNil(saltMinionID), "wazuh_agent_id": emptyToNil(wazuhAgentID), "notes": emptyToNil(notes)})
+		result = append(result, gin.H{"id": id, "asset_tag": assetTag, "name": name, "hostname": emptyToNil(hostname), "category": category, "is_compute": compute, "serial_number": emptyToNil(serial), "model": emptyToNil(model), "entity_id": entityRef, "entity_code": entityCode, "assigned_to": emptyToNil(assignedTo), "assigned_name": emptyToNil(assignedName), "dept_id": emptyToNil(deptRef), "department": emptyToNil(deptName), "location_id": emptyToNil(locationRef), "location": emptyToNil(locationName), "purchase_date": emptyToNil(purchaseDate), "cost": emptyToNil(cost), "warranty_until": emptyToNil(warrantyUntil), "maintenance_until": emptyToNil(maintenanceUntil), "status": status, "condition": condition, "glpi_id": zeroToNil(glpiID), "salt_minion_id": emptyToNil(saltMinionID), "wazuh_agent_id": emptyToNil(wazuhAgentID), "notes": emptyToNil(notes)})
 	}
 	httpx.JSON(c, http.StatusOK, result)
 }
@@ -4499,7 +4501,7 @@ func (server *apiServer) getAsset(c *gin.Context) {
 	httpx.JSON(c, http.StatusOK, gin.H{
 		"id": asset.ID, "asset_tag": asset.AssetTag, "name": asset.Name, "hostname": emptyToNil(asset.Hostname), "category": asset.Category, "is_compute": asset.IsCompute,
 		"serial_number": emptyToNil(asset.SerialNumber), "model": emptyToNil(asset.Model), "entity_id": asset.EntityID, "assigned_to": emptyToNil(asset.AssignedTo),
-		"dept_id": emptyToNil(asset.DeptID), "location_id": emptyToNil(asset.LocationID), "purchase_date": emptyToNil(asset.PurchaseDate), "cost": emptyToNil(asset.Cost), "warranty_until": emptyToNil(asset.WarrantyUntil),
+		"dept_id": emptyToNil(asset.DeptID), "location_id": emptyToNil(asset.LocationID), "purchase_date": emptyToNil(asset.PurchaseDate), "cost": emptyToNil(asset.Cost), "warranty_until": emptyToNil(asset.WarrantyUntil), "maintenance_until": emptyToNil(asset.MaintenanceUntil),
 		"status": asset.Status, "condition": asset.Condition, "glpi_id": zeroToNil(asset.GLPIID), "salt_minion_id": emptyToNil(asset.SaltMinionID), "wazuh_agent_id": emptyToNil(asset.WazuhAgentID),
 		"notes": emptyToNil(asset.Notes), "compute_details": details, "network": network, "installed_software": software,
 	})
@@ -4885,6 +4887,160 @@ func (server *apiServer) deleteAsset(c *gin.Context) {
 		},
 	})
 	httpx.JSON(c, http.StatusOK, gin.H{"ok": true})
+}
+
+func (server *apiServer) setAssetMaintenance(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+	asset, err := server.fetchAsset(c.Param("id"))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "asset not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if !server.entityAllowedByID(c, asset.EntityID) {
+		httpx.Error(c, http.StatusNotFound, "asset not found")
+		return
+	}
+
+	var body struct {
+		MaintenanceUntil *string `json:"maintenance_until"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	var maintenanceUntilSQL interface{}
+	if body.MaintenanceUntil != nil && strings.TrimSpace(*body.MaintenanceUntil) != "" {
+		// Validate timestamp format
+		_, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(*body.MaintenanceUntil))
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid timestamp format, use RFC3339 (e.g., 2026-06-28T12:00:00Z)")
+			return
+		}
+		maintenanceUntilSQL = strings.TrimSpace(*body.MaintenanceUntil)
+	} else {
+		maintenanceUntilSQL = nil
+	}
+
+	_, err = server.db.Exec(`UPDATE assets SET maintenance_until = $1 WHERE id = $2::uuid`, maintenanceUntilSQL, asset.ID)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	middleware.TagAudit(c, middleware.AuditMeta{
+		Action:     "asset_maintenance_updated",
+		TargetType: "asset",
+		TargetID:   asset.ID,
+		Detail: gin.H{
+			"asset_tag":         asset.AssetTag,
+			"maintenance_until": body.MaintenanceUntil,
+		},
+	})
+
+	httpx.JSON(c, http.StatusOK, gin.H{"ok": true, "maintenance_until": body.MaintenanceUntil})
+}
+
+func (server *apiServer) setBulkAssetMaintenance(c *gin.Context) {
+	if !server.requireRoles(c, "super_admin", "it_team") {
+		return
+	}
+
+	var body struct {
+		AssetIDs         []string `json:"asset_ids" binding:"required"`
+		MaintenanceUntil *string  `json:"maintenance_until"`
+	}
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body: asset_ids required")
+		return
+	}
+
+	if len(body.AssetIDs) == 0 {
+		httpx.Error(c, http.StatusBadRequest, "asset_ids cannot be empty")
+		return
+	}
+
+	var maintenanceUntilSQL interface{}
+	if body.MaintenanceUntil != nil && strings.TrimSpace(*body.MaintenanceUntil) != "" {
+		// Validate timestamp format
+		_, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(*body.MaintenanceUntil))
+		if parseErr != nil {
+			httpx.Error(c, http.StatusBadRequest, "invalid timestamp format, use RFC3339 (e.g., 2026-06-28T12:00:00Z)")
+			return
+		}
+		maintenanceUntilSQL = strings.TrimSpace(*body.MaintenanceUntil)
+	} else {
+		maintenanceUntilSQL = nil
+	}
+
+	// Verify all assets exist and user has access
+	placeholders := make([]string, len(body.AssetIDs))
+	args := make([]interface{}, len(body.AssetIDs))
+	for i, id := range body.AssetIDs {
+		placeholders[i] = fmt.Sprintf("$%d::uuid", i+1)
+		args[i] = id
+	}
+
+	query := fmt.Sprintf("SELECT id, entity_id::text FROM assets WHERE id IN (%s)", strings.Join(placeholders, ", "))
+	rows, err := server.db.Query(query, args...)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+
+	allowedAssetIDs := make([]string, 0, len(body.AssetIDs))
+	for rows.Next() {
+		var assetID, entityID string
+		if err := rows.Scan(&assetID, &entityID); err != nil {
+			httpx.Error(c, http.StatusInternalServerError, err.Error())
+			return
+		}
+		if server.entityAllowedByID(c, entityID) {
+			allowedAssetIDs = append(allowedAssetIDs, assetID)
+		}
+	}
+
+	if len(allowedAssetIDs) == 0 {
+		httpx.Error(c, http.StatusNotFound, "no accessible assets found")
+		return
+	}
+
+	// Update maintenance_until for all allowed assets
+	updatePlaceholders := make([]string, len(allowedAssetIDs))
+	updateArgs := make([]interface{}, len(allowedAssetIDs)+1)
+	updateArgs[0] = maintenanceUntilSQL
+	for i, id := range allowedAssetIDs {
+		updatePlaceholders[i] = fmt.Sprintf("$%d::uuid", i+2)
+		updateArgs[i+1] = id
+	}
+
+	updateQuery := fmt.Sprintf("UPDATE assets SET maintenance_until = $1 WHERE id IN (%s)", strings.Join(updatePlaceholders, ", "))
+	result, err := server.db.Exec(updateQuery, updateArgs...)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+
+	middleware.TagAudit(c, middleware.AuditMeta{
+		Action:     "asset_maintenance_bulk_updated",
+		TargetType: "asset",
+		Detail: gin.H{
+			"asset_count":       rowsAffected,
+			"asset_ids":         allowedAssetIDs,
+			"maintenance_until": body.MaintenanceUntil,
+		},
+	})
+
+	httpx.JSON(c, http.StatusOK, gin.H{"ok": true, "updated_count": rowsAffected, "maintenance_until": body.MaintenanceUntil})
 }
 
 func (server *apiServer) getAssetHistory(c *gin.Context) {
@@ -5667,9 +5823,9 @@ func (server *apiServer) fetchAsset(id string) (dbAsset, error) {
 	err := server.db.QueryRow(`
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
 			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
-			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
+			COALESCE(maintenance_until::text, ''), status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
 		FROM assets WHERE id = $1::uuid
-	`, id).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, id).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.MaintenanceUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 
@@ -5678,11 +5834,11 @@ func (server *apiServer) fetchAssetByTerminalTarget(target string) (dbAsset, err
 	err := server.db.QueryRow(`
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
 			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
-			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
+			COALESCE(maintenance_until::text, ''), status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
 		FROM assets
 		WHERE is_compute = TRUE AND (hostname = $1 OR salt_minion_id = $1 OR asset_tag = $1)
 		LIMIT 1
-	`, strings.TrimSpace(target)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, strings.TrimSpace(target)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.MaintenanceUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 
@@ -6491,11 +6647,11 @@ func (server *apiServer) fetchAssetByTag(ctx context.Context, assetTag string) (
 	err := server.db.QueryRowContext(ctx, `
 		SELECT id, asset_tag, name, COALESCE(hostname, ''), category, is_compute, COALESCE(serial_number, ''), COALESCE(manufacturer, ''), COALESCE(model, ''), entity_id::text,
 			COALESCE(assigned_to::text, ''), COALESCE(dept_id::text, ''), COALESCE(location_id::text, ''), COALESCE(purchase_date::text, ''), COALESCE(cost::text, ''), COALESCE(warranty_until::text, ''),
-			status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
+			COALESCE(maintenance_until::text, ''), status, condition, COALESCE(glpi_id, 0), COALESCE(salt_minion_id, ''), COALESCE(wazuh_agent_id, ''), COALESCE(notes, '')
 		FROM assets
 		WHERE asset_tag = $1
 		LIMIT 1
-	`, strings.TrimSpace(assetTag)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
+	`, strings.TrimSpace(assetTag)).Scan(&asset.ID, &asset.AssetTag, &asset.Name, &asset.Hostname, &asset.Category, &asset.IsCompute, &asset.SerialNumber, &asset.Manufacturer, &asset.Model, &asset.EntityID, &asset.AssignedTo, &asset.DeptID, &asset.LocationID, &asset.PurchaseDate, &asset.Cost, &asset.WarrantyUntil, &asset.MaintenanceUntil, &asset.Status, &asset.Condition, &asset.GLPIID, &asset.SaltMinionID, &asset.WazuhAgentID, &asset.Notes)
 	return asset, err
 }
 
