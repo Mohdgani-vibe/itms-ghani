@@ -64,6 +64,9 @@ CREATE TABLE IF NOT EXISTS users (
   role_id UUID NOT NULL REFERENCES roles(id),
   google_sub VARCHAR(100),
   password_hash TEXT,
+  totp_secret TEXT,
+  mfa_enabled BOOLEAN DEFAULT FALSE,
+  mfa_backup_codes TEXT[],
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -268,6 +271,7 @@ CREATE TABLE IF NOT EXISTS vault_shares (
 
 CREATE INDEX IF NOT EXISTS idx_users_entity_id ON users(entity_id);
 CREATE INDEX IF NOT EXISTS idx_users_dept_id ON users(dept_id);
+CREATE INDEX IF NOT EXISTS idx_users_mfa_enabled ON users(mfa_enabled);
 CREATE INDEX IF NOT EXISTS idx_assets_entity_id ON assets(entity_id);
 CREATE INDEX IF NOT EXISTS idx_assets_assigned_to ON assets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
