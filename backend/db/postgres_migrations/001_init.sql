@@ -225,6 +225,47 @@ CREATE TABLE IF NOT EXISTS remote_sessions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS vault_credentials (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
+  username TEXT,
+  encrypted_password BYTEA NOT NULL,
+  encrypted_notes BYTEA,
+  credential_type VARCHAR(50) DEFAULT 'password',
+  asset_id UUID REFERENCES assets(id) ON DELETE SET NULL,
+  url TEXT,
+  created_by UUID NOT NULL REFERENCES users(id),
+  updated_by UUID REFERENCES users(id),
+  last_accessed_at TIMESTAMPTZ,
+  access_count INTEGER NOT NULL DEFAULT 0,
+  tags TEXT[],
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS vault_access_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  credential_id UUID NOT NULL REFERENCES vault_credentials(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  access_type VARCHAR(30) NOT NULL,
+  ip_address INET,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS vault_shares (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  credential_id UUID NOT NULL REFERENCES vault_credentials(id) ON DELETE CASCADE,
+  shared_with_user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  shared_with_role VARCHAR(30),
+  permission VARCHAR(20) NOT NULL DEFAULT 'view',
+  shared_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT check_share_target CHECK (
+    (shared_with_user_id IS NOT NULL AND shared_with_role IS NULL) OR
+    (shared_with_user_id IS NULL AND shared_with_role IS NOT NULL)
+  )
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_entity_id ON users(entity_id);
 CREATE INDEX IF NOT EXISTS idx_users_dept_id ON users(dept_id);
 CREATE INDEX IF NOT EXISTS idx_assets_entity_id ON assets(entity_id);
@@ -243,3 +284,12 @@ CREATE INDEX IF NOT EXISTS idx_remote_sessions_asset_id ON remote_sessions(asset
 CREATE INDEX IF NOT EXISTS idx_remote_sessions_user_id ON remote_sessions(user_id, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_remote_sessions_status ON remote_sessions(status);
 CREATE INDEX IF NOT EXISTS idx_remote_sessions_session_id ON remote_sessions(session_id);
+CREATE INDEX IF NOT EXISTS idx_vault_credentials_asset_id ON vault_credentials(asset_id);
+CREATE INDEX IF NOT EXISTS idx_vault_credentials_created_by ON vault_credentials(created_by);
+CREATE INDEX IF NOT EXISTS idx_vault_credentials_type ON vault_credentials(credential_type);
+CREATE INDEX IF NOT EXISTS idx_vault_credentials_name ON vault_credentials(name);
+CREATE INDEX IF NOT EXISTS idx_vault_access_log_credential_id ON vault_access_log(credential_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_vault_access_log_user_id ON vault_access_log(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_vault_shares_credential_id ON vault_shares(credential_id);
+CREATE INDEX IF NOT EXISTS idx_vault_shares_user_id ON vault_shares(shared_with_user_id);
+CREATE INDEX IF NOT EXISTS idx_vault_shares_role ON vault_shares(shared_with_role);
