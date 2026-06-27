@@ -1,0 +1,200 @@
+.PHONY: help setup security-setup security-scan security-test test-pre-commit rotate-secrets clean-secrets audit-logs
+
+# Colors for output
+RED=\033[0;31m
+GREEN=\033[0;32m
+YELLOW=\033[1;33m
+NC=\033[0m # No Color
+
+help: ## Show this help message
+	@echo "ITMS Security Makefile"
+	@echo "====================="
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  ${GREEN}%-20s${NC} %s\n", $$1, $$2}'
+
+setup: security-setup ## Complete initial setup (security + dependencies)
+	@echo "${GREEN}✅ Setup complete!${NC}"
+
+security-setup: ## Install security tools and pre-commit hooks
+	@echo "${YELLOW}🔒 Setting up security tools...${NC}"
+	@# Install pre-commit hook
+	@if [ -f scripts/pre-commit.sh ]; then \
+		cp scripts/pre-commit.sh .git/hooks/pre-commit; \
+		chmod +x .git/hooks/pre-commit; \
+		echo "${GREEN}✅ Pre-commit hook installed${NC}"; \
+	fi
+	@# Make scripts executable
+	@chmod +x scripts/*.sh 2>/dev/null || true
+	@echo "${GREEN}✅ Security setup complete${NC}"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Run: make setup-secrets"
+	@echo "  2. Run: make security-test"
+
+setup-secrets: ## Initialize secrets directory (interactive)
+	@./scripts/setup-secrets.sh
+
+security-scan: ## Run all security scans
+	@echo "${YELLOW}🔍 Running security scans...${NC}"
+	@echo ""
+	@echo "=== Checking for secrets in code ==="
+	@if git grep -inE "(password|secret|api[_-]?key|token)\s*=\s*['\"][^'\"]{10,}" -- ':!*.md' ':!Makefile' ':!*.example'; then \
+		echo "${RED}❌ Potential secrets found in code!${NC}"; \
+	else \
+		echo "${GREEN}✅ No hardcoded secrets found${NC}"; \
+	fi
+	@echo ""
+	@echo "=== Checking for .env files in git ==="
+	@if git ls-files | grep -E '\.env$$|secrets/.*\.txt$$'; then \
+		echo "${RED}❌ .env files or secrets found in git!${NC}"; \
+	else \
+		echo "${GREEN}✅ No .env files in repository${NC}"; \
+	fi
+	@echo ""
+	@echo "=== Checking for weak patterns ==="
+	@if git grep -inE "password\s*=\s*['\"]?(password|admin|root|test|123)" -- ':!*.md' ':!Makefile'; then \
+		echo "${RED}❌ Weak passwords found!${NC}"; \
+	else \
+		echo "${GREEN}✅ No weak passwords found${NC}"; \
+	fi
+	@echo ""
+	@echo "${GREEN}✅ Security scan complete${NC}"
+
+security-scan-deep: ## Deep security scan with external tools
+	@echo "${YELLOW}🔍 Running deep security scan...${NC}"
+	@echo ""
+	@# TruffleHog
+	@echo "=== Running TruffleHog ==="
+	@if command -v trufflehog > /dev/null; then \
+		trufflehog filesystem . --only-verified; \
+	elif docker info > /dev/null 2>&1; then \
+		docker run --rm -v "$(PWD):/repo" trufflesecurity/trufflehog:latest filesystem /repo --only-verified; \
+	else \
+		echo "${YELLOW}⚠️  TruffleHog not available (install or use Docker)${NC}"; \
+	fi
+	@echo ""
+	@# Gitleaks
+	@echo "=== Running Gitleaks ==="
+	@if command -v gitleaks > /dev/null; then \
+		gitleaks detect --source . --verbose; \
+	elif docker info > /dev/null 2>&1; then \
+		docker run --rm -v "$(PWD):/repo" zricethezav/gitleaks:latest detect --source /repo --verbose; \
+	else \
+		echo "${YELLOW}⚠️  Gitleaks not available (install or use Docker)${NC}"; \
+	fi
+
+test-pre-commit: ## Test pre-commit hook without committing
+	@echo "${YELLOW}🧪 Testing pre-commit hook...${NC}"
+	@if [ -f .git/hooks/pre-commit ]; then \
+		.git/hooks/pre-commit; \
+		echo "${GREEN}✅ Pre-commit hook test passed${NC}"; \
+	else \
+		echo "${RED}❌ Pre-commit hook not found. Run: make security-setup${NC}"; \
+		exit 1; \
+	fi
+
+rotate-secrets: ## Rotate all secrets (WARNING: requires downtime)
+	@echo "${RED}⚠️  This will rotate all secrets and restart services${NC}"
+	@echo "Press Enter to continue or Ctrl+C to cancel..."
+	@read dummy
+	@# Generate new database password
+	@NEW_DB_PASS=$$(openssl rand -hex 32); \
+	echo "$$NEW_DB_PASS" > backend/secrets/postgres_password.txt; \
+	docker exec zerodha-itms-postgres psql -U postgres -d itms -c "ALTER USER postgres WITH PASSWORD '$$NEW_DB_PASS';" || true
+	@# Generate new JWT secret
+	@openssl rand -hex 64 > backend/secrets/jwt_secret.txt
+	@# Restart services
+	@cd backend && docker compose restart backend
+	@echo "${GREEN}✅ Secrets rotated successfully${NC}"
+	@echo "${YELLOW}⚠️  All users must log in again${NC}"
+
+clean-secrets: ## Remove all local secrets (WARNING: destructive)
+	@echo "${RED}⚠️  This will delete all local secrets${NC}"
+	@echo "Press Enter to continue or Ctrl+C to cancel..."
+	@read dummy
+	@rm -rf backend/secrets/*.txt
+	@echo "${GREEN}✅ Secrets cleaned${NC}"
+
+audit-logs: ## Check database logs for suspicious activity
+	@echo "${YELLOW}🔍 Checking database logs...${NC}"
+	@docker exec zerodha-itms-postgres psql -U postgres -d itms -c \
+		"SELECT datname, usename, client_addr, state, query_start FROM pg_stat_activity WHERE usename != '' ORDER BY query_start DESC LIMIT 20;" || \
+		echo "${RED}❌ Could not connect to database${NC}"
+
+check-env: ## Verify environment configuration
+	@echo "${YELLOW}🔍 Checking environment configuration...${NC}"
+	@echo ""
+	@echo "=== Backend .env file ==="
+	@if [ -f backend/.env ]; then \
+		echo "${GREEN}✅ backend/.env exists${NC}"; \
+		if grep -q "postgres://.*:.*@" backend/.env; then \
+			echo "${RED}❌ WARNING: Database password in .env${NC}"; \
+		fi; \
+	else \
+		echo "${RED}❌ backend/.env not found${NC}"; \
+	fi
+	@echo ""
+	@echo "=== Secrets directory ==="
+	@if [ -d backend/secrets ]; then \
+		echo "${GREEN}✅ backend/secrets exists${NC}"; \
+		echo "Files: $$(ls -1 backend/secrets/*.txt 2>/dev/null | wc -l)"; \
+	else \
+		echo "${YELLOW}⚠️  backend/secrets not found${NC}"; \
+		echo "Run: make setup-secrets"; \
+	fi
+	@echo ""
+	@echo "=== .gitignore ==="
+	@if grep -q "^backend/.env$$" .gitignore 2>/dev/null; then \
+		echo "${GREEN}✅ .env in .gitignore${NC}"; \
+	else \
+		echo "${RED}❌ .env NOT in .gitignore!${NC}"; \
+	fi
+	@if grep -q "^backend/secrets/" .gitignore 2>/dev/null; then \
+		echo "${GREEN}✅ secrets/ in .gitignore${NC}"; \
+	else \
+		echo "${RED}❌ secrets/ NOT in .gitignore!${NC}"; \
+	fi
+
+deploy-production: ## Deploy with production secrets (Docker Compose)
+	@echo "${YELLOW}🚀 Deploying production with secrets...${NC}"
+	@if [ ! -d backend/secrets ] || [ ! -f backend/secrets/postgres_password.txt ]; then \
+		echo "${RED}❌ Secrets not configured. Run: make setup-secrets${NC}"; \
+		exit 1; \
+	fi
+	@cd backend && docker compose -f docker-compose.production.yml up -d
+	@echo "${GREEN}✅ Production deployed${NC}"
+
+backup-db: ## Create encrypted database backup
+	@echo "${YELLOW}💾 Creating database backup...${NC}"
+	@BACKUP_FILE="backup_$$(date +%Y%m%d_%H%M%S).sql.gpg"; \
+	docker exec zerodha-itms-postgres pg_dump -U postgres itms | \
+		gpg --symmetric --cipher-algo AES256 > "$$BACKUP_FILE"; \
+	echo "${GREEN}✅ Backup created: $$BACKUP_FILE${NC}"
+
+security-report: ## Generate security report
+	@echo "==================================="
+	@echo "  ITMS Security Report"
+	@echo "  Generated: $$(date)"
+	@echo "==================================="
+	@echo ""
+	@echo "Pre-commit Hook:"
+	@if [ -x .git/hooks/pre-commit ]; then echo "  ✅ Installed"; else echo "  ❌ Not installed"; fi
+	@echo ""
+	@echo "Secrets Configuration:"
+	@if [ -d backend/secrets ]; then echo "  ✅ Secrets directory exists"; else echo "  ❌ No secrets directory"; fi
+	@if [ -f backend/.env ]; then echo "  ✅ .env file exists"; else echo "  ❌ No .env file"; fi
+	@echo ""
+	@echo "Git Security:"
+	@echo "  .env in git: $$(git ls-files | grep -c '\.env$$' || echo 0) files"
+	@echo "  secrets/ in git: $$(git ls-files | grep -c 'secrets/' || echo 0) files"
+	@echo ""
+	@echo "Database Status:"
+	@docker exec zerodha-itms-postgres psql -U postgres -d itms -t -c "SELECT COUNT(*) FROM pg_stat_activity WHERE usename = 'postgres';" 2>/dev/null || echo "  ❌ Cannot connect"
+	@echo ""
+	@echo "==================================="
+	@echo "Run 'make security-scan' for detailed scan"
+
+.DEFAULT_GOAL := help

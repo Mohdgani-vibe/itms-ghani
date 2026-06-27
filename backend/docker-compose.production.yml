@@ -1,0 +1,93 @@
+version: '3.8'
+
+# Production Docker Compose with Secrets Management
+# This file demonstrates best practices for production deployments
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: itms-postgres
+    restart: unless-stopped
+    secrets:
+      - postgres_password
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${POSTGRES_DB:-itms}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - itms_internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d itms"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itms-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+      - jwt_secret
+      - salt_api_token
+      - wazuh_api_password
+    environment:
+      # Public configuration
+      BACKEND_ADDR: :3001
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      PUBLIC_SERVER_URL: ${PUBLIC_SERVER_URL}
+      MIGRATION_DIR: /app/db/postgres_migrations
+      
+      # Database - password from secret
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-itms}?sslmode=disable
+      
+      # Secrets are mounted as files at /run/secrets/
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+      SALT_API_TOKEN_FILE: /run/secrets/salt_api_token
+      WAZUH_API_PASSWORD_FILE: /run/secrets/wazuh_api_password
+      
+      # Non-sensitive configuration from .env
+      SALT_MASTER_HOST: ${SALT_MASTER_HOST}
+      WAZUH_MANAGER_HOST: ${WAZUH_MANAGER_HOST}
+      SALT_API_BASE_URL: ${SALT_API_BASE_URL}
+      WAZUH_API_BASE_URL: ${WAZUH_API_BASE_URL}
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+    networks:
+      - itms_internal
+      - itms_external
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3001/api/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+secrets:
+  postgres_password:
+    file: ./secrets/postgres_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+  salt_api_token:
+    file: ./secrets/salt_api_token.txt
+  wazuh_api_password:
+    file: ./secrets/wazuh_api_password.txt
+
+networks:
+  itms_internal:
+    driver: bridge
+    internal: true
+  itms_external:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
