@@ -55,6 +55,8 @@ CREATE TABLE IF NOT EXISTS alerts (
   detail TEXT,
   acknowledged BOOLEAN NOT NULL DEFAULT FALSE,
   resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at TIMESTAMPTZ,
+  mttr_seconds INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -109,6 +111,10 @@ CREATE INDEX IF NOT EXISTS idx_gatepasses_requester_id ON gatepasses(requester_i
 CREATE INDEX IF NOT EXISTS idx_gatepasses_status ON gatepasses(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_device_id ON alerts(device_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_alerts_source ON alerts(source);
+CREATE INDEX IF NOT EXISTS idx_alerts_resolved ON alerts(resolved);
+CREATE INDEX IF NOT EXISTS idx_alerts_source_resolved ON alerts(source, resolved);
+CREATE INDEX IF NOT EXISTS idx_alerts_user_resolved ON alerts(user_id, resolved);
 CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id, channel_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_id ON chat_messages(channel_id, created_at ASC);

@@ -138,7 +138,8 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 			` + departmentExpr + `,
 			` + sourceKeyExpr + ` AS source_key,
 			` + sourceLabelExpr + ` AS source_label,
-			COALESCE(al.source, ''), al.severity, al.title, COALESCE(al.detail, ''), al.acknowledged, al.resolved, al.created_at
+			COALESCE(al.source, ''), al.severity, al.title, COALESCE(al.detail, ''), al.acknowledged, al.resolved, 
+			COALESCE(al.resolved_at::text, ''), COALESCE(al.mttr_seconds, 0), al.created_at
 	` + baseFrom + `
 		WHERE ` + whereSQL + `
 		ORDER BY al.created_at DESC`
@@ -157,10 +158,11 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 	result := make([]gin.H, 0)
 	for rows.Next() {
 		var id, assetID, assetTag, assetName, hostname, alertUserID, alertUserName, alertUserEmail, departmentName string
-		var sourceKey, sourceLabel, rawSource, severity, title, detail string
+		var sourceKey, sourceLabel, rawSource, severity, title, detail, resolvedAt string
 		var acknowledged, resolved bool
+		var mttrSeconds int
 		var createdAt time.Time
-		if err := rows.Scan(&id, &assetID, &assetTag, &assetName, &hostname, &alertUserID, &alertUserName, &alertUserEmail, &departmentName, &sourceKey, &sourceLabel, &rawSource, &severity, &title, &detail, &acknowledged, &resolved, &createdAt); err != nil {
+		if err := rows.Scan(&id, &assetID, &assetTag, &assetName, &hostname, &alertUserID, &alertUserName, &alertUserEmail, &departmentName, &sourceKey, &sourceLabel, &rawSource, &severity, &title, &detail, &acknowledged, &resolved, &resolvedAt, &mttrSeconds, &createdAt); err != nil {
 			httpx.Error(c, http.StatusInternalServerError, err.Error())
 			return
 		}
@@ -184,6 +186,8 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 			"detail":       detail,
 			"acknowledged": acknowledged,
 			"resolved":     resolved,
+			"resolvedAt":   emptyToNil(resolvedAt),
+			"mttrSeconds":  mttrSeconds,
 			"createdAt":    createdAt,
 		})
 	}
@@ -378,7 +382,15 @@ func (server *apiServer) resolveAlert(c *gin.Context) {
 		return
 	}
 	var title, userID string
-	if err := server.db.QueryRow(`UPDATE alerts SET resolved = TRUE, acknowledged = TRUE WHERE id = $1::uuid RETURNING title, user_id`, c.Param("id")).Scan(&title, &userID); err != nil {
+	if err := server.db.QueryRow(`
+		UPDATE alerts 
+		SET resolved = TRUE, 
+		    acknowledged = TRUE, 
+		    resolved_at = NOW(), 
+		    mttr_seconds = EXTRACT(EPOCH FROM (NOW() - created_at))::INTEGER 
+		WHERE id = $1::uuid 
+		RETURNING title, user_id
+	`, c.Param("id")).Scan(&title, &userID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			httpx.Error(c, http.StatusNotFound, "alert not found")
 			return

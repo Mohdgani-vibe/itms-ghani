@@ -5928,7 +5928,8 @@ func (server *apiServer) userAuthPayload(user dbUser) gin.H {
 
 func (server *apiServer) collectAssetAlerts(ctx context.Context, asset dbAsset) ([]gin.H, error) {
 	rows, err := server.db.QueryContext(ctx, `
-		SELECT id, source, severity, title, COALESCE(detail, ''), is_resolved, created_at
+		SELECT id, source, severity, title, COALESCE(detail, ''), is_resolved, 
+		       COALESCE(resolved_at::text, ''), COALESCE(mttr_seconds, 0), created_at
 		FROM asset_alerts
 		WHERE asset_id = $1::uuid AND created_at >= NOW() - INTERVAL '7 days'
 		ORDER BY created_at DESC
@@ -5940,13 +5941,24 @@ func (server *apiServer) collectAssetAlerts(ctx context.Context, asset dbAsset) 
 
 	items := make([]gin.H, 0)
 	for rows.Next() {
-		var id, source, severity, title, detail string
+		var id, source, severity, title, detail, resolvedAt string
 		var resolved bool
+		var mttrSeconds int
 		var createdAt time.Time
-		if err := rows.Scan(&id, &source, &severity, &title, &detail, &resolved, &createdAt); err != nil {
+		if err := rows.Scan(&id, &source, &severity, &title, &detail, &resolved, &resolvedAt, &mttrSeconds, &createdAt); err != nil {
 			return nil, err
 		}
-		items = append(items, gin.H{"id": id, "source": source, "severity": severity, "title": title, "detail": emptyToNil(detail), "resolved": resolved, "created_at": createdAt})
+		items = append(items, gin.H{
+			"id":          id,
+			"source":      source,
+			"severity":    severity,
+			"title":       title,
+			"detail":      emptyToNil(detail),
+			"resolved":    resolved,
+			"resolved_at": emptyToNil(resolvedAt),
+			"mttr_seconds": mttrSeconds,
+			"created_at":  createdAt,
+		})
 	}
 
 	return items, nil
@@ -6715,7 +6727,15 @@ func (server *apiServer) persistInventorySecurityReports(ctx context.Context, as
 		}
 		status := strings.ToLower(strings.TrimSpace(report.Status))
 		if source == "clamav" && status == "clean" {
-			_, _ = server.db.ExecContext(ctx, `UPDATE asset_alerts SET is_resolved = TRUE WHERE asset_id = $1::uuid AND lower(source) = 'clamav' AND is_resolved = FALSE`, resolvedAsset.ID)
+			_, _ = server.db.ExecContext(ctx, `
+				UPDATE asset_alerts 
+				SET is_resolved = TRUE, 
+				    resolved_at = NOW(), 
+				    mttr_seconds = EXTRACT(EPOCH FROM (NOW() - created_at))::INTEGER
+				WHERE asset_id = $1::uuid 
+				  AND lower(source) = 'clamav' 
+				  AND is_resolved = FALSE
+			`, resolvedAsset.ID)
 			_, _ = server.db.ExecContext(ctx, `UPDATE alerts SET resolved = TRUE WHERE device_id = $1::uuid AND lower(source) = 'clamav' AND resolved = FALSE`, resolvedAsset.ID)
 		}
 		if server.resolveExistingAssetAlert(ctx, resolvedAsset.ID, source, title, detail) == "" {

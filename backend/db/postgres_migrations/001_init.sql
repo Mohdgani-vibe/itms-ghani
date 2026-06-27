@@ -172,6 +172,8 @@ CREATE TABLE IF NOT EXISTS asset_alerts (
   title VARCHAR(200) NOT NULL,
   detail TEXT,
   is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+  resolved_at TIMESTAMPTZ,
+  mttr_seconds INTEGER,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -203,3 +205,7 @@ CREATE INDEX IF NOT EXISTS idx_assets_assigned_to ON assets(assigned_to);
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action);
 CREATE INDEX IF NOT EXISTS idx_asset_history_asset_id ON asset_history(asset_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_asset_alerts_source ON asset_alerts(source);
+CREATE INDEX IF NOT EXISTS idx_asset_alerts_is_resolved ON asset_alerts(is_resolved);
+CREATE INDEX IF NOT EXISTS idx_asset_alerts_source_resolved ON asset_alerts(source, is_resolved);
+CREATE INDEX IF NOT EXISTS idx_asset_alerts_asset_resolved ON asset_alerts(asset_id, is_resolved);
