@@ -26,6 +26,8 @@ const MyRequestsPage = lazy(() => import('./pages/live/MyRequestsPage'));
 const RequestsQueuePage = lazy(() => import('./pages/live/RequestsQueuePage'));
 const TerminalConsole = lazy(() => import('./pages/TerminalConsole'));
 const SshTerminalPage = lazy(() => import('./pages/SshTerminalPage'));
+const VaultPage = lazy(() => import('./pages/live/VaultPage'));
+const DocsPage = lazy(() => import('./pages/live/DocsPage'));
 
 function RouteFallback() {
   return (
@@ -149,6 +151,8 @@ function App() {
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueuePage />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="vault" element={<VaultPage />} />
+            <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
@@ -170,6 +174,8 @@ function App() {
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueuePage />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="vault" element={<VaultPage />} />
+            <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
@@ -189,6 +195,8 @@ function App() {
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="vault" element={<VaultPage />} />
+            <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 

@@ -8,6 +8,7 @@ import {
   DEVICES_PAGE_SIZE,
   formatCurrency,
   formatDateTime,
+  isOnline,
   loadInventoryData,
   loadUnassignedDeviceCount,
   type DeviceAssignmentFilter,
@@ -244,7 +245,10 @@ export default function Devices() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="ml-0">
-                          <div className="text-sm font-semibold text-brand-700 hover:text-brand-900 cursor-pointer">{device.hostname}</div>
+                          <div className="flex items-center gap-2">
+                            <div className={`h-2 w-2 rounded-full ${isOnline(device.lastSeenAt) ? 'bg-emerald-500' : 'bg-slate-400'}`} title={isOnline(device.lastSeenAt) ? 'Online' : 'Offline'} />
+                            <div className="text-sm font-semibold text-brand-700 hover:text-brand-900 cursor-pointer">{device.hostname}</div>
+                          </div>
                           <div className="text-xs text-slate-500 mt-0.5">{device.deviceType} • {device.osName} • {device.assetId}</div>
                           {showAdvancedColumns ? <div className="text-xs text-slate-500 mt-0.5">{formatCurrency(device.cost)} • Warranty {formatDateTime(device.warrantyUntil)}</div> : null}
                         </div>

@@ -94,6 +94,18 @@ export function formatDateTime(value?: string | null) {
   return parsed.toLocaleString();
 }
 
+export function isOnline(lastSeenAt?: string | null): boolean {
+  if (!lastSeenAt) {
+    return false;
+  }
+  const parsed = new Date(lastSeenAt);
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  // Device is online if last seen within 10 minutes
+  return Date.now() - parsed.getTime() < 10 * 60 * 1000;
+}
+
 export function formatCurrency(value?: string | null) {
   if (!value) {
     return 'Cost not tracked';
