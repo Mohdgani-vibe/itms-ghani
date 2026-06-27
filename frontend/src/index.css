@@ -1,84 +1,89 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0f6fe;
-  --color-brand-100: #e0edfc;
-  --color-brand-200: #c7e0fa;
-  --color-brand-300: #a3ccf6;
-  --color-brand-400: #79b1ef;
-  --color-brand-500: #5894e7;
-  --color-brand-600: #4077db;
-  --color-brand-700: #3461c9;
-  --color-brand-800: #2f4fa4;
-  --color-brand-900: #2a4382;
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
 }
 
 @custom-variant dark (&:is(.dark *));
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--color-slate-50, #f8fafc);
-  color: #18181b;
-  transition: background-color 160ms ease, color 160ms ease;
+  background-color: #fafafa;
+  color: #0a0a0a;
+  transition: background-color 200ms cubic-bezier(0.4, 0, 0.2, 1), color 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  letter-spacing: -0.011em;
+}
+
+@supports (font-variation-settings: normal) {
+  body {
+    font-family: 'InterVariable', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
 }
 
 ::selection {
-  background-color: #dbeafe;
-  color: #0f172a;
+  background-color: #e0f2fe;
+  color: #0c4a6e;
 }
 
 body:not(.dark *) {
-  caret-color: #2563eb;
+  caret-color: #0ea5e9;
 }
 
 body:not(.dark *) .portal-nav-link-inactive,
 body:not(.dark *) .patch-workspace-tab-inactive {
-  background-color: #ffffff !important;
-  color: #1d4ed8 !important;
+  background-color: transparent !important;
+  color: #525252 !important;
 }
 
 body:not(.dark *) .portal-nav-link-inactive:hover,
 body:not(.dark *) .patch-workspace-tab-inactive:hover {
-  background-color: #eff6ff !important;
+  background-color: #f5f5f5 !important;
+  color: #0a0a0a !important;
 }
 
 body:not(.dark *) .portal-nav-link-active,
 body:not(.dark *) .patch-workspace-tab-active {
-  background-color: #dbeafe !important;
-  color: #1e3a8a !important;
+  background-color: #0a0a0a !important;
+  color: #ffffff !important;
 }
 
 .dark .portal-nav-link-inactive,
 .dark .patch-workspace-tab-inactive {
   background-color: transparent !important;
-  color: #a1a1aa !important;
+  color: #a3a3a3 !important;
 }
 
 .dark .portal-nav-link-inactive:hover,
 .dark .patch-workspace-tab-inactive:hover {
-  background-color: rgba(39, 39, 42, 0.7) !important;
-  color: #ffffff !important;
+  background-color: #262626 !important;
+  color: #fafafa !important;
 }
 
-/* Selected navigation items - white bg with black text */
 .dark .portal-nav-link-active,
 .dark .patch-workspace-tab-active,
 .dark nav .portal-nav-link-active,
 .dark header nav a.portal-nav-link-active {
-  background-color: #ffffff !important;
-  color: #000000 !important;
-  border-color: #ffffff !important;
+  background-color: #fafafa !important;
+  color: #0a0a0a !important;
+  border-color: #fafafa !important;
 }
 
 .dark .portal-nav-link-active:hover,
 .dark .patch-workspace-tab-active:hover {
-  background-color: #f4f4f5 !important;
-  color: #000000 !important;
+  background-color: #e5e5e5 !important;
+  color: #0a0a0a !important;
 }
 
 body:not(.dark *) input,
@@ -105,192 +110,44 @@ body:not(.dark *) h6 {
   min-height: 100vh;
 }
 
-/* Ensure cards are white in light mode */
-body:not(.dark *) .bg-white,
-body:not(.dark *) .bg-zinc-50,
-body:not(.dark *) .bg-slate-50,
-body:not(.dark *) .rounded-\[32px\],
-body:not(.dark *) .rounded-\[28px\],
-body:not(.dark *) .rounded-\[26px\],
-body:not(.dark *) .rounded-\[24px\],
-body:not(.dark *) .rounded-2xl,
-body:not(.dark *) .rounded-xl {
-  background-color: white !important;
-}
-
+/* Dark mode color scheme */
 .dark {
   color-scheme: dark;
 }
 
 :is(.dark) body,
 .dark body {
-  background-color: #000000 !important;
-  color: #ffffff !important;
+  background-color: #0a0a0a !important;
+  color: #fafafa !important;
 }
 
-/* Main cards - light like light mode */
 .dark .bg-white {
-  background-color: #ffffff !important;
+  background-color: #171717 !important;
 }
 
 .dark .bg-zinc-50 {
-  background-color: #f4f4f5 !important;
+  background-color: #0a0a0a !important;
 }
 
-.dark .bg-zinc-50\/70 {
-  background-color: #f4f4f5 !important;
-}
-
-.dark .bg-zinc-100 {
-  background-color: #f4f4f5 !important;
-}
-
-.dark .bg-slate-50 {
-  background-color: #f8fafc !important;
-}
-
-.dark .bg-slate-100 {
-  background-color: #f1f5f9 !important;
-}
-
-.dark .bg-gradient-to-b,
-.dark .bg-\[linear-gradient\(180deg\2c _\#ffffff_0\%\2c _\#f9fbff_100\%\)\],
-.dark .bg-\[linear-gradient\(135deg\2c _\#f8fcff_0\%\2c _\#ffffff_58\%\2c _\#f6fbf7_100\%\)\],
-.dark .bg-\[linear-gradient\(135deg\2c _\#fdfefe_0\%\2c _\#f4f9ff_45\%\2c _\#eaf3ff_100\%\)\] {
-  background: #f4f4f5 !important;
-}
-
-/* Override all radial gradients */
-.dark [class*="bg-[radial-gradient"] {
-  background: #f4f4f5 !important;
-}
-
-/* Override all linear gradients */
-.dark [class*="bg-[linear-gradient"] {
-  background: #f4f4f5 !important;
-}
-
-.dark .border-zinc-100,
 .dark .border-zinc-200 {
-  border-color: #3f3f46 !important;
+  border-color: #262626 !important;
 }
 
-.dark .border-slate-200,
-.dark .border-slate-300,
-.dark .border-sky-100 {
-  border-color: #3f3f46 !important;
+.dark .text-zinc-900 {
+  color: #fafafa !important;
 }
 
-/* Override light backgrounds in dark mode - inner cards white */
-.dark .bg-white\/80,
-.dark .bg-white\/90,
-.dark .bg-white\/75 {
-  background-color: #ffffff !important;
+.dark .text-zinc-600 {
+  color: #a3a3a3 !important;
 }
 
-.dark .bg-white\/60 {
-  background-color: #ffffff !important;
-}
-
-/* Use attribute selector as fallback for Tailwind 4 */
-.dark [class*="bg-white/"] {
-  background-color: #ffffff !important;
-}
-
-.dark .bg-sky-50,
-.dark .bg-sky-50\/90 {
-  background-color: #f0f9ff !important;
-}
-
-.dark .text-sky-700 {
-  color: #ffffff !important;
-}
-
-.dark .text-sky-200 {
-  color: #ffffff !important;
-}
-
-/* Override any remaining light-colored backgrounds */
-.dark [style*="background"] {
-  background: #000000 !important;
-}
-
-.dark .border-sky-100,
-.dark .border-sky-200 {
-  border-color: #3f3f46 !important;
-}
-
-.dark .bg-sky-50 {
-  background-color: #1a1a1a !important;
-}
-
-.dark .text-sky-700 {
-  color: #ffffff !important;
-}
-
-.dark .bg-white\/80,
-.dark .bg-white\/75,
-.dark .bg-white\/90,
-.dark .bg-white\/60 {
-  background-color: #2a2a2a !important;
-}
-
-/* Catch all white background variants */
-.dark [class*="bg-white/"] {
-  background-color: #2a2a2a !important;
-}
-
-.dark .border-white\/80 {
-  border-color: #3f3f46 !important;
-}
-
-/* Make ALL text white in dark mode */
-.dark .text-zinc-900,
-.dark .text-zinc-950 {
-  color: #18181b !important;
-}
-
-.dark .text-zinc-800 {
-  color: #ffffff !important;
-}
-
-.dark .text-zinc-700 {
-  color: #ffffff !important;
-}
-
-.dark .text-zinc-600,
-.dark .text-zinc-500 {
-  color: #71717a !important;
-}
-
-.dark .text-zinc-400 {
-  color: #a1a1aa !important;
-}
-
-.dark .text-slate-900 {
-  color: #0f172a !important;
-}
-
-.dark .text-slate-800 {
-  color: #1e293b !important;
-}
-
-.dark .text-slate-700 {
-  color: #334155 !important;
-}
-
-.dark .text-slate-600 {
-  color: #e4e4e7 !important;
-}
-
-/* Make sure all headings are white */
 .dark h1,
 .dark h2,
 .dark h3,
 .dark h4,
 .dark h5,
 .dark h6 {
-  color: #ffffff !important;
+  color: #fafafa !important;
 }
 
 /* Make all text elements white */

@@ -83,7 +83,7 @@ export default function PortalLayout() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100 flex flex-col">
       <TopNav />
-      <main className="flex-1 flex flex-col">
+      <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8">
          <Outlet />
       </main>
     </div>

@@ -31,9 +31,12 @@ const DocsPage = lazy(() => import('./pages/live/DocsPage'));
 
 function RouteFallback() {
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100 flex items-center justify-center px-4">
-      <div className="rounded-xl border border-zinc-200 bg-white px-6 py-4 shadow-sm text-sm font-medium text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300">
-        Loading ITMS...
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex items-center justify-center px-4">
+      <div className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-8 py-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 dark:border-zinc-700 border-t-zinc-900 dark:border-t-white"></div>
+          <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Loading ITMS...</span>
+        </div>
       </div>
     </div>
   );
