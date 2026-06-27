@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS requests (
   description TEXT,
   status VARCHAR(30) NOT NULL DEFAULT 'pending',
   notes TEXT,
+  priority VARCHAR(20) DEFAULT 'medium',
+  sla_deadline TIMESTAMPTZ,
+  ticket_number VARCHAR(20),
+  alert_id UUID REFERENCES alerts(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -102,10 +106,50 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS it_docs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(250) NOT NULL,
+  content TEXT NOT NULL,
+  category VARCHAR(100) NOT NULL,
+  author_id UUID NOT NULL REFERENCES users(id),
+  tags TEXT[],
+  is_published BOOLEAN NOT NULL DEFAULT FALSE,
+  view_count INTEGER NOT NULL DEFAULT 0,
+  helpful_count INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS it_doc_versions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  doc_id UUID NOT NULL REFERENCES it_docs(id) ON DELETE CASCADE,
+  version_number INTEGER NOT NULL,
+  title VARCHAR(250) NOT NULL,
+  content TEXT NOT NULL,
+  author_id UUID NOT NULL REFERENCES users(id),
+  change_summary TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS it_doc_attachments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  doc_id UUID NOT NULL REFERENCES it_docs(id) ON DELETE CASCADE,
+  filename VARCHAR(250) NOT NULL,
+  file_path VARCHAR(500) NOT NULL,
+  file_size INTEGER,
+  mime_type VARCHAR(100),
+  uploaded_by UUID NOT NULL REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_stock_items_status ON stock_items(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_stock_items_assigned_user_id ON stock_items(assigned_user_id);
 CREATE INDEX IF NOT EXISTS idx_requests_requester_id ON requests(requester_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON requests(status, updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_requests_priority ON requests(priority);
+CREATE INDEX IF NOT EXISTS idx_requests_sla_deadline ON requests(sla_deadline);
+CREATE INDEX IF NOT EXISTS idx_requests_ticket_number ON requests(ticket_number);
+CREATE INDEX IF NOT EXISTS idx_requests_alert_id ON requests(alert_id);
 CREATE INDEX IF NOT EXISTS idx_request_comments_request_id ON request_comments(request_id, created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_gatepasses_requester_id ON gatepasses(requester_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_gatepasses_status ON gatepasses(status, created_at DESC);
@@ -118,3 +162,8 @@ CREATE INDEX IF NOT EXISTS idx_alerts_user_resolved ON alerts(user_id, resolved)
 CREATE INDEX IF NOT EXISTS idx_announcements_created_at ON announcements(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_chat_members_user_id ON chat_members(user_id, channel_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_channel_id ON chat_messages(channel_id, created_at ASC);
+CREATE INDEX IF NOT EXISTS idx_it_docs_category ON it_docs(category);
+CREATE INDEX IF NOT EXISTS idx_it_docs_author_id ON it_docs(author_id);
+CREATE INDEX IF NOT EXISTS idx_it_docs_is_published ON it_docs(is_published, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_it_doc_versions_doc_id ON it_doc_versions(doc_id, version_number DESC);
+CREATE INDEX IF NOT EXISTS idx_it_doc_attachments_doc_id ON it_doc_attachments(doc_id);

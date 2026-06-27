@@ -198,6 +198,33 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE IF NOT EXISTS backup_status (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  backup_type VARCHAR(50) NOT NULL,
+  status VARCHAR(30) NOT NULL,
+  started_at TIMESTAMPTZ NOT NULL,
+  completed_at TIMESTAMPTZ,
+  size_bytes BIGINT,
+  backup_location VARCHAR(500),
+  error_message TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS remote_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  asset_id UUID NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id),
+  session_type VARCHAR(30) NOT NULL,
+  session_id VARCHAR(100),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  ended_at TIMESTAMPTZ,
+  duration_seconds INTEGER,
+  ip_address INET,
+  status VARCHAR(30) NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 CREATE INDEX IF NOT EXISTS idx_users_entity_id ON users(entity_id);
 CREATE INDEX IF NOT EXISTS idx_users_dept_id ON users(dept_id);
 CREATE INDEX IF NOT EXISTS idx_assets_entity_id ON assets(entity_id);
@@ -209,3 +236,10 @@ CREATE INDEX IF NOT EXISTS idx_asset_alerts_source ON asset_alerts(source);
 CREATE INDEX IF NOT EXISTS idx_asset_alerts_is_resolved ON asset_alerts(is_resolved);
 CREATE INDEX IF NOT EXISTS idx_asset_alerts_source_resolved ON asset_alerts(source, is_resolved);
 CREATE INDEX IF NOT EXISTS idx_asset_alerts_asset_resolved ON asset_alerts(asset_id, is_resolved);
+CREATE INDEX IF NOT EXISTS idx_backup_status_asset_id ON backup_status(asset_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_backup_status_status ON backup_status(status, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_backup_status_backup_type ON backup_status(backup_type);
+CREATE INDEX IF NOT EXISTS idx_remote_sessions_asset_id ON remote_sessions(asset_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_remote_sessions_user_id ON remote_sessions(user_id, started_at DESC);
+CREATE INDEX IF NOT EXISTS idx_remote_sessions_status ON remote_sessions(status);
+CREATE INDEX IF NOT EXISTS idx_remote_sessions_session_id ON remote_sessions(session_id);
