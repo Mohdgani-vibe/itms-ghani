@@ -201,26 +201,31 @@ func GenerateCSRFToken() string {
 }
 
 func CORS(origin string) gin.HandlerFunc {
-	       allowedOrigins := make([]string, 0)
-	       for _, candidate := range strings.Split(origin, ",") {
-		       trimmed := strings.TrimSpace(candidate)
-		       if trimmed != "" {
-			       allowedOrigins = append(allowedOrigins, trimmed)
-		       }
-	       }
+	allowedOrigins := make([]string, 0)
+	for _, candidate := range strings.Split(origin, ",") {
+		trimmed := strings.TrimSpace(candidate)
+		if trimmed != "" {
+			allowedOrigins = append(allowedOrigins, trimmed)
+		}
+	}
 
 	return func(c *gin.Context) {
-		       requestOrigin := strings.TrimSpace(c.GetHeader("Origin"))
-		       if requestOrigin != "" {
-			       if len(allowedOrigins) > 0 && !slices.Contains(allowedOrigins, requestOrigin) {
-				       c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
-				       return
-			       }
-			       c.Header("Access-Control-Allow-Origin", requestOrigin)
-			       c.Header("Vary", "Origin")
-		       }
-		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+		requestOrigin := strings.TrimSpace(c.GetHeader("Origin"))
+		if requestOrigin != "" {
+			// Strict origin validation
+			if len(allowedOrigins) > 0 && !slices.Contains(allowedOrigins, requestOrigin) {
+				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "origin not allowed"})
+				return
+			}
+			c.Header("Access-Control-Allow-Origin", requestOrigin)
+			c.Header("Vary", "Origin")
+		}
+		// Restricted CORS headers - only allow necessary headers
+		c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-CSRF-Token")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Credentials", "true")
+		c.Header("Access-Control-Max-Age", "3600") // 1 hour preflight cache
+		
 		if c.Request.Method == http.MethodOptions {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
@@ -430,4 +435,122 @@ func ioNopCloser(buffer *bytes.Buffer) *nopCloser {
 
 func (closer *nopCloser) Close() error {
 	return nil
+}
+
+// RequestSizeLimit enforces maximum request body size
+func RequestSizeLimit(maxSize int64) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.ContentLength > maxSize {
+			httpx.Error(c, http.StatusRequestEntityTooLarge, "request body too large")
+			c.Abort()
+			return
+		}
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxSize)
+		c.Next()
+	}
+}
+
+// SecurityHeaders adds additional security headers to responses
+func SecurityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Additional backend security headers
+		c.Header("X-Content-Type-Options", "nosniff")
+		c.Header("X-Frame-Options", "SAMEORIGIN")
+		c.Header("X-XSS-Protection", "1; mode=block")
+		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("X-Permitted-Cross-Domain-Policies", "none")
+		c.Next()
+	}
+}
+
+// SuspiciousPatternDetection detects potentially malicious patterns in requests
+var suspiciousPatterns = []string{
+	"<script", "javascript:", "onerror=", "onload=",
+	"../", "..\\\\", // Path traversal
+	"union select", "1=1", "' or '1'='1", // SQL injection
+	"${", "#{", // Template injection
+	"../../../../", // Path traversal
+	"cmd.exe", "/bin/sh", "/bin/bash", // Command injection
+}
+
+func SuspiciousPatternDetection() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Check URL path
+		path := strings.ToLower(c.Request.URL.Path)
+		for _, pattern := range suspiciousPatterns {
+			if strings.Contains(path, strings.ToLower(pattern)) {
+				_ = TagAuditSuspicious(c, "suspicious_pattern_in_url", pattern)
+				httpx.Error(c, http.StatusBadRequest, "invalid request")
+				c.Abort()
+				return
+			}
+		}
+
+		// Check query parameters
+		for key, values := range c.Request.URL.Query() {
+			for _, value := range values {
+				lowerValue := strings.ToLower(value)
+				for _, pattern := range suspiciousPatterns {
+					if strings.Contains(lowerValue, strings.ToLower(pattern)) {
+						_ = TagAuditSuspicious(c, "suspicious_pattern_in_query", pattern)
+						httpx.Error(c, http.StatusBadRequest, "invalid request")
+						c.Abort()
+						return
+					}
+				}
+			}
+		}
+
+		c.Next()
+	}
+}
+
+func TagAuditSuspicious(c *gin.Context, action string, pattern string) error {
+	ip := clientIP(c)
+	userAgent := c.GetHeader("User-Agent")
+	
+	TagAudit(c, AuditMeta{
+		Action:         action,
+		TargetType:     "security",
+		Detail:         gin.H{"pattern": pattern, "path": c.Request.URL.Path, "ip": ip, "user_agent": userAgent},
+		PersistOnError: true,
+	})
+	return nil
+}
+
+// IPWhitelist allows requests only from whitelisted IPs (optional, for admin endpoints)
+func IPWhitelist(allowedIPs []string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if len(allowedIPs) == 0 {
+			c.Next()
+			return
+		}
+
+		clientIP := clientIP(c)
+		allowed := false
+		
+		for _, allowedIP := range allowedIPs {
+			if clientIP == allowedIP || allowedIP == "*" {
+				allowed = true
+				break
+			}
+			// Check CIDR ranges (simplified - just prefix match)
+			if strings.HasSuffix(allowedIP, "/24") {
+				prefix := strings.TrimSuffix(allowedIP, "/24")
+				prefix = prefix[:strings.LastIndex(prefix, ".")]
+				if strings.HasPrefix(clientIP, prefix+".") {
+					allowed = true
+					break
+				}
+			}
+		}
+
+		if !allowed {
+			httpx.Error(c, http.StatusForbidden, "access denied from this IP")
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
 }

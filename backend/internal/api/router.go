@@ -809,12 +809,21 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 		chat:          newChatHub(),
 		announcements: newAnnouncementHub(),
 		sync:          syncService,
-		authLimiter:   newAuthAttemptLimiter(15*time.Minute, 10, 15*time.Minute),
+		authLimiter:   newAuthAttemptLimiter(10*time.Minute, 5, 30*time.Minute), // 5 attempts, 30min block
 	}
 	server.chatBridge = chatbridge.NewService(db, server.mattermost, config)
 
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(config.FrontendOrigin), middleware.CSRFProtection(), middleware.Audit(db))
+	router.Use(
+		gin.Logger(),
+		gin.Recovery(),
+		middleware.SecurityHeaders(),
+		middleware.CORS(config.FrontendOrigin),
+		middleware.CSRFProtection(),
+		middleware.RequestSizeLimit(10<<20), // 10MB max request size
+		middleware.SuspiciousPatternDetection(),
+		middleware.Audit(db),
+	)
 	router.GET("/ws/chat", server.chatWebsocket)
 	router.GET("/ws/announcements", server.announcementWebsocket)
 	router.GET("/ws/ssh/assets/:id", server.assetSSHWebsocket)

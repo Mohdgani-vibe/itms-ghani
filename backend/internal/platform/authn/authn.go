@@ -72,6 +72,10 @@ func (manager *Manager) IssueToken(input UserTokenInput) (string, error) {
 
 func (manager *Manager) ParseToken(raw string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(raw, &Claims{}, func(token *jwt.Token) (any, error) {
+		// Strict algorithm validation - prevent algorithm confusion attacks
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
 		return manager.secret, nil
 	})
 	if err != nil {
@@ -81,6 +85,24 @@ func (manager *Manager) ParseToken(raw string) (*Claims, error) {
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token claims")
 	}
+	
+	// Additional expiration validation with safety margin
+	if claims.ExpiresAt != nil {
+		expiryTime := claims.ExpiresAt.Time
+		// Add 5-second grace period for clock skew
+		if time.Now().UTC().Add(-5 * time.Second).After(expiryTime) {
+			return nil, fmt.Errorf("token expired")
+		}
+	}
+	
+	// Validate issued-at is not in the future (prevents time-travel attacks)
+	if claims.IssuedAt != nil {
+		issuedTime := claims.IssuedAt.Time
+		if issuedTime.After(time.Now().UTC().Add(5 * time.Second)) {
+			return nil, fmt.Errorf("token issued in the future")
+		}
+	}
+	
 	return claims, nil
 }
 
