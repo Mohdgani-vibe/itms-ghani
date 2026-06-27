@@ -13,7 +13,7 @@
 - Backend API is proxied through the same origin at `http://YOUR_SERVER_IP/api/*`
 - Backend container listens on `http://YOUR_SERVER_IP:3001` internally on the host
 - Secondary local backend instance is available on `http://YOUR_SERVER_IP:3012`
-- Salt API is served on `http://YOUR_SERVER_IP:8000`
+- **Salt API**: Port 8000 (⚠️ **SECURITY**: Must bind to localhost/private network ONLY - NEVER expose to public internet)
 
 In production, the frontend should use same-origin `/api` and `/ws` through nginx. Leave `VITE_API_ORIGIN` and `VITE_WS_ORIGIN` empty in `frontend/.env.production` unless you intentionally want to bypass the reverse proxy.
 

@@ -814,7 +814,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 	server.chatBridge = chatbridge.NewService(db, server.mattermost, config)
 
 	router := gin.New()
-	router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(config.FrontendOrigin), middleware.Audit(db))
+	router.Use(gin.Logger(), gin.Recovery(), middleware.CORS(config.FrontendOrigin), middleware.CSRFProtection(), middleware.Audit(db))
 	router.GET("/ws/chat", server.chatWebsocket)
 	router.GET("/ws/announcements", server.announcementWebsocket)
 	router.GET("/ws/ssh/assets/:id", server.assetSSHWebsocket)
@@ -830,6 +830,9 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 		api.POST("/backup/ingest", server.ingestBackupStatus)
 		api.PUT("/assets/heartbeat", server.heartbeat)
 		server.registerAuthRoutes(api)
+		
+		// Apply rate limiting to sensitive API endpoints
+		api.Use(middleware.RateLimit(false)) // 60 req/min for general API
 
 		protected := api.Group("")
 		protected.Use(middleware.AuthRequired(server.auth))
@@ -1042,20 +1045,25 @@ func loadInstallerScript(fileName string) ([]byte, error) {
 }
 
 func (server *apiServer) registerAuthRoutes(api *gin.RouterGroup) {
-	api.GET("/auth/providers", server.authProviders)
-	api.POST("/auth/login", server.login)
-	api.POST("/auth/login/verify-mfa", server.loginVerifyMFA)
-	api.POST("/auth/google", server.loginWithGoogleIDToken)
-	api.GET("/auth/google", server.googleRedirect)
-	api.GET("/auth/google/callback", server.googleCallback)
-	api.POST("/auth/logout", server.logout)
-	api.GET("/auth/me", middleware.AuthRequired(server.auth), server.me)
-	
-	// MFA endpoints (require authentication)
-	api.POST("/auth/mfa/setup", middleware.AuthRequired(server.auth), server.setupMFA)
-	api.POST("/auth/mfa/verify", middleware.AuthRequired(server.auth), server.verifyMFA)
-	api.POST("/auth/mfa/disable", middleware.AuthRequired(server.auth), server.disableMFA)
-	api.GET("/auth/mfa/status", middleware.AuthRequired(server.auth), server.getMFAStatus)
+	// Auth endpoints with strict rate limiting (5 req/min)
+	auth := api.Group("/auth")
+	auth.Use(middleware.RateLimit(true)) // 5 req/min for auth
+	{
+		auth.GET("/providers", server.authProviders)
+		auth.POST("/login", server.login)
+		auth.POST("/login/verify-mfa", server.loginVerifyMFA)
+		auth.POST("/google", server.loginWithGoogleIDToken)
+		auth.GET("/google", server.googleRedirect)
+		auth.GET("/google/callback", server.googleCallback)
+		auth.POST("/logout", server.logout)
+		auth.GET("/me", middleware.AuthRequired(server.auth), server.me)
+		
+		// MFA endpoints (require authentication)
+		auth.POST("/mfa/setup", middleware.AuthRequired(server.auth), server.setupMFA)
+		auth.POST("/mfa/verify", middleware.AuthRequired(server.auth), server.verifyMFA)
+		auth.POST("/mfa/disable", middleware.AuthRequired(server.auth), server.disableMFA)
+		auth.GET("/mfa/status", middleware.AuthRequired(server.auth), server.getMFAStatus)
+	}
 }
 
 func (server *apiServer) authProviders(c *gin.Context) {

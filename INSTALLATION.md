@@ -62,7 +62,7 @@ After installation, you'll have:
 - **Frontend**: React + TypeScript + Vite UI
 - **Backend**: Go + Gin REST API (port 3001)
 - **PostgreSQL**: Database (port 5432)
-- **SaltStack**: Configuration management (port 8000)
+- **SaltStack**: Configuration management (⚠️ port 8000 - **localhost/private network ONLY**)
 - **Wazuh**: Security monitoring (port 55000)
 - **OpenSCAP**: Compliance scanning
 - **Agents**: Client-side inventory collectors (Linux/Windows)
@@ -532,7 +532,7 @@ curl http://localhost/api/health
 - **Operating System**: Ubuntu 20.04 LTS or newer
 - **RAM**: Minimum 4GB, recommended 8GB+
 - **Disk Space**: Minimum 20GB available
-- **Network**: Access to required ports (80, 443, 3001, 5432, 8000)
+- **Network**: Public access to ports 80/443 (nginx), Internal-only ports: 3001 (backend), 5432 (postgres), 8000 (Salt API - **MUST be firewalled from internet**)
 
 ### Required Software
 
@@ -1124,7 +1124,7 @@ The certbot will automatically update your nginx configuration for HTTPS.
 | Backend Container | 3001 | `http://YOUR_SERVER_IP:3001` (internal) |
 | Secondary Backend | 3012 | `http://YOUR_SERVER_IP:3012` |
 | PostgreSQL | 5432 | `localhost:5432` (Docker network) |
-| Salt API | 8000 | `http://YOUR_SERVER_IP:8000` |
+| Salt API | 8000 | 🚨 **MUST bind to localhost/private network ONLY** |
 | Frontend Dev Server | 5173 | `http://YOUR_SERVER_IP:5173` (dev only) |
 | Frontend Preview | 4175 | `http://YOUR_SERVER_IP:4175` (preview only) |
 
@@ -2261,6 +2261,70 @@ npm test                # Run tests
 5. **Keep secrets in .env files** - never commit them to Git
 6. **Regular backups** of PostgreSQL database
 7. **Update dependencies** regularly for security patches
+
+### 🚨 CRITICAL: Salt API Security
+
+**Salt API (port 8000) must NEVER be exposed to the public internet.**
+
+The Salt API provides powerful system administration capabilities. **Exposing it publicly is a critical security vulnerability** that could allow attackers to execute arbitrary commands on all managed systems.
+
+#### Required Firewall Configuration
+
+**Using UFW (Ubuntu/Debian):**
+```bash
+# Allow Salt API only from localhost
+sudo ufw allow from 127.0.0.1 to any port 8000 proto tcp
+
+# Or allow from specific private network
+sudo ufw allow from 10.10.0.0/16 to any port 8000 proto tcp
+
+# Block all other access
+sudo ufw deny 8000/tcp
+
+# Enable firewall
+sudo ufw enable
+```
+
+**Using firewalld (RHEL/CentOS):**
+```bash
+# Create rule for Salt API (localhost only)
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="127.0.0.1" port port="8000" protocol="tcp" accept'
+
+# Or allow from private network
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.10.0.0/16" port port="8000" protocol="tcp" accept'
+
+# Remove from public zone
+sudo firewall-cmd --zone=public --remove-port=8000/tcp --permanent
+
+# Reload
+sudo firewall-cmd --reload
+```
+
+#### Salt API Binding Configuration
+
+Configure Salt API to bind only to localhost:
+
+```yaml
+# /etc/salt/master.d/api.conf
+rest_cherrypy:
+  port: 8000
+  host: 127.0.0.1  # Localhost only
+  disable_ssl: false  # Always use SSL
+  ssl_crt: /etc/salt/ssl/cert.pem
+  ssl_key: /etc/salt/ssl/key.pem
+```
+
+#### Verify Salt API is Not Publicly Accessible
+
+```bash
+# From external machine - this should FAIL or timeout
+curl -k http://YOUR_PUBLIC_IP:8000
+
+# From server localhost - this should work
+curl -k http://127.0.0.1:8000
+```
+
+**See [docs/SECURITY_BEST_PRACTICES.md](docs/SECURITY_BEST_PRACTICES.md) for comprehensive security guidance.**
 
 ---
 
