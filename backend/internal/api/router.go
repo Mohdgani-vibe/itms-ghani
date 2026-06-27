@@ -895,6 +895,16 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.PUT("/chat/channels/:id/reopen", server.reopenChatChannel)
 			protected.DELETE("/chat/channels/:id", server.deleteChatChannel)
 			protected.GET("/chat/channels/:id/messages", server.listChatMessages)
+
+			// IT Documentation (knowledge base)
+			protected.GET("/docs/categories", server.listDocsCategories)
+			protected.POST("/docs/categories", server.createDocsCategory)
+			protected.GET("/docs/pages", server.listDocsPages)
+			protected.GET("/docs/pages/:id", server.getDocsPage)
+			protected.POST("/docs/pages", server.createDocsPage)
+			protected.PUT("/docs/pages/:id", server.updateDocsPage)
+			protected.DELETE("/docs/pages/:id", server.deleteDocsPage)
+
 			protected.GET("/patch/dashboard", server.patchDashboardCompat)
 			protected.GET("/patch/devices", server.patchDevicesCompat)
 			protected.GET("/patch/jobs", server.patchJobsCompat)
@@ -928,6 +938,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.POST("/assets/:id/patch", server.runAssetPatch)
 			protected.POST("/assets/:id/script", server.runAssetScript)
 			protected.GET("/assets/:id/terminal", server.getAssetTerminal)
+			protected.GET("/assets/:id/docs", server.getAssetDocs)
 			protected.GET("/assets/hostname/suggest", server.suggestHostname)
 
 			protected.GET("/audit", server.listAudit)
