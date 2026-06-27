@@ -93,6 +93,9 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 	page, pageSize, paginate := parsePaginationRequest(c, 20)
 	searchQuery := strings.ToLower(strings.TrimSpace(c.Query("search")))
 	sourceFilter := strings.ToLower(strings.TrimSpace(c.Query("source")))
+	severityFilter := strings.ToLower(strings.TrimSpace(c.Query("severity")))
+	resolvedFilter := strings.ToLower(strings.TrimSpace(c.Query("resolved")))
+	deviceIDFilter := strings.TrimSpace(c.Query("device_id"))
 	sourceKeyExpr := alertSourceKeyExpr("al.source")
 	sourceLabelExpr := alertSourceLabelExpr("al.source")
 	departmentExpr := `COALESCE(NULLIF(ad.name, ''), NULLIF(ud.name, ''), 'Unassigned')`
@@ -121,6 +124,22 @@ func (server *apiServer) listAlertsByOwner(c *gin.Context, restrict bool, userID
 	if sourceFilter != "" && sourceFilter != "all" {
 		whereClauses = append(whereClauses, fmt.Sprintf("%s = $%d", sourceKeyExpr, argIndex))
 		args = append(args, sourceFilter)
+		argIndex++
+	}
+	if severityFilter != "" && severityFilter != "all" {
+		whereClauses = append(whereClauses, fmt.Sprintf("al.severity = $%d", argIndex))
+		args = append(args, severityFilter)
+		argIndex++
+	}
+	if resolvedFilter != "" && resolvedFilter != "all" {
+		resolvedBool := resolvedFilter == "true" || resolvedFilter == "1" || resolvedFilter == "resolved"
+		whereClauses = append(whereClauses, fmt.Sprintf("al.resolved = $%d", argIndex))
+		args = append(args, resolvedBool)
+		argIndex++
+	}
+	if deviceIDFilter != "" {
+		whereClauses = append(whereClauses, fmt.Sprintf("al.device_id = $%d::uuid", argIndex))
+		args = append(args, deviceIDFilter)
 		argIndex++
 	}
 	if searchQuery != "" {
