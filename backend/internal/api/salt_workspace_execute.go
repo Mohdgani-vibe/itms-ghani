@@ -82,7 +82,16 @@ func (server *apiServer) executeSaltWorkspaceAction(c *gin.Context) {
 			trimmedArgs = append(trimmedArgs, trimmed)
 		}
 	}
-	if policyErr := terminalFunctionPolicy(functionName, trimmedArgs); policyErr != nil {
+	
+	// Get user role for policy validation
+	claims := server.currentClaims(c)
+	userRole := "it_team"
+	if claims != nil {
+		userRole = claims.Role
+	}
+	
+	// Use role-aware policy for workspace execution
+	if policyErr := terminalFunctionPolicyWithRole(functionName, trimmedArgs, userRole); policyErr != nil {
 		httpx.Error(c, http.StatusBadRequest, policyErr.Error())
 		return
 	}

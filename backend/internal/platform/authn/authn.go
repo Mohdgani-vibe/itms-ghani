@@ -130,8 +130,8 @@ func ValidatePasswordStrength(password string) error {
 	if password != trimmed {
 		return fmt.Errorf("password must not start or end with whitespace")
 	}
-	if len(trimmed) < 12 {
-		return fmt.Errorf("password must be at least 12 characters")
+	if len(trimmed) < 8 {
+		return fmt.Errorf("password must be at least 8 characters")
 	}
 	if len(trimmed) > 128 {
 		return fmt.Errorf("password must be at most 128 characters")

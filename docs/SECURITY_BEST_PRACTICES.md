@@ -454,6 +454,145 @@ Check: GitHub → Security → Code scanning alerts
 
 ---
 
+## Salt API Security
+
+### 🚨 CRITICAL: Network Exposure
+
+**Salt API (port 8000) must NEVER be exposed to the public internet.**
+
+The Salt API provides powerful system administration capabilities and should only be accessible from:
+- The ITMS backend server (localhost or private network)
+- Trusted administrative jump boxes
+- VPN-connected administrators (with strict firewall rules)
+
+### Firewall Configuration
+
+#### Using UFW (Ubuntu/Debian)
+
+```bash
+# Allow Salt API only from ITMS backend (localhost)
+sudo ufw allow from 127.0.0.1 to any port 8000 proto tcp
+
+# Allow Salt API from specific private network
+sudo ufw allow from 10.10.0.0/16 to any port 8000 proto tcp
+
+# Deny all other access to Salt API
+sudo ufw deny 8000/tcp
+```
+
+#### Using firewalld (RHEL/CentOS)
+
+```bash
+# Create rich rule for Salt API (private network only)
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.10.0.0/16" port port="8000" protocol="tcp" accept'
+
+# Block Salt API from public zones
+sudo firewall-cmd --zone=public --remove-port=8000/tcp --permanent
+
+# Reload firewall
+sudo firewall-cmd --reload
+```
+
+#### Using iptables
+
+```bash
+# Allow Salt API from localhost
+sudo iptables -A INPUT -s 127.0.0.1 -p tcp --dport 8000 -j ACCEPT
+
+# Allow from private network
+sudo iptables -A INPUT -s 10.10.0.0/16 -p tcp --dport 8000 -j ACCEPT
+
+# Deny all other access
+sudo iptables -A INPUT -p tcp --dport 8000 -j DROP
+
+# Save rules
+sudo iptables-save > /etc/iptables/rules.v4
+```
+
+### Salt API Binding Configuration
+
+Configure Salt API to bind only to localhost/private interfaces:
+
+```yaml
+# /etc/salt/master.d/api.conf
+rest_cherrypy:
+  port: 8000
+  host: 127.0.0.1  # Localhost only
+  # OR for private network:
+  # host: 10.10.21.11  # Private IP only
+  ssl_crt: /etc/salt/ssl/cert.pem
+  ssl_key: /etc/salt/ssl/key.pem
+  disable_ssl: false  # Always use SSL
+```
+
+### Authentication & Authorization
+
+```yaml
+# /etc/salt/master.d/api.conf
+external_auth:
+  pam:
+    itms_service_account:
+      - '@wheel'
+      - '@runner'
+      - 'test.*'
+      - 'grains.*'
+      - 'cmd.run'
+      - 'state.apply'
+```
+
+### Access Control
+
+ITMS enforces role-based access control for Salt functions:
+
+| Function | it_team | super_admin | Notes |
+|----------|---------|-------------|-------|
+| `test.ping`, `grains.items`, `disk.usage` | ✅ | ✅ | Safe read-only |
+| `cmd.run` | ✅ | ✅ | Limited commands |
+| `state.apply`, `state.sls` | ❌ | ✅ | Dangerous - super_admin only |
+| `cmd.script` | ❌ | ✅ | Dangerous - super_admin only |
+
+### Monitoring & Auditing
+
+```bash
+# Monitor Salt API access logs
+sudo tail -f /var/log/salt/api
+
+# Check active Salt connections
+sudo netstat -tnp | grep :8000
+
+# Audit Salt master logs
+sudo tail -f /var/log/salt/master
+```
+
+### Security Checklist
+
+- [ ] Salt API bound to localhost or private network only
+- [ ] Firewall rules configured to block public access
+- [ ] SSL/TLS enabled with valid certificates
+- [ ] Strong authentication credentials (32+ character passwords)
+- [ ] Regular audit of Salt API logs
+- [ ] Restricted function access (dangerous commands require super_admin)
+- [ ] Network segmentation between Salt API and internet-facing services
+- [ ] Regular security updates for Salt and dependencies
+
+### Incident Response
+
+If Salt API is exposed to the internet:
+
+1. **Immediately block public access** via firewall
+2. **Rotate all Salt API credentials** (service accounts, auth tokens)
+3. **Audit Salt logs** for unauthorized commands
+4. **Check all managed nodes** for suspicious activity
+5. **Review and update firewall rules**
+6. **Document incident** in security log
+
+### References
+
+- [Salt Security Best Practices](https://docs.saltproject.io/en/latest/topics/hardening.html)
+- [Salt API Documentation](https://docs.saltproject.io/en/latest/ref/netapi/all/salt.netapi.rest_cherrypy.html)
+
+---
+
 ## Training & Resources
 
 ### Required Reading

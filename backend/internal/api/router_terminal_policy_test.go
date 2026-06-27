@@ -116,11 +116,21 @@ func TestTerminalFunctionPolicyAllowsSafeFunctions(t *testing.T) {
 	if err := terminalFunctionPolicy("service.status", []string{"salt-minion"}); err != nil {
 		t.Fatalf("terminalFunctionPolicy(service.status) error = %v, want nil", err)
 	}
-	if err := terminalFunctionPolicy("state.apply", []string{"patch.run"}); err != nil {
-		t.Fatalf("terminalFunctionPolicy(state.apply) error = %v, want nil", err)
+	if err := terminalFunctionPolicy("cmd.run", []string{"hostname"}); err != nil {
+		t.Fatalf("terminalFunctionPolicy(cmd.run) error = %v, want nil", err)
 	}
-	if err := terminalFunctionPolicy("cmd.script", []string{"hostname"}); err != nil {
-		t.Fatalf("terminalFunctionPolicy(cmd.script) error = %v, want nil", err)
+}
+
+func TestTerminalFunctionPolicyBlocksDangerousFunctions(t *testing.T) {
+	// Dangerous functions blocked in terminal (state.apply, cmd.script)
+	if err := terminalFunctionPolicy("state.apply", []string{"patch.run"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(state.apply) error = nil, want blocked - requires workspace with super_admin")
+	}
+	if err := terminalFunctionPolicy("cmd.script", []string{"hostname"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(cmd.script) error = nil, want blocked - requires workspace with super_admin")
+	}
+	if err := terminalFunctionPolicy("state.sls", []string{"config"}); err == nil {
+		t.Fatal("terminalFunctionPolicy(state.sls) error = nil, want blocked - requires workspace with super_admin")
 	}
 }
 
@@ -128,13 +138,66 @@ func TestTerminalFunctionPolicyBlocksUnsafeFunctions(t *testing.T) {
 	if err := terminalFunctionPolicy("cmd.run", []string{"curl https://example.com"}); err == nil {
 		t.Fatal("terminalFunctionPolicy(cmd.run) error = nil, want blocked command")
 	}
-	if err := terminalFunctionPolicy("cmd.script", []string{"curl https://example.com"}); err == nil {
-		t.Fatal("terminalFunctionPolicy(cmd.script) error = nil, want blocked command")
-	}
 	if err := terminalFunctionPolicy("service.status", []string{"salt-minion; reboot"}); err == nil {
 		t.Fatal("terminalFunctionPolicy(service.status) error = nil, want blocked service name")
 	}
 	if err := terminalFunctionPolicy("file.write", nil); err == nil {
 		t.Fatal("terminalFunctionPolicy(file.write) error = nil, want blocked function")
+	}
+}
+
+func TestTerminalFunctionPolicyWithRoleAllowsSafeFunctions(t *testing.T) {
+	// Safe functions allowed for all roles
+	roles := []string{"it_team", "super_admin", "auditor"}
+	for _, role := range roles {
+		if err := terminalFunctionPolicyWithRole("test.ping", nil, role); err != nil {
+			t.Fatalf("terminalFunctionPolicyWithRole(test.ping, %s) error = %v, want nil", role, err)
+		}
+		if err := terminalFunctionPolicyWithRole("service.status", []string{"salt-minion"}, role); err != nil {
+			t.Fatalf("terminalFunctionPolicyWithRole(service.status, %s) error = %v, want nil", role, err)
+		}
+	}
+}
+
+func TestTerminalFunctionPolicyWithRoleRestrictsDangerousFunctions(t *testing.T) {
+	// Dangerous functions blocked for it_team
+	dangerousFunctions := []struct {
+		name string
+		args []string
+	}{
+		{"state.apply", []string{"patch.run"}},
+		{"state.sls", []string{"config"}},
+		{"cmd.script", []string{"/tmp/test.sh"}},
+	}
+
+	for _, fn := range dangerousFunctions {
+		// it_team should be blocked
+		if err := terminalFunctionPolicyWithRole(fn.name, fn.args, "it_team"); err == nil {
+			t.Fatalf("terminalFunctionPolicyWithRole(%s, it_team) error = nil, want blocked", fn.name)
+		}
+		
+		// auditor should be blocked
+		if err := terminalFunctionPolicyWithRole(fn.name, fn.args, "auditor"); err == nil {
+			t.Fatalf("terminalFunctionPolicyWithRole(%s, auditor) error = nil, want blocked", fn.name)
+		}
+		
+		// super_admin should be allowed (with valid args)
+		// Note: cmd.script and state functions still need valid args
+		if fn.name == "state.apply" || fn.name == "state.sls" {
+			if err := terminalFunctionPolicyWithRole(fn.name, fn.args, "super_admin"); err != nil {
+				t.Fatalf("terminalFunctionPolicyWithRole(%s, super_admin) error = %v, want nil", fn.name, err)
+			}
+		}
+	}
+}
+
+func TestTerminalFunctionPolicyWithRoleValidatesArguments(t *testing.T) {
+	// Even super_admin must pass validation rules
+	if err := terminalFunctionPolicyWithRole("cmd.run", []string{"curl https://evil.com"}, "super_admin"); err == nil {
+		t.Fatal("terminalFunctionPolicyWithRole(cmd.run curl, super_admin) error = nil, want blocked unsafe command")
+	}
+	
+	if err := terminalFunctionPolicyWithRole("state.apply", []string{"bad && reboot"}, "super_admin"); err == nil {
+		t.Fatal("terminalFunctionPolicyWithRole(state.apply, super_admin) error = nil, want blocked unsafe state name")
 	}
 }

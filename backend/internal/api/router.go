@@ -459,6 +459,60 @@ func terminalFunctionPolicy(functionName string, args []string) error {
 			return fmt.Errorf("invalid service name")
 		}
 		return nil
+	case "state", "state.apply", "state.sls", "cmd.script":
+		// DANGEROUS FUNCTIONS - Blocked for all users in terminal
+		// These powerful commands can modify system state, run arbitrary scripts
+		return fmt.Errorf("function %s is restricted - requires super_admin role and workspace execution", normalizedFunction)
+	case "cmd.run", "cmd.run_all":
+		if len(trimmedArgs) == 0 {
+			return fmt.Errorf("%s requires a command", normalizedFunction)
+		}
+		return terminalCommandPolicy(strings.Join(trimmedArgs, " "))
+	default:
+		return fmt.Errorf("function is not allowed in the terminal function runner")
+	}
+}
+
+// terminalFunctionPolicyWithRole validates Salt function with role-based restrictions
+// Used by workspace execution for role-aware policy
+func terminalFunctionPolicyWithRole(functionName string, args []string, role string) error {
+	normalizedFunction := strings.ToLower(strings.TrimSpace(functionName))
+	normalizedRole := strings.ToLower(strings.TrimSpace(role))
+	
+	trimmedArgs := make([]string, 0, len(args))
+	for _, arg := range args {
+		trimmed := strings.TrimSpace(arg)
+		if trimmed != "" {
+			trimmedArgs = append(trimmedArgs, trimmed)
+		}
+	}
+
+	// Dangerous functions require super_admin role
+	dangerousFunctions := []string{"state", "state.apply", "state.sls", "cmd.script"}
+	for _, dangerous := range dangerousFunctions {
+		if normalizedFunction == dangerous {
+			if normalizedRole != "super_admin" {
+				return fmt.Errorf("function %s requires super_admin role", normalizedFunction)
+			}
+			// super_admin can proceed with validation
+			break
+		}
+	}
+
+	switch normalizedFunction {
+	case "test.ping", "test.version", "grains.items", "disk.usage", "status.uptime", "pkg.upgrades", "pkg.uptodate", "network.interfaces":
+		if len(trimmedArgs) > 0 {
+			return fmt.Errorf("%s does not accept arguments in the terminal function runner", normalizedFunction)
+		}
+		return nil
+	case "service.status":
+		if len(trimmedArgs) != 1 {
+			return fmt.Errorf("service.status requires exactly one service name")
+		}
+		if !terminalSimpleArgumentPattern.MatchString(trimmedArgs[0]) {
+			return fmt.Errorf("invalid service name")
+		}
+		return nil
 	case "state", "state.apply", "state.sls":
 		if len(trimmedArgs) != 1 {
 			return fmt.Errorf("%s requires exactly one state name", normalizedFunction)
