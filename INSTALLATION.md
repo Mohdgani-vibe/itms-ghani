@@ -110,7 +110,7 @@ cp .env.example .env
 
 # Edit .env with your values (or use sed commands below)
 cat > .env << 'EOF'
-DATABASE_URL=postgresql://itms_user:itms_pass@postgres:5432/itms
+DATABASE_URL=postgresql://YOUR_DB_USER:YOUR_DB_PASSWORD@postgres:5432/itms
 JWT_SECRET=<YOUR_32_CHAR_JWT_SECRET>
 PUBLIC_SERVER_URL=http://<YOUR_SERVER_IP>
 DEFAULT_ADMIN_EMAIL=admin@zerodha.com
@@ -442,7 +442,7 @@ nano .env  # Edit configuration
 **Minimum required settings in .env:**
 
 ```bash
-DATABASE_URL=postgresql://itms_user:itms_pass@postgres:5432/itms
+DATABASE_URL=postgresql://YOUR_DB_USER:YOUR_DB_PASSWORD@postgres:5432/itms
 JWT_SECRET=your-jwt-secret-at-least-32-characters-long
 PUBLIC_SERVER_URL=http://YOUR_SERVER_IP
 DEFAULT_ADMIN_EMAIL=admin@zerodha.com
@@ -681,7 +681,7 @@ nano .env
 
 ```bash
 # Database (Docker compose will create this)
-DATABASE_URL=postgresql://itms_user:itms_pass@postgres:5432/itms
+DATABASE_URL=postgresql://YOUR_DB_USER:YOUR_DB_PASSWORD@postgres:5432/itms
 
 # JWT Settings
 JWT_SECRET=your-development-jwt-secret-at-least-32-characters-long
@@ -939,7 +939,7 @@ nano .env
 **Critical environment variables:**
 
 ```bash
-DATABASE_URL=postgresql://itms_user:strong_password@postgres:5432/itms
+DATABASE_URL=postgresql://YOUR_DB_USER:YOUR_DB_PASSWORD@postgres:5432/itms
 JWT_SECRET=generate-a-long-random-string-at-least-32-chars
 PUBLIC_SERVER_URL=http://your-server-ip-or-domain
 DEFAULT_ADMIN_EMAIL=admin@zerodha.com
@@ -2044,7 +2044,7 @@ curl -X POST http://localhost/api/auth/login \
 **Verify admin user in database:**
 
 ```bash
-# Check user exists (adjust -U postgres or -U itms_user based on your DB setup)
+# Check user exists (adjust -U postgres or -U YOUR_DB_USER based on your DB setup)
 docker exec -it zerodha-itms-postgres psql -U postgres -d itms \
   -c "SELECT email, role, full_name, emp_id FROM users WHERE email='admin@zerodha.com';"
 
@@ -2056,7 +2056,7 @@ docker exec -it zerodha-itms-postgres psql -U postgres -d itms \
 If automatic creation doesn't work, create the admin user manually via database:
 
 ```bash
-# Connect to database (try -U postgres or -U itms_user)
+# Connect to database (try -U postgres or -U YOUR_DB_USER)
 docker exec -it zerodha-itms-postgres psql -U postgres -d itms
 
 # Check if users table exists
@@ -2100,7 +2100,7 @@ docker compose up
 3. **Check PostgreSQL:**
    ```bash
    docker-compose logs postgres
-   docker-compose exec postgres psql -U itms_user -d itms -c "SELECT version();"
+   docker-compose exec postgres psql -U YOUR_DB_USER -d itms -c "SELECT version();"
    ```
 
 4. **Restart services:**
@@ -2151,7 +2151,7 @@ sudo kill -9 <PID>
 
 2. **Test direct connection:**
    ```bash
-   docker-compose exec postgres psql -U itms_user -d itms
+   docker-compose exec postgres psql -U YOUR_DB_USER -d itms
    ```
 
 3. **Check network:**

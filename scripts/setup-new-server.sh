@@ -5,7 +5,7 @@ REPO_URL=""
 APP_DIR="${HOME}/itms"
 SERVER_NAME=""
 DB_NAME="itms"
-DB_USER="itms_user"
+DB_USER="postgres"
 DB_PASSWORD=""
 DB_PORT="5432"
 PUBLIC_SERVER_URL=""
@@ -27,7 +27,7 @@ Options:
   --server-name NAME      Public host or IP used by nginx and PUBLIC_SERVER_URL
   --app-dir PATH          Install path. Default: ~/itms
   --db-name NAME          PostgreSQL database name. Default: itms
-  --db-user USER          PostgreSQL user. Default: itms_user
+  --db-user USER          PostgreSQL user. Default: YOUR_DB_USER
   --db-port PORT          PostgreSQL port in DATABASE_URL and restore step. Default: 5432
   --db-password VALUE     PostgreSQL password. If omitted, prompt securely
   --admin-email EMAIL     Admin email. Default: admin@zerodha.com

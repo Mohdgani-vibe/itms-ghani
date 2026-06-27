@@ -419,12 +419,12 @@ All ITMS instances should connect to the same PostgreSQL database:
 
 **Server 1 (172.10.80.16):**
 ```bash
-DATABASE_URL=postgres://itms_user:password@db.zero.com:5432/itms
+DATABASE_URL=postgres://YOUR_DB_USER:YOUR_DB_PASSWORD@db.zero.com:5432/itms
 ```
 
 **Server 2 (172.10.80.20):**
 ```bash
-DATABASE_URL=postgres://itms_user:password@db.zero.com:5432/itms
+DATABASE_URL=postgres://YOUR_DB_USER:YOUR_DB_PASSWORD@db.zero.com:5432/itms
 ```
 
 ### Session Synchronization
