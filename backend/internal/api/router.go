@@ -1004,7 +1004,8 @@ func (server *apiServer) login(c *gin.Context) {
 		httpx.Error(c, http.StatusTooManyRequests, "too many login attempts, try again later")
 		return
 	}
-	if !strings.HasSuffix(email, "@zerodha.com") {
+	// Validate email domain against configured hosted domain
+	if server.config.GoogleHostedDomain != "" && !strings.HasSuffix(email, "@"+server.config.GoogleHostedDomain) {
 		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
@@ -1063,7 +1064,8 @@ func (server *apiServer) loginWithGoogleIDToken(c *gin.Context) {
 		httpx.Error(c, http.StatusTooManyRequests, "too many login attempts, try again later")
 		return
 	}
-	if !strings.HasSuffix(email, "@zerodha.com") {
+	// Validate email domain against configured hosted domain
+	if server.config.GoogleHostedDomain != "" && !strings.HasSuffix(email, "@"+server.config.GoogleHostedDomain) {
 		server.rejectAuthAttempt(c, limiterKey)
 		return
 	}
@@ -1875,8 +1877,9 @@ func (server *apiServer) upsertUser(c *gin.Context, create bool) {
 			return
 		}
 	}
-	if !strings.HasSuffix(effectiveEmail, "@zerodha.com") {
-		httpx.Error(c, http.StatusBadRequest, "only @zerodha.com email addresses are allowed")
+	// Validate email domain against configured hosted domain
+	if server.config.GoogleHostedDomain != "" && !strings.HasSuffix(effectiveEmail, "@"+server.config.GoogleHostedDomain) {
+		httpx.Error(c, http.StatusBadRequest, "email must belong to the @"+server.config.GoogleHostedDomain+" domain")
 		return
 	}
 	if err := server.validateEntityLinks(effectiveEntityID, effectiveDeptID, effectiveLocationID); err != nil {
@@ -2076,7 +2079,11 @@ func (server *apiServer) exportUserImportTemplate(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename=user-import-template.csv")
 	writer := csv.NewWriter(c.Writer)
 	_ = writer.Write(userImportCSVHeaders)
-	_ = writer.Write([]string{"", "jane.doe@zerodha.com", "EMP010", "", "ChangeMe123!", "employee", "", "", "active"})
+	exampleDomain := server.config.GoogleHostedDomain
+	if exampleDomain == "" {
+		exampleDomain = "example.com"
+	}
+	_ = writer.Write([]string{"", "jane.doe@" + exampleDomain, "EMP010", "", "ChangeMe123!", "employee", "", "", "active"})
 	writer.Flush()
 }
 
@@ -2088,8 +2095,12 @@ func (server *apiServer) exportUserImportMinimalTemplate(c *gin.Context) {
 	c.Header("Content-Disposition", "attachment; filename=user-import-minimal-template.csv")
 	writer := csv.NewWriter(c.Writer)
 	_ = writer.Write(userImportCSVHeaders)
-	_ = writer.Write([]string{"", "employee1@zerodha.com", "EMP1001", "", "ChangeMe123!", "employee", "", "", "active"})
-	_ = writer.Write([]string{"", "employee2@zerodha.com", "EMP1002", "", "ChangeMe123!", "employee", "", "", "active"})
+	exampleDomain := server.config.GoogleHostedDomain
+	if exampleDomain == "" {
+		exampleDomain = "example.com"
+	}
+	_ = writer.Write([]string{"", "employee1@" + exampleDomain, "EMP1001", "", "ChangeMe123!", "employee", "", "", "active"})
+	_ = writer.Write([]string{"", "employee2@" + exampleDomain, "EMP1002", "", "ChangeMe123!", "employee", "", "", "active"})
 	writer.Flush()
 }
 
