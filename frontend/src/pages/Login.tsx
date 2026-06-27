@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MonitorSmartphone, Lock, Eye, EyeOff } from 'lucide-react';
+import { MonitorSmartphone, Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { apiRequest, resetAuthRedirectState } from '../lib/api';
 import { getPreferredPortalPath, getShortName, normalizeAuthUser, normalizeLoginIdentifier, setStoredSession } from '../lib/session';
 import { normalizeAuthErrorMessage } from './loginUtils';
@@ -90,6 +90,8 @@ export default function Login() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
   const [mfaRequired, setMfaRequired] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -275,6 +277,43 @@ export default function Login() {
   const revealPasswordForm = useCallback(() => {
     setShowPasswordForm(true);
     setCredentialFieldsReady(true);
+  }, []);
+
+  const handleSSOLogin = useCallback(() => {
+    setSsoLoading(true);
+    setError('');
+    
+    // Redirect to Keycloak authorization endpoint
+    // IMPORTANT: Update these values to match your Keycloak configuration
+    const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL || 'http://localhost:8081';
+    const keycloakRealm = import.meta.env.VITE_KEYCLOAK_REALM || 'itms';
+    const keycloakClientId = import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'itms-frontend';
+    const redirectUri = `${window.location.origin}/login/callback`;
+    
+    // Build OAuth2 authorization URL
+    const authUrl = new URL(`${keycloakUrl}/realms/${keycloakRealm}/protocol/openid-connect/auth`);
+    authUrl.searchParams.set('client_id', keycloakClientId);
+    authUrl.searchParams.set('redirect_uri', redirectUri);
+    authUrl.searchParams.set('response_type', 'code');
+    authUrl.searchParams.set('scope', 'openid profile email');
+    authUrl.searchParams.set('state', Math.random().toString(36).substring(7));
+    
+    // Redirect to Keycloak login page
+    window.location.href = authUrl.toString();
+    
+    // TODO: Implement callback handler at /login/callback route
+    // 1. Extract 'code' from query params
+    // 2. POST to /api/auth/sso/callback with code
+    // 3. Backend exchanges code for tokens with Keycloak
+    // 4. Backend validates user and issues ITMS JWT
+    // 5. handleSuccessfulLogin(response)
+  }, []);
+
+  // Check if SSO is enabled (would be loaded from /api/auth/providers)
+  useEffect(() => {
+    // For now, enable SSO if VITE_KEYCLOAK_URL is set
+    const keycloakUrl = import.meta.env.VITE_KEYCLOAK_URL;
+    setSsoEnabled(Boolean(keycloakUrl));
   }, []);
 
   return (
@@ -519,6 +558,22 @@ export default function Login() {
                   <span>Google SSO not configured</span>
                 </button>
               )}
+              
+              {/* Keycloak SSO Button */}
+              {ssoEnabled ? (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={handleSSOLogin}
+                    disabled={ssoLoading}
+                    className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-sky-300 rounded-md shadow-sm bg-sky-50 text-sm font-semibold text-sky-700 hover:bg-sky-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Shield className="w-4 h-4 mr-2" />
+                    <span>{ssoLoading ? 'Redirecting...' : 'Login with Enterprise SSO'}</span>
+                  </button>
+                  {ssoLoading ? <p className="text-xs text-center text-slate-500">Redirecting to SSO provider...</p> : null}
+                </div>
+              ) : null}
             </div>
           </div>
         </div>

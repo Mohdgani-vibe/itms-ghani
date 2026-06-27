@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Monitor, Wrench } from 'lucide-react';
 import { actionButtonStyles } from '../../lib/buttonStyles';
 
 interface DeviceDetailOverviewCard {
@@ -18,9 +18,12 @@ interface DeviceDetailOverviewProps {
   startingTerminal: boolean;
   canStartTerminal: boolean;
   canOpenPatchConsole: boolean;
+  maintenanceUntil?: string | null;
   onBack: () => void;
   onStartTerminal: () => void;
+  onRemoteDesktop?: () => void;
   onOpenSaltConsole: () => void;
+  onToggleMaintenance: () => void;
   error: string;
   successMessage: string;
   overviewCards: DeviceDetailOverviewCard[];
@@ -39,9 +42,12 @@ export default function DeviceDetailOverview({
   startingTerminal,
   canStartTerminal,
   canOpenPatchConsole,
+  maintenanceUntil,
   onBack,
   onStartTerminal,
+  onRemoteDesktop,
   onOpenSaltConsole,
+  onToggleMaintenance,
   error,
   successMessage,
   overviewCards,
@@ -49,6 +55,7 @@ export default function DeviceDetailOverview({
   activeSection,
   onSelectSection,
 }: DeviceDetailOverviewProps) {
+  const isInMaintenance = maintenanceUntil && new Date(maintenanceUntil) > new Date();
   return (
     <>
       <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(163,230,53,0.12),_transparent_24%),linear-gradient(135deg,_#f6fdf8_0%,_#ffffff_58%,_#f6fbf7_100%)] p-5 shadow-sm sm:p-6">
@@ -74,9 +81,19 @@ export default function DeviceDetailOverview({
             </div>
           </div>
           {computeAsset && canOperate ? <div className="flex flex-wrap gap-2.5 lg:justify-end">
+            <button type="button" onClick={onToggleMaintenance} className={`rounded-2xl border px-4 py-2.5 text-sm font-bold shadow-sm transition ${isInMaintenance ? 'border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100' : 'border-zinc-200 bg-white text-zinc-800 hover:bg-zinc-50'}`}>
+              <Wrench className="-mt-0.5 mr-1.5 inline-block h-4 w-4" />
+              {isInMaintenance ? 'In Maintenance' : 'Maintenance Mode'}
+            </button>
             <button type="button" onClick={onStartTerminal} disabled={startingTerminal || !canStartTerminal} className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60">
               {startingTerminal ? 'Opening SSH terminal...' : 'Open SSH Terminal'}
             </button>
+            {onRemoteDesktop && (
+              <button type="button" onClick={onRemoteDesktop} className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-2.5 text-sm font-bold text-sky-700 shadow-sm transition hover:bg-sky-100">
+                <Monitor className="-mt-0.5 mr-1.5 inline-block h-4 w-4" />
+                Remote Desktop
+              </button>
+            )}
             <button type="button" onClick={onOpenSaltConsole} disabled={!canOpenPatchConsole} className={`rounded-2xl px-4 py-2.5 text-sm font-bold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60 ${actionButtonStyles.add}`}>
               Open Salt Console
             </button>

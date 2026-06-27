@@ -884,6 +884,24 @@ export default function DeviceDetailPage() {
     setActiveSection(sectionId);
     navigate({ pathname: location.pathname, hash: `#${sectionId}` }, { replace: true });
   };
+
+  const handleRemoteDesktop = () => {
+    if (!device?.id) {
+      return;
+    }
+    
+    // Open Guacamole remote desktop in new tab
+    // Backend should create a Guacamole connection and return connection ID
+    // For now, open the base Guacamole interface
+    const remoteUrl = `/remote/#/client/${device.id}`;
+    window.open(remoteUrl, '_blank', 'noopener,noreferrer');
+    
+    // TODO: Backend integration:
+    // 1. POST /api/devices/:id/remote-desktop to create Guacamole connection
+    // 2. Return connection ID and auth token
+    // 3. Open /remote/#/client/{connection_id}?token={auth_token}
+  };
+
   const {
     sshTerminalReady,
     canStartTerminal,
@@ -953,9 +971,12 @@ export default function DeviceDetailPage() {
         startingTerminal={startingTerminal}
         canStartTerminal={canStartTerminal}
         canOpenPatchConsole={canOpenPatchConsole}
+        maintenanceUntil={device.maintenanceUntil}
         onBack={() => navigate(-1)}
         onStartTerminal={() => { void handleStartTerminal(); }}
+        onRemoteDesktop={handleRemoteDesktop}
         onOpenSaltConsole={handleOpenMainSaltConsole}
+        onToggleMaintenance={() => { /* TODO: Implement maintenance mode toggle */ }}
         error={error}
         successMessage={successMessage}
         overviewCards={overviewCards}
@@ -1080,11 +1101,11 @@ export default function DeviceDetailPage() {
 
             {activeSection === 'updates-salt' && computeAsset ? <SaltUpdatesPanel saltTarget={device.saltMinionId || device.toolStatus?.salt?.identifier || 'Not linked'} selectedSaltAction={selectedSaltAction} customSaltInput={customSaltInput} runningPatch={runningPatch} canOperate={canOperate} canOpenPatchConsole={canOpenPatchConsole} patchActionButtonLabel={patchActionButtonLabel} patchBlockedReason={patchBlockedReason} sidebarLoading={sidebarLoading} patchJobs={patchJobs} onSelectedSaltActionChange={setSelectedSaltAction} onCustomSaltInputChange={setCustomSaltInput} onRunPatch={() => { void handleRunPatch(); }} formatDate={formatDate} /> : null}
 
-            {activeSection === 'security' && computeAsset ? <SecurityFindingsPanel title="Wazuh Findings" description="Latest file-integrity and compliance findings linked through the Wazuh agent for this asset." alerts={wazuhAlerts} loading={sidebarLoading} emptyMessage="No recent Wazuh findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
+            {activeSection === 'security' && computeAsset ? <SecurityFindingsPanel title="Wazuh Findings" description="Latest file-integrity and compliance findings linked through the Wazuh agent for this asset." alerts={wazuhAlerts} loading={sidebarLoading} emptyMessage="No recent Wazuh findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} complianceScore={device.complianceScore} patchStatus={device.patchStatus} /> : null}
 
-            {activeSection === 'clamav' && computeAsset ? <SecurityFindingsPanel title="ClamScan Findings" description="Recent malware scan results reported by the endpoint agent for this asset." alerts={clamavAlerts} loading={sidebarLoading} emptyMessage="No recent ClamScan findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
+            {activeSection === 'clamav' && computeAsset ? <SecurityFindingsPanel title="ClamScan Findings" description="Recent malware scan results reported by the endpoint agent for this asset." alerts={clamavAlerts} loading={sidebarLoading} emptyMessage="No recent ClamScan findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} complianceScore={device.complianceScore} patchStatus={device.patchStatus} /> : null}
 
-            {activeSection === 'openscap' && computeAsset ? <SecurityFindingsPanel title="OpenSCAP Findings" description="Recent hardening and compliance results reported from OpenSCAP scans for this asset." alerts={openscapAlerts} loading={sidebarLoading} emptyMessage="No recent OpenSCAP findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} /> : null}
+            {activeSection === 'openscap' && computeAsset ? <SecurityFindingsPanel title="OpenSCAP Findings" description="Recent hardening and compliance results reported from OpenSCAP scans for this asset." alerts={openscapAlerts} loading={sidebarLoading} emptyMessage="No recent OpenSCAP findings for this asset." onSelectAlert={setSelectedAlert} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} severityBadgeClassName={severityBadgeClassName} alertSourceLabel={alertSourceLabel} formatDate={formatDate} complianceScore={device.complianceScore} patchStatus={device.patchStatus} /> : null}
 
             {activeSection === 'other-alerts' && computeAsset ? <OtherAlertsPanel alerts={otherAlerts} loading={sidebarLoading} onSelectAlert={setSelectedAlert} alertSourceLabel={alertSourceLabel} severityBadgeClassName={severityBadgeClassName} alertStatusBadgeClassName={alertStatusBadgeClassName} alertStatusLabel={alertStatusLabel} formatDate={formatDate} /> : null}
           </div>

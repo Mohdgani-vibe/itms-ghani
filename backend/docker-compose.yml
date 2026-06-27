@@ -18,6 +18,47 @@ services:
       timeout: 5s
       retries: 5
 
+  # Keycloak SSO & Identity Management
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: zerodha-itms-keycloak
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Database configuration (shared with ITMS)
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-itms}
+      KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      KC_DB_SCHEMA: keycloak
+      
+      # Admin credentials (CHANGE IN PRODUCTION)
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USER:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-changeme_keycloak_admin}
+      
+      # Server configuration
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-localhost}
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_PORT: "8080"
+      KC_PROXY: edge
+      KC_HEALTH_ENABLED: "true"
+      KC_METRICS_ENABLED: "true"
+      
+      # Logging
+      KC_LOG_LEVEL: INFO
+    ports:
+      - "8081:8080"  # Changed from 8080 to avoid conflict with Guacamole
+    command:
+      - start-dev  # Use 'start' for production with proper hostname/cert
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 90s
+
   backend:
     build:
       context: .
@@ -27,6 +68,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      keycloak:
+        condition: service_healthy
     env_file:
       - .env
       - .env.secrets
@@ -34,6 +77,11 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-itms}?sslmode=disable
       MIGRATION_DIR: /app/db/postgres_migrations
       BACKEND_ADDR: :3001
+      # Keycloak SSO configuration
+      KEYCLOAK_URL: ${KEYCLOAK_URL:-http://keycloak:8080}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-itms}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID:-itms-backend}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:-}
     ports:
       - "3001:3001"
     healthcheck:

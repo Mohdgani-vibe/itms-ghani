@@ -111,14 +111,27 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 		}
 
 		rawToken := strings.TrimPrefix(header, "Bearer ")
+		
+		// Try ITMS-issued JWT first
 		token, err := jwt.ParseWithClaims(rawToken, &claims{}, func(token *jwt.Token) (any, error) {
 			return a.secret, nil
 		})
+		
+		// If ITMS token fails, try Keycloak JWT validation
 		if err != nil || !token.Valid {
-			ErrorJSON(writer, http.StatusUnauthorized, "Invalid access token")
+			identity, keycloakErr := a.validateKeycloakToken(rawToken)
+			if keycloakErr != nil {
+				ErrorJSON(writer, http.StatusUnauthorized, "Invalid access token")
+				return
+			}
+			
+			// Keycloak token valid - set identity and continue
+			ctx := context.WithValue(request.Context(), userContextKey, identity)
+			next.ServeHTTP(writer, request.WithContext(ctx))
 			return
 		}
 
+		// ITMS token valid
 		parsedClaims, ok := token.Claims.(*claims)
 		if !ok {
 			ErrorJSON(writer, http.StatusUnauthorized, "Invalid token claims")
@@ -129,6 +142,79 @@ func (a *Authenticator) Authenticate(next http.HandlerFunc) http.HandlerFunc {
 		ctx := context.WithValue(request.Context(), userContextKey, identity)
 		next.ServeHTTP(writer, request.WithContext(ctx))
 	}
+}
+
+// validateKeycloakToken validates a Keycloak-issued JWT and maps it to ITMS Identity
+// TODO: Implement full Keycloak JWT validation:
+// 1. Fetch Keycloak public key from ${KEYCLOAK_URL}/realms/${KEYCLOAK_REALM}/protocol/openid-connect/certs
+// 2. Verify JWT signature using RSA public key
+// 3. Validate standard claims (exp, iss, aud)
+// 4. Map Keycloak roles to ITMS roles (super_admin, it_team, auditor, employee)
+// 5. Optionally sync user to ITMS database on first SSO login
+func (a *Authenticator) validateKeycloakToken(rawToken string) (Identity, error) {
+	// Placeholder implementation - returns error until fully implemented
+	// Production implementation should:
+	// - Use go-oidc library or golang-jwt with RSA verification
+	// - Cache Keycloak public keys (JWKS)
+	// - Map Keycloak claims to ITMS Identity structure
+	
+	return Identity{}, errors.New("keycloak sso not yet fully implemented - see TODO comments in auth.go")
+	
+	/* Example implementation structure:
+	
+	import "github.com/coreos/go-oidc/v3/oidc"
+	
+	// Initialize OIDC verifier (do this once at startup)
+	ctx := context.Background()
+	provider, err := oidc.NewProvider(ctx, os.Getenv("KEYCLOAK_URL") + "/realms/" + os.Getenv("KEYCLOAK_REALM"))
+	if err != nil {
+		return Identity{}, err
+	}
+	
+	verifier := provider.Verifier(&oidc.Config{ClientID: os.Getenv("KEYCLOAK_CLIENT_ID")})
+	
+	// Verify token
+	idToken, err := verifier.Verify(ctx, rawToken)
+	if err != nil {
+		return Identity{}, err
+	}
+	
+	// Extract claims
+	var keycloakClaims struct {
+		Email         string   `json:"email"`
+		Name          string   `json:"name"`
+		PreferredUser string   `json:"preferred_username"`
+		RealmRoles    []string `json:"realm_access.roles"`
+	}
+	
+	if err := idToken.Claims(&keycloakClaims); err != nil {
+		return Identity{}, err
+	}
+	
+	// Map Keycloak role to ITMS role
+	itmsRole := "employee" // default
+	if slices.Contains(keycloakClaims.RealmRoles, "itms-admin") {
+		itmsRole = "super_admin"
+	} else if slices.Contains(keycloakClaims.RealmRoles, "itms-it") {
+		itmsRole = "it_team"
+	} else if slices.Contains(keycloakClaims.RealmRoles, "itms-auditor") {
+		itmsRole = "auditor"
+	}
+	
+	// Optionally: Look up or create user in ITMS database
+	userID, err := a.getOrCreateSSOUser(keycloakClaims.Email, keycloakClaims.Name, itmsRole)
+	if err != nil {
+		return Identity{}, err
+	}
+	
+	return Identity{
+		ID:    userID,
+		Email: keycloakClaims.Email,
+		Name:  keycloakClaims.Name,
+		Role:  itmsRole,
+		Token: rawToken,
+	}, nil
+	*/
 }
 
 func (a *Authenticator) Require(next http.HandlerFunc, allowedRoles ...string) http.HandlerFunc {
