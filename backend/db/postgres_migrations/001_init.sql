@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS assets (
   location_id UUID REFERENCES locations(id),
   purchase_date DATE,
   warranty_until DATE,
+  maintenance_until TIMESTAMPTZ,
   status VARCHAR(30) NOT NULL DEFAULT 'in_use',
   condition VARCHAR(30) NOT NULL DEFAULT 'good',
   glpi_id INTEGER,

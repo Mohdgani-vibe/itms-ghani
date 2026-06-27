@@ -5623,6 +5623,7 @@ type dbAsset struct {
 	PurchaseDate  string
 	Cost          string
 	WarrantyUntil string
+	MaintenanceUntil string
 	Status        string
 	Condition     string
 	GLPIID        int
@@ -6323,6 +6324,15 @@ func (server *apiServer) recordOperationalAlert(asset dbAsset, fallbackUserID st
 	}
 	if alertUserID == "" || strings.TrimSpace(asset.ID) == "" {
 		return
+	}
+
+	// Skip alert recording if asset is in maintenance window
+	if strings.TrimSpace(asset.MaintenanceUntil) != "" {
+		maintenanceUntil, err := time.Parse(time.RFC3339, strings.TrimSpace(asset.MaintenanceUntil))
+		if err == nil && time.Now().UTC().Before(maintenanceUntil) {
+			// Asset is in maintenance mode, suppress alert
+			return
+		}
 	}
 
 	var existingID string
