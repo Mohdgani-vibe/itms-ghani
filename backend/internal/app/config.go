@@ -77,6 +77,7 @@ type Config struct {
 	GoogleClientSecret               string
 	GoogleRedirectURL                string
 	GoogleHostedDomain               string
+	VaultEncryptionKey               string
 	DefaultAdminEmail                string
 	DefaultAdminPassword             string
 	DefaultAdminName                 string
@@ -157,6 +158,7 @@ func LoadConfig() (Config, error) {
 		GoogleClientSecret:               os.Getenv("GOOGLE_CLIENT_SECRET"),
 		GoogleRedirectURL:                getEnv("GOOGLE_REDIRECT_URL", "http://localhost:3001/api/auth/google/callback"),
 		GoogleHostedDomain:               getEnv("GOOGLE_HOSTED_DOMAIN", "zerodha.com"),
+		VaultEncryptionKey:               os.Getenv("VAULT_ENCRYPTION_KEY"),
 		DefaultAdminEmail:                getEnv("DEFAULT_ADMIN_EMAIL", "admin@zerodha.com"),
 		DefaultAdminPassword:             getEnv("DEFAULT_ADMIN_PASSWORD", defaultAdminPassword),
 		DefaultAdminName:                 getEnv("DEFAULT_ADMIN_NAME", "ITMS Admin"),
@@ -189,6 +191,11 @@ func (config Config) SecurityWarnings() []string {
 	}
 	if config.InventorySyncEnabled && strings.TrimSpace(config.InventoryIngestToken) == "" {
 		warnings = append(warnings, "INVENTORY_SYNC_ENABLED is true but INVENTORY_INGEST_TOKEN is empty; ingest endpoint cannot be safely exposed")
+	}
+	if strings.TrimSpace(config.VaultEncryptionKey) == "" {
+		warnings = append(warnings, "VAULT_ENCRYPTION_KEY is not set; credential vault features will be unavailable")
+	} else if len(strings.TrimSpace(config.VaultEncryptionKey)) < minimumRecommendedJWTLen {
+		warnings = append(warnings, "VAULT_ENCRYPTION_KEY is shorter than 32 characters; use a longer random secret for better security")
 	}
 	if strings.TrimSpace(config.SSHTerminalUsername) != "" && strings.TrimSpace(config.SSHTerminalPrivateKeyPath) == "" && strings.TrimSpace(config.SSHTerminalPrivateKey) == "" {
 		warnings = append(warnings, "SSH_TERMINAL_USERNAME is set but no signing key is configured; SSH terminal sessions will be unavailable")

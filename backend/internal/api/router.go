@@ -905,6 +905,13 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 			protected.PUT("/docs/pages/:id", server.updateDocsPage)
 			protected.DELETE("/docs/pages/:id", server.deleteDocsPage)
 
+			// Secure Credential Vault
+			protected.GET("/vault", server.listVaultCredentials)
+			protected.POST("/vault", server.createVaultCredential)
+			protected.POST("/vault/:id/reveal", server.revealVaultCredential)
+			protected.DELETE("/vault/:id", server.deleteVaultCredential)
+			protected.GET("/vault/:id/access-log", server.getVaultAccessLog)
+
 			protected.GET("/patch/dashboard", server.patchDashboardCompat)
 			protected.GET("/patch/devices", server.patchDevicesCompat)
 			protected.GET("/patch/jobs", server.patchJobsCompat)
