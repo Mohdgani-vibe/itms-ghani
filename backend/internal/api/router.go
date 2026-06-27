@@ -773,6 +773,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 	{
 		api.GET("/health", server.healthCheck)
 		api.POST("/inventory-sync/ingest", server.ingestInventorySnapshot)
+		api.POST("/backup/ingest", server.ingestBackupStatus)
 		server.registerAuthRoutes(api)
 
 		protected := api.Group("")
@@ -4177,6 +4178,106 @@ func (server *apiServer) ingestInventorySnapshot(c *gin.Context) {
 		}
 	}
 	httpx.JSON(c, http.StatusAccepted, status)
+}
+
+func (server *apiServer) ingestBackupStatus(c *gin.Context) {
+	expectedToken := strings.TrimSpace(server.config.InventoryIngestToken)
+	if expectedToken == "" {
+		httpx.Error(c, http.StatusServiceUnavailable, "backup ingest token is not configured")
+		return
+	}
+
+	receivedToken := strings.TrimSpace(c.GetHeader("X-Inventory-Token"))
+	if receivedToken == "" {
+		authorization := strings.TrimSpace(c.GetHeader("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authorization), "bearer ") {
+			receivedToken = strings.TrimSpace(authorization[7:])
+		}
+	}
+	if receivedToken == "" || receivedToken != expectedToken {
+		httpx.Error(c, http.StatusUnauthorized, "invalid backup ingest token")
+		return
+	}
+
+	var body struct {
+		AssetTag        string  `json:"asset_tag"`
+		BackupType      string  `json:"backup_type"`
+		Status          string  `json:"status"`
+		StartedAt       *string `json:"started_at"`
+		LastBackupAt    *string `json:"last_backup_at"`
+		BackupSizeBytes *int64  `json:"backup_size_bytes"`
+		Target          string  `json:"target"`
+		ErrorMessage    string  `json:"error_message"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	assetTag := strings.TrimSpace(body.AssetTag)
+	if assetTag == "" {
+		httpx.Error(c, http.StatusBadRequest, "asset_tag is required")
+		return
+	}
+
+	var assetID string
+	err := server.db.QueryRow(`SELECT id FROM assets WHERE asset_tag = $1`, assetTag).Scan(&assetID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "asset not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	backupType := strings.TrimSpace(body.BackupType)
+	if backupType == "" {
+		backupType = "full"
+	}
+
+	status := strings.TrimSpace(body.Status)
+	if status == "" {
+		status = "completed"
+	}
+
+	startedAt := "NOW()"
+	if body.StartedAt != nil && strings.TrimSpace(*body.StartedAt) != "" {
+		startedAt = "$4"
+	}
+
+	var completedAt interface{}
+	if body.LastBackupAt != nil && strings.TrimSpace(*body.LastBackupAt) != "" {
+		completedAt = strings.TrimSpace(*body.LastBackupAt)
+	}
+
+	backupLocation := strings.TrimSpace(body.Target)
+	errorMsg := strings.TrimSpace(body.ErrorMessage)
+
+	query := fmt.Sprintf(`
+		INSERT INTO backup_status 
+		(asset_id, backup_type, status, started_at, completed_at, size_bytes, backup_location, error_message)
+		VALUES ($1::uuid, $2, $3, %s, $5, $6, $7, $8)
+	`, startedAt)
+
+	args := []interface{}{assetID, backupType, status}
+	if startedAt == "$4" {
+		args = append(args, strings.TrimSpace(*body.StartedAt))
+	}
+	args = append(args, completedAt, body.BackupSizeBytes, backupLocation, errorMsg)
+
+	_, err = server.db.Exec(query, args...)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	httpx.JSON(c, http.StatusAccepted, gin.H{
+		"status":    "accepted",
+		"asset_tag": assetTag,
+		"asset_id":  assetID,
+	})
 }
 
 func (server *apiServer) ensureInventoryEnrollmentRequest(ctx context.Context, asset inventorysync.Asset) error {
