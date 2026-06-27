@@ -4,6 +4,7 @@ import { ArrowLeft, Briefcase, Building2, IdCard, Laptop, Mail, MapPin, Save, Sh
 import { apiRequest } from '../../lib/api';
 import type { ChatChannel, PaginatedChatChannelsResponse } from '../../components/chat/types';
 import ConfirmDialog from '../../components/ConfirmDialog';
+import MFAManagement from '../../components/MFAManagement';
 import { sortByRecentChatActivity } from '../../lib/chat';
 import { getPreferredPortalPath, getShortName, getStoredSession, normalizeAuthUser, setStoredSession } from '../../lib/session';
 import { isProbeLikeUser } from '../../lib/userVisibility';
@@ -362,6 +363,10 @@ export default function UserProfilePage() {
           items={recentChatItems}
         />
       ) : null}
+
+      {isSelfProfileRoute && !isAuditor && (
+        <MFAManagement />
+      )}
 
       <div className="grid gap-6 xl:grid-cols-[360px_minmax(0,1fr)]">
         <section className="rounded-[24px] border border-zinc-200 bg-white p-6 shadow-sm">

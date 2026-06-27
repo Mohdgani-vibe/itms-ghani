@@ -18,6 +18,8 @@ interface LoginResponse {
     default_portal?: string;
     portals?: string[];
   };
+  mfaRequired?: boolean;
+  message?: string;
 }
 
 interface AuthProvidersResponse {
@@ -88,6 +90,9 @@ export default function Login() {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [googleClientId, setGoogleClientId] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     resetAuthRedirectState();
@@ -212,12 +217,50 @@ export default function Login() {
           password,
         }),
       });
-      handleSuccessfulLogin(response);
+      
+      // Check if MFA is required
+      if (response.mfaRequired) {
+        setMfaRequired(true);
+        setUserEmail(normalizedEmail);
+        setError('');
+      } else {
+        handleSuccessfulLogin(response);
+      }
     } catch (requestError) {
 		setError(requestError instanceof Error ? normalizeAuthErrorMessage(requestError.message) : 'Login failed');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMFAVerification = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setLoading(true);
+      setError('');
+
+      const response = await apiRequest<LoginResponse>('/api/auth/login/verify-mfa', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: userEmail,
+          code: mfaCode.trim(),
+        }),
+      });
+      handleSuccessfulLogin(response);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? normalizeAuthErrorMessage(requestError.message) : 'MFA verification failed');
+      setMfaCode('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackToLogin = () => {
+    setMfaRequired(false);
+    setMfaCode('');
+    setPassword('');
+    setError('');
   };
 
   const handleForgotPassword = useCallback(() => {
@@ -252,7 +295,65 @@ export default function Login() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow-sm sm:rounded-xl sm:px-10 border border-slate-200">
-          {!showPasswordForm ? (
+          {mfaRequired ? (
+            <form className="space-y-6" onSubmit={handleMFAVerification}>
+              <div>
+                <h3 className="text-lg font-medium text-slate-900 mb-2">Two-Factor Authentication</h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Enter the 6-digit code from your authenticator app or use a backup code.
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="mfa-code" className="block text-sm font-medium text-slate-700">
+                  Verification Code
+                </label>
+                <div className="mt-1">
+                  <input
+                    id="mfa-code"
+                    name="mfa-code"
+                    type="text"
+                    required
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value)}
+                    autoComplete="one-time-code"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    maxLength={10}
+                    placeholder="Enter 6-digit code"
+                    className="appearance-none block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-brand-500 focus:border-brand-500 sm:text-sm text-center text-lg tracking-widest"
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  Enter the code from your authenticator app (Google Authenticator, Authy, etc.) or use a 10-digit backup code.
+                </p>
+              </div>
+
+              <div>
+                {error ? (
+                  <div className="mb-3 rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50"
+                >
+                  {loading ? 'Verifying...' : 'Verify Code'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBackToLogin}
+                  className="mt-3 w-full flex justify-center py-2 px-4 border border-slate-300 rounded-md shadow-sm text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
+                >
+                  Back to Login
+                </button>
+              </div>
+            </form>
+          ) : !showPasswordForm ? (
             <div className="space-y-4">
               {error ? (
                 <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">

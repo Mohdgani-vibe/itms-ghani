@@ -11,7 +11,6 @@ interface MaintenancePanelProps {
 
 export default function MaintenancePanel({ deviceId, maintenanceUntil, onMaintenanceUpdated, canOperate }: MaintenancePanelProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [hours, setHours] = useState('2');
   const [customDate, setCustomDate] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
