@@ -59,3 +59,14 @@ backend/router_diff.txt
 backend/test_output.txt
 backend/tname
 backend/workflow_settings_diff.txt
+
+# Files that look like commands or contain credentials
+*psql*
+*mysql*
+*.sql.bak
+*password*
+*passwd*
+*credentials*
+.env*
+!.env.example
+ql *

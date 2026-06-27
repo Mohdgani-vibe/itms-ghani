@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
-  Search, Bell, MonitorSmartphone, ChevronDown, Moon, LogOut
+  Search, Bell, MonitorSmartphone, ChevronDown, Moon, Sun, LogOut
 } from 'lucide-react';
 import { apiRequest, resolveWebSocketUrl } from '../../lib/api';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
@@ -341,6 +341,15 @@ export default function TopNav() {
               placeholder="Search..."
             />
           </div> : null}
+          
+          <button
+            type="button"
+            onClick={() => setTheme(toggleStoredTheme())}
+            className="rounded-md border border-zinc-200 bg-white p-1.5 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 focus:outline-none focus:ring-1 focus:ring-zinc-200 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white dark:focus:ring-zinc-700"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
           
           {!isAuditor ? <div className="relative">
             <button

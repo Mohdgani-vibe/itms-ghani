@@ -23,7 +23,7 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--color-slate-50, #f8fafc);
-  color: #000;
+  color: #18181b;
   transition: background-color 160ms ease, color 160ms ease;
 }
 
@@ -65,8 +65,11 @@ body:not(.dark *) .patch-workspace-tab-active {
   color: #ffffff !important;
 }
 
+/* Selected navigation items - white bg with black text */
 .dark .portal-nav-link-active,
-.dark .patch-workspace-tab-active {
+.dark .patch-workspace-tab-active,
+.dark nav .portal-nav-link-active,
+.dark header nav a.portal-nav-link-active {
   background-color: #ffffff !important;
   color: #000000 !important;
   border-color: #ffffff !important;
@@ -102,52 +105,314 @@ body:not(.dark *) h6 {
   min-height: 100vh;
 }
 
+/* Ensure cards are white in light mode */
+body:not(.dark *) .bg-white,
+body:not(.dark *) .bg-zinc-50,
+body:not(.dark *) .bg-slate-50,
+body:not(.dark *) .rounded-\[32px\],
+body:not(.dark *) .rounded-\[28px\],
+body:not(.dark *) .rounded-\[26px\],
+body:not(.dark *) .rounded-\[24px\],
+body:not(.dark *) .rounded-2xl,
+body:not(.dark *) .rounded-xl {
+  background-color: white !important;
+}
+
 .dark {
   color-scheme: dark;
 }
 
+:is(.dark) body,
 .dark body {
-  background-color: #09090b;
-  color: #f4f4f5;
+  background-color: #000000 !important;
+  color: #ffffff !important;
 }
 
+/* Main cards - light like light mode */
 .dark .bg-white {
-  background-color: #18181b !important;
+  background-color: #ffffff !important;
 }
 
 .dark .bg-zinc-50 {
-  background-color: #09090b !important;
+  background-color: #f4f4f5 !important;
+}
+
+.dark .bg-zinc-50\/70 {
+  background-color: #f4f4f5 !important;
 }
 
 .dark .bg-zinc-100 {
-  background-color: #27272a !important;
+  background-color: #f4f4f5 !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+.dark .bg-gradient-to-b,
+.dark .bg-\[linear-gradient\(180deg\2c _\#ffffff_0\%\2c _\#f9fbff_100\%\)\],
+.dark .bg-\[linear-gradient\(135deg\2c _\#f8fcff_0\%\2c _\#ffffff_58\%\2c _\#f6fbf7_100\%\)\],
+.dark .bg-\[linear-gradient\(135deg\2c _\#fdfefe_0\%\2c _\#f4f9ff_45\%\2c _\#eaf3ff_100\%\)\] {
+  background: #f4f4f5 !important;
+}
+
+/* Override all radial gradients */
+.dark [class*="bg-[radial-gradient"] {
+  background: #f4f4f5 !important;
+}
+
+/* Override all linear gradients */
+.dark [class*="bg-[linear-gradient"] {
+  background: #f4f4f5 !important;
 }
 
 .dark .border-zinc-100,
 .dark .border-zinc-200 {
-  border-color: #27272a !important;
+  border-color: #3f3f46 !important;
 }
 
-.dark .text-zinc-900 {
-  color: #fafafa !important;
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-sky-100 {
+  border-color: #3f3f46 !important;
+}
+
+/* Override light backgrounds in dark mode - inner cards white */
+.dark .bg-white\/80,
+.dark .bg-white\/90,
+.dark .bg-white\/75 {
+  background-color: #ffffff !important;
+}
+
+.dark .bg-white\/60 {
+  background-color: #ffffff !important;
+}
+
+/* Use attribute selector as fallback for Tailwind 4 */
+.dark [class*="bg-white/"] {
+  background-color: #ffffff !important;
+}
+
+.dark .bg-sky-50,
+.dark .bg-sky-50\/90 {
+  background-color: #f0f9ff !important;
+}
+
+.dark .text-sky-700 {
+  color: #ffffff !important;
+}
+
+.dark .text-sky-200 {
+  color: #ffffff !important;
+}
+
+/* Override any remaining light-colored backgrounds */
+.dark [style*="background"] {
+  background: #000000 !important;
+}
+
+.dark .border-sky-100,
+.dark .border-sky-200 {
+  border-color: #3f3f46 !important;
+}
+
+.dark .bg-sky-50 {
+  background-color: #1a1a1a !important;
+}
+
+.dark .text-sky-700 {
+  color: #ffffff !important;
+}
+
+.dark .bg-white\/80,
+.dark .bg-white\/75,
+.dark .bg-white\/90,
+.dark .bg-white\/60 {
+  background-color: #2a2a2a !important;
+}
+
+/* Catch all white background variants */
+.dark [class*="bg-white/"] {
+  background-color: #2a2a2a !important;
+}
+
+.dark .border-white\/80 {
+  border-color: #3f3f46 !important;
+}
+
+/* Make ALL text white in dark mode */
+.dark .text-zinc-900,
+.dark .text-zinc-950 {
+  color: #18181b !important;
 }
 
 .dark .text-zinc-800 {
-  color: #f4f4f5 !important;
+  color: #ffffff !important;
 }
 
 .dark .text-zinc-700 {
-  color: #d4d4d8 !important;
+  color: #ffffff !important;
 }
 
 .dark .text-zinc-600,
 .dark .text-zinc-500 {
+  color: #71717a !important;
+}
+
+.dark .text-zinc-400 {
   color: #a1a1aa !important;
+}
+
+.dark .text-slate-900 {
+  color: #0f172a !important;
+}
+
+.dark .text-slate-800 {
+  color: #1e293b !important;
+}
+
+.dark .text-slate-700 {
+  color: #334155 !important;
+}
+
+.dark .text-slate-600 {
+  color: #e4e4e7 !important;
+}
+
+/* Make sure all headings are white */
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6 {
+  color: #ffffff !important;
+}
+
+/* Make all text elements white */
+.dark p,
+.dark span,
+.dark div,
+.dark label,
+.dark a {
+  color: #ffffff !important;
+}
+
+/* IMPORTANT: Text inside light cards should be dark */
+.dark .bg-white *,
+.dark .bg-zinc-50 *,
+.dark .bg-zinc-50\/70 *,
+.dark .bg-zinc-50\/60 *,
+.dark .bg-zinc-100 *,
+.dark .bg-slate-50 *,
+.dark .bg-slate-100 *,
+.dark .rounded-\[28px\] *,
+.dark .rounded-\[32px\] *,
+.dark .rounded-\[26px\] *,
+.dark .rounded-\[24px\] *,
+.dark .rounded-2xl *,
+.dark .rounded-xl * {
+  color: inherit !important;
+}
+
+/* IMPORTANT: Override for active navigation - must stay black text on white bg */
+.dark .portal-nav-link-active,
+.dark .portal-nav-link-active *,
+.dark .patch-workspace-tab-active,
+.dark .patch-workspace-tab-active * {
+  color: #000000 !important;
 }
 
 .dark .shadow-sm,
 .dark .shadow-lg {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.03), 0 20px 45px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Additional comprehensive overrides for black background */
+.dark * {
+  border-color: #3f3f46 !important;
+}
+
+/* But borders inside cards should be light like light mode */
+.dark .bg-white *,
+.dark .bg-zinc-50 *,
+.dark .bg-zinc-50\/70 *,
+.dark .bg-zinc-50\/60 *,
+.dark .bg-zinc-100 *,
+.dark .bg-slate-50 *,
+.dark .bg-slate-100 *,
+.dark .rounded-\[28px\] *,
+.dark .rounded-\[32px\] *,
+.dark .rounded-\[26px\] *,
+.dark .rounded-\[24px\] *,
+.dark .rounded-2xl *,
+.dark .rounded-xl * {
+  border-color: #e4e4e7 !important;
+}
+
+.dark .border-zinc-200,
+.dark .border-zinc-300,
+.dark .border-zinc-400 {
+  border-color: #3f3f46 !important;
+}
+
+/* Comprehensive dark mode background overrides */
+.dark section {
+  background-color: #000000 !important;
+}
+
+.dark .bg-zinc-50\/60 {
+  background-color: #f4f4f5 !important;
+}
+
+/* Override ALL gradient backgrounds in dark mode */
+.dark section[class*="bg-[radial-gradient"] {
+  background: #f4f4f5 !important;
+}
+
+.dark section[class*="bg-[linear-gradient"] {
+  background: #f4f4f5 !important;
+}
+
+/* Ensure consistent dark background for all containers */
+.dark .rounded-\[32px\],
+.dark .rounded-\[26px\],
+.dark .rounded-\[24px\],
+.dark .rounded-2xl,
+.dark .rounded-xl,
+.dark .rounded-lg {
+  background-color: #f4f4f5 !important;
+  border-color: #e4e4e7 !important;
+}
+
+/* All divs with background classes should be light for cards */
+.dark div[class*="bg-"],
+.dark section[class*="bg-"] {
+  background-color: #f4f4f5 !important;
+}
+
+/* IMPORTANT: Inner stat cards white like light mode - override the above */
+.dark div[class*="bg-white/"] {
+  background-color: #ffffff !important;
+}
+
+/* Cards and containers */
+.dark .shadow-sm,
+.dark .shadow-lg,
+.dark [class*="shadow"] {
+  background-color: #f4f4f5 !important;
+}
+
+/* Override any inline styles or specific background colors */
+.dark .bg-slate-950,
+.dark .bg-zinc-950,
+.dark .bg-zinc-900,
+.dark .bg-zinc-800 {
+  background-color: #1a1a1a !important;
 }
 
 @media print {
