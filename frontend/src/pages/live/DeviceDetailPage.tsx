@@ -13,6 +13,7 @@ import DeviceAssignmentPanel from '../../components/devices/DeviceAssignmentPane
 import DetailSectionCard from '../../components/devices/DetailSectionCard';
 import DeviceDetailOverview from '../../components/devices/DeviceDetailOverview';
 import DeviceLifecycleEditor from '../../components/devices/DeviceLifecycleEditor';
+import MaintenancePanel from '../../components/devices/MaintenancePanel';
 import type { DeviceAlertRecord, DeviceNetworkInterfaceRecord, DevicePatchJobRecord, DeviceTerminalSessionRecord, DeviceVolumeRecord } from '../../components/devices/types';
 import { alertStatusBadgeClassName, alertStatusLabel, formatDate, formatDetailValue, severityBadgeClassName } from '../../components/devices/deviceDetailUtils';
 import { deviceAssignmentActionsReadOnly } from '../../components/devices/deviceAssignmentPanelUtils';
@@ -110,6 +111,7 @@ interface DeviceRecord {
   alertStatus?: string;
   complianceScore: number;
   warrantyExpiresAt?: string | null;
+  maintenanceUntil?: string | null;
   user?: { id: string; fullName: string; email: string; employeeCode: string; status?: string | null } | null;
   department?: { name: string } | null;
   branch?: { name: string } | null;
@@ -159,6 +161,7 @@ const computeDetailSections = [
   ['operating-system', 'Operating System'],
   ['assignment', 'Assignment'],
   ['lifecycle', 'Lifecycle'],
+  ['maintenance', 'Maintenance Mode'],
   ['enrollment', 'Enrollment'],
   ['network', 'Network'],
   ['volumes', 'Volumes'],
@@ -1038,6 +1041,17 @@ export default function DeviceDetailPage() {
                   )
                 ) : null}
               </>
+            ) : null}
+
+            {activeSection === 'maintenance' && device ? (
+              <MaintenancePanel
+                deviceId={device.id}
+                maintenanceUntil={device.maintenanceUntil}
+                onMaintenanceUpdated={(newMaintenanceUntil) => {
+                  setDevice(prev => prev ? { ...prev, maintenanceUntil: newMaintenanceUntil } : null);
+                }}
+                canOperate={canOperate}
+              />
             ) : null}
 
             {activeSection === 'enrollment' ? (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Filter, HardDrive, RefreshCw, Search, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Filter, HardDrive, RefreshCw, Search, ShieldAlert, ShieldCheck, Wrench } from 'lucide-react';
 import { apiRequest } from '../lib/api';
 import { getStoredSession } from '../lib/session';
 import Pagination from '../components/Pagination';
@@ -260,6 +260,12 @@ export default function Devices() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
+                        {device.maintenanceUntil && new Date(device.maintenanceUntil) > new Date() ? (
+                          <div className="flex items-center gap-1.5 px-2 py-1 bg-amber-100 text-amber-700 rounded-full">
+                            <Wrench className="h-3.5 w-3.5" />
+                            <span className="text-xs font-semibold">Maintenance</span>
+                          </div>
+                        ) : null}
                         {device.alertStatus === 'healthy' || device.alertStatus === 'secure' ? (
                           <ShieldCheck className="h-5 w-5 text-emerald-500" />
                         ) : (

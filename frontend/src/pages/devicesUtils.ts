@@ -39,6 +39,7 @@ export interface DeviceRecord {
   lastSeenAt?: string | null;
   cost?: string | null;
   warrantyUntil?: string | null;
+  maintenanceUntil?: string | null;
   patchStatus: string;
   alertStatus: string;
   status: string;
