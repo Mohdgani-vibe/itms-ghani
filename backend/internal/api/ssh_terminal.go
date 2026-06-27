@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -91,7 +92,18 @@ func (server *apiServer) createSSHSession(c *gin.Context) {
 	}
 	_, _ = server.recordAssetHistory(asset.ID, middleware.CurrentClaims(c).UserID, "terminal_session", payload)
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "terminal_session", TargetType: "asset", TargetID: asset.ID, Detail: payload})
-	httpx.JSON(c, http.StatusOK, gin.H{"id": asset.ID, "deviceId": asset.ID, "status": "started", "createdAt": time.Now().UTC(), "requestedBy": middleware.CurrentClaims(c).Name, "connection": payload})
+
+	var sessionID string
+	err = server.db.QueryRowContext(c.Request.Context(), `
+		INSERT INTO remote_sessions (asset_id, user_id, session_type, started_at)
+		VALUES ($1::uuid, $2::uuid, $3, NOW())
+		RETURNING id
+	`, asset.ID, middleware.CurrentClaims(c).UserID, "ssh").Scan(&sessionID)
+	if err != nil {
+		log.Printf("failed to record remote_sessions: %v", err)
+	}
+
+	httpx.JSON(c, http.StatusOK, gin.H{"id": asset.ID, "deviceId": asset.ID, "sessionId": sessionID, "status": "started", "createdAt": time.Now().UTC(), "requestedBy": middleware.CurrentClaims(c).Name, "connection": payload})
 }
 
 func (server *apiServer) getSSHTarget(c *gin.Context) {
@@ -331,6 +343,17 @@ func (server *apiServer) assetSSHWebsocket(c *gin.Context) {
 		return
 	}
 	defer conn.Close()
+
+	sessionID := strings.TrimSpace(c.Query("sessionId"))
+	if sessionID != "" {
+		defer func() {
+			_, _ = server.db.ExecContext(context.Background(), `
+				UPDATE remote_sessions
+				SET ended_at = NOW()
+				WHERE id = $1::uuid AND ended_at IS NULL
+			`, sessionID)
+		}()
+	}
 	conn.SetReadLimit(sshWebsocketReadLimit)
 	_ = conn.SetReadDeadline(time.Now().Add(sshWebsocketReadTimeout))
 	conn.SetPongHandler(func(string) error {
