@@ -130,6 +130,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_generate_ticket_number ON requests;
 CREATE TRIGGER trg_generate_ticket_number
 BEFORE INSERT ON requests
 FOR EACH ROW
@@ -149,6 +150,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_calculate_session_duration ON remote_sessions;
 CREATE TRIGGER trg_calculate_session_duration
 BEFORE UPDATE ON remote_sessions
 FOR EACH ROW

@@ -86,6 +86,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_record_vault_access ON vault_access_log;
 CREATE TRIGGER trg_record_vault_access
 AFTER INSERT ON vault_access_log
 FOR EACH ROW
@@ -101,6 +102,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_update_vault_credentials_timestamp ON vault_credentials;
 CREATE TRIGGER trg_update_vault_credentials_timestamp
 BEFORE UPDATE ON vault_credentials
 FOR EACH ROW

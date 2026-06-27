@@ -38,7 +38,7 @@ func checkWarrantyExpiry(db *sql.DB) {
 	rows, err := db.Query(`
 		SELECT a.id, a.asset_tag, a.name, a.assigned_to, a.warranty_until,
 		       a.maintenance_until,
-		       EXTRACT(DAY FROM (a.warranty_until - CURRENT_DATE))::INTEGER AS days_remaining
+		       (a.warranty_until - CURRENT_DATE) AS days_remaining
 		FROM assets a
 		WHERE a.warranty_until IS NOT NULL
 		  AND a.warranty_until BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '90 days'
