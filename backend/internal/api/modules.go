@@ -1761,6 +1761,7 @@ func (server *apiServer) createMyRequest(c *gin.Context) {
 		Type        string `json:"type"`
 		Title       string `json:"title"`
 		Description string `json:"description"`
+		Priority    string `json:"priority"`
 	}
 	if err := c.ShouldBindJSON(&input); err != nil || strings.TrimSpace(input.Type) == "" || strings.TrimSpace(input.Title) == "" {
 		httpx.Error(c, http.StatusBadRequest, "type and title are required")
@@ -1771,12 +1772,32 @@ func (server *apiServer) createMyRequest(c *gin.Context) {
 		httpx.Error(c, http.StatusInternalServerError, err.Error())
 		return
 	}
+	
+	// Calculate SLA deadline based on priority
+	priority := strings.ToLower(strings.TrimSpace(input.Priority))
+	if priority == "" {
+		priority = "medium"
+	}
+	var slaHours int
+	switch priority {
+	case "critical":
+		slaHours = 4
+	case "high":
+		slaHours = 8
+	case "medium", "normal":
+		slaHours = 24
+	case "low":
+		slaHours = 72
+	default:
+		slaHours = 24 // Default to normal
+	}
+	
 	var id string
 	if err := server.db.QueryRow(`
-		INSERT INTO requests (requester_id, assignee_id, type, title, description, status)
-		VALUES ($1::uuid, NULLIF($2, '')::uuid, $3, $4, NULLIF($5, ''), 'pending')
+		INSERT INTO requests (requester_id, assignee_id, type, title, description, status, priority, sla_deadline)
+		VALUES ($1::uuid, NULLIF($2, '')::uuid, $3, $4, NULLIF($5, ''), 'pending', $6, NOW() + $7 * INTERVAL '1 hour')
 		RETURNING id
-	`, claims.UserID, assigneeID, strings.TrimSpace(input.Type), strings.TrimSpace(input.Title), strings.TrimSpace(input.Description)).Scan(&id); err != nil {
+	`, claims.UserID, assigneeID, strings.TrimSpace(input.Type), strings.TrimSpace(input.Title), strings.TrimSpace(input.Description), priority, slaHours).Scan(&id); err != nil {
 		httpx.Error(c, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -1784,10 +1805,11 @@ func (server *apiServer) createMyRequest(c *gin.Context) {
 		"type":        strings.TrimSpace(input.Type),
 		"title":       strings.TrimSpace(input.Title),
 		"description": strings.TrimSpace(input.Description),
+		"priority":    priority,
 		"assigneeId":  assigneeID,
 	}
 	middleware.TagAudit(c, middleware.AuditMeta{Action: "request_created", TargetType: "request", TargetID: id, Detail: auditDetail})
-	httpx.Created(c, gin.H{"id": id, "status": "pending", "assigneeId": assigneeID})
+	httpx.Created(c, gin.H{"id": id, "status": "pending", "priority": priority, "assigneeId": assigneeID})
 }
 
 func (server *apiServer) getMyRequest(c *gin.Context) {
@@ -2913,8 +2935,8 @@ func (server *apiServer) ensureClosedChatTicket(tx *sql.Tx, channelID string) (s
 		requestStatus = "in_progress"
 	}
 	if err := tx.QueryRow(`
-		INSERT INTO requests (requester_id, assignee_id, type, title, description, status, notes, ticket_number, source_chat_id, reference_key)
-		VALUES ($1::uuid, NULLIF($2, '')::uuid, 'support_chat', $3, $4, $5, $6, $7, $8::uuid, $9)
+		INSERT INTO requests (requester_id, assignee_id, type, title, description, status, notes, ticket_number, source_chat_id, reference_key, priority, sla_deadline)
+		VALUES ($1::uuid, NULLIF($2, '')::uuid, 'support_chat', $3, $4, $5, $6, $7, $8::uuid, $9, 'medium', NOW() + INTERVAL '24 hours')
 		RETURNING id
 	`, requesterID, strings.TrimSpace(primaryOwnerID), "Chat Ticket: "+strings.TrimSpace(channelName), "Auto-created from a closed support chat conversation.", requestStatus, "Converted from chat closure.", ticketNumber, channelID, "chat:"+channelID).Scan(&requestID); err != nil {
 		return "", "", err
