@@ -774,6 +774,7 @@ func NewRouter(db *sql.DB, config app.Config, syncService *inventorysync.Service
 		api.GET("/health", server.healthCheck)
 		api.POST("/inventory-sync/ingest", server.ingestInventorySnapshot)
 		api.POST("/backup/ingest", server.ingestBackupStatus)
+		api.PUT("/assets/heartbeat", server.heartbeat)
 		server.registerAuthRoutes(api)
 
 		protected := api.Group("")
@@ -4277,6 +4278,70 @@ func (server *apiServer) ingestBackupStatus(c *gin.Context) {
 		"status":    "accepted",
 		"asset_tag": assetTag,
 		"asset_id":  assetID,
+	})
+}
+
+func (server *apiServer) heartbeat(c *gin.Context) {
+	expectedToken := strings.TrimSpace(server.config.InventoryIngestToken)
+	if expectedToken == "" {
+		httpx.Error(c, http.StatusServiceUnavailable, "heartbeat token is not configured")
+		return
+	}
+
+	receivedToken := strings.TrimSpace(c.GetHeader("X-Inventory-Token"))
+	if receivedToken == "" {
+		authorization := strings.TrimSpace(c.GetHeader("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authorization), "bearer ") {
+			receivedToken = strings.TrimSpace(authorization[7:])
+		}
+	}
+	if receivedToken == "" || receivedToken != expectedToken {
+		httpx.Error(c, http.StatusUnauthorized, "invalid heartbeat token")
+		return
+	}
+
+	var body struct {
+		AssetTag string `json:"asset_tag"`
+		Hostname string `json:"hostname"`
+	}
+
+	if err := c.ShouldBindJSON(&body); err != nil {
+		httpx.Error(c, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	assetTag := strings.TrimSpace(body.AssetTag)
+	if assetTag == "" {
+		httpx.Error(c, http.StatusBadRequest, "asset_tag is required")
+		return
+	}
+
+	var assetID string
+	err := server.db.QueryRow(`SELECT id FROM assets WHERE asset_tag = $1`, assetTag).Scan(&assetID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			httpx.Error(c, http.StatusNotFound, "asset not found")
+			return
+		}
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	_, err = server.db.Exec(`
+		UPDATE asset_compute_details 
+		SET last_seen = NOW() 
+		WHERE asset_id = $1::uuid
+	`, assetID)
+	if err != nil {
+		httpx.Error(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	httpx.JSON(c, http.StatusOK, gin.H{
+		"status":    "ok",
+		"asset_tag": assetTag,
+		"asset_id":  assetID,
+		"timestamp": "NOW()",
 	})
 }
 
