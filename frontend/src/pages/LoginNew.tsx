@@ -121,7 +121,7 @@ export default function LoginNew() {
                   backgroundColor: '#2667E8',
                 }}
               >
-                <span style={{ color: 'white', fontWeight: '700', fontSize: '24px', fontFamily: 'Inter, sans-serif' }}>IT</span>
+                <span style={{ color: 'white !important', fontWeight: '700', fontSize: '24px', fontFamily: 'Inter, sans-serif' }}>IT</span>
                 {/* Z Badge */}
                 <div 
                   style={{
@@ -135,7 +135,7 @@ export default function LoginNew() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#0F1B2D',
-                    color: 'white',
+                    color: 'white !important',
                     fontSize: '12px',
                     fontWeight: '700',
                     fontFamily: 'Inter, sans-serif',
@@ -145,11 +145,11 @@ export default function LoginNew() {
                 </div>
               </div>
               {/* ITMS Wordmark */}
-              <span style={{ fontSize: '38px', fontWeight: '700', color: '#0F1B2D', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
+              <span style={{ fontSize: '38px', fontWeight: '700', color: '#0F1B2D !important', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
                 ITMS
               </span>
             </div>
-            <div style={{ fontSize: '9px', fontWeight: '500', color: '#8C96A4', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
+            <div style={{ fontSize: '9px', fontWeight: '500', color: '#8C96A4 !important', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
               IT MANAGEMENT SYSTEM / POWERED BY ZERODHA
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function LoginNew() {
           <div style={{ borderTop: '1px solid #E7EBF1', marginBottom: '32px' }} />
 
           {/* Welcome Heading */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0F1B2D', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0F1B2D !important', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
             Welcome back
           </h1>
 
@@ -174,7 +174,7 @@ export default function LoginNew() {
                   borderRadius: '12px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#2667E8',
+                  color: '#2667E8 !important',
                   backgroundColor: 'white',
                   border: '1.5px solid #2667E8',
                   cursor: 'pointer',
@@ -192,7 +192,7 @@ export default function LoginNew() {
               </button>
 
               {/* Helper Text */}
-              <p style={{ fontSize: '14px', color: '#8C96A4', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
+              <p style={{ fontSize: '14px', color: '#8C96A4 !important', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
                 Sign in with your Zerodha credentials
               </p>
 
@@ -202,7 +202,7 @@ export default function LoginNew() {
                   <div style={{ width: '100%', borderTop: '1px solid #E7EBF1' }} />
                 </div>
                 <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                  <span style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', color: '#8C96A4', fontFamily: 'Inter, sans-serif' }}>
+                  <span style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', color: '#8C96A4 !important', fontFamily: 'Inter, sans-serif' }}>
                     Or continue with
                   </span>
                 </div>
@@ -221,7 +221,7 @@ export default function LoginNew() {
                   alignItems: 'center',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#8C96A4',
+                  color: '#8C96A4 !important',
                   backgroundColor: '#F1F4F9',
                   border: '1px solid #E7EBF1',
                   cursor: 'not-allowed',
@@ -236,7 +236,7 @@ export default function LoginNew() {
             <form style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onSubmit={handleLogin}>
               {/* Email Field */}
               <div>
-                <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D', fontFamily: 'Inter, sans-serif' }}>
+                <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D !important', fontFamily: 'Inter, sans-serif' }}>
                   Email
                 </label>
                 <input
@@ -254,7 +254,7 @@ export default function LoginNew() {
                     borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
-                    color: '#0F1B2D',
+                    color: '#0F1B2D !important',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s',
@@ -274,7 +274,7 @@ export default function LoginNew() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D', fontFamily: 'Inter, sans-serif' }}>
+                <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D !important', fontFamily: 'Inter, sans-serif' }}>
                   Password
                 </label>
                 <input
@@ -292,7 +292,7 @@ export default function LoginNew() {
                     borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
-                    color: '#0F1B2D',
+                    color: '#0F1B2D !important',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s',
@@ -319,7 +319,7 @@ export default function LoginNew() {
                     fontSize: '14px',
                     backgroundColor: '#FEE2E2',
                     border: '1px solid #E5484D',
-                    color: '#E5484D',
+                    color: '#E5484D !important',
                     fontFamily: 'Inter, sans-serif',
                   }}
                 >
@@ -337,7 +337,7 @@ export default function LoginNew() {
                   borderRadius: '12px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: 'white',
+                  color: 'white !important',
                   backgroundColor: '#2667E8',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -374,7 +374,7 @@ export default function LoginNew() {
                   padding: '8px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#8C96A4',
+                  color: '#8C96A4 !important',
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
@@ -394,7 +394,7 @@ export default function LoginNew() {
           )}
 
           {/* Footer */}
-          <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', color: '#8C96A4', fontFamily: 'Inter, sans-serif' }}>
+          <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', color: '#8C96A4 !important', fontFamily: 'Inter, sans-serif' }}>
             © 2026 ITMS · Powered by Zerodha
           </div>
         </div>
