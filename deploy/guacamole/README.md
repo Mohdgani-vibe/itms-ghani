@@ -164,7 +164,7 @@ SELECT * FROM guacamole_entity WHERE name = 'guacadmin';
 ### 3. Restrict Network Access
 ```bash
 # Firewall: Allow only from ITMS server
-sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="10.10.21.11" port port="8080" protocol="tcp" accept'
+sudo firewall-cmd --permanent --add-rich-rule='rule family="ipv4" source address="YOUR_ITMS_SERVER_IP" port port="8080" protocol="tcp" accept'
 sudo firewall-cmd --reload
 ```
 

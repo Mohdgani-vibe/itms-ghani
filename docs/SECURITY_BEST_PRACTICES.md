@@ -519,7 +519,7 @@ rest_cherrypy:
   port: 8000
   host: 127.0.0.1  # Localhost only
   # OR for private network:
-  # host: 10.10.21.11  # Private IP only
+  # host: YOUR_PRIVATE_IP  # Private IP only
   ssl_crt: /etc/salt/ssl/cert.pem
   ssl_key: /etc/salt/ssl/key.pem
   disable_ssl: false  # Always use SSL
