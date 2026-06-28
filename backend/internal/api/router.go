@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 
 	"itms/backend/internal/app"
@@ -6087,7 +6088,7 @@ func (server *apiServer) fetchUser(predicate string, arg string) (dbUser, error)
 		FROM users u
 		JOIN roles r ON r.id = u.role_id
 		`+predicate, arg).Scan(&user.ID, &user.EmpID, &user.FullName, &user.Email, &entityID, &deptID, &locationID, &user.Role, &passwordHash, &user.IsActive,
-		&user.MFAEnabled, &user.TOTPSecret, &user.MFABackupCodes)
+		&user.MFAEnabled, &user.TOTPSecret, pq.Array(&user.MFABackupCodes))
 	if err != nil {
 		return user, err
 	}

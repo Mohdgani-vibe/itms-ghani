@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"itms/backend/internal/platform/httpx"
+	"itms/backend/internal/platform/middleware"
 )
 
 type saltWorkspaceExecuteInput struct {
@@ -84,7 +85,7 @@ func (server *apiServer) executeSaltWorkspaceAction(c *gin.Context) {
 	}
 	
 	// Get user role for policy validation
-	claims := server.currentClaims(c)
+	claims := middleware.CurrentClaims(c)
 	userRole := "it_team"
 	if claims != nil {
 		userRole = claims.Role

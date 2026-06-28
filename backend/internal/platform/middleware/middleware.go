@@ -487,7 +487,7 @@ func SuspiciousPatternDetection() gin.HandlerFunc {
 		}
 
 		// Check query parameters
-		for key, values := range c.Request.URL.Query() {
+		for _, values := range c.Request.URL.Query() {
 			for _, value := range values {
 				lowerValue := strings.ToLower(value)
 				for _, pattern := range suspiciousPatterns {
