@@ -6,8 +6,10 @@ import { getPageAccessRedirect, getPortalAccessRedirect, getRoleAccessRedirect }
 import { validateStoredSession } from './lib/api';
 
 const Login = lazy(() => import('./pages/Login'));
+const LoginNew = lazy(() => import('./pages/LoginNew'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPage = lazy(() => import('./pages/live/DashboardPage'));
+const DashboardPageNew = lazy(() => import('./pages/live/DashboardPageNew'));
 const UsersPage = lazy(() => import('./pages/live/UsersPage'));
 const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
@@ -134,15 +136,18 @@ function App() {
       <NavigationMetrics />
       <Suspense fallback={<RouteFallback />}>
         <Routes>
-          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/login" element={<LoginNew />} />
+          <Route path="/login/old" element={<LoginRoute />} />
           <Route path="/portal/superadmin/gatepass" element={<Navigate to="/admin/gatepass" replace />} />
           <Route path="/portal/it/gatepass" element={<Navigate to="/it/gatepass" replace />} />
           <Route path="/terminal/:minionId" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><TerminalConsole /></RequireRoles></RequireAuth>} />
           <Route path="/ssh/assets/:id" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><SshTerminalPage /></RequireRoles></RequireAuth>} />
 
+          {/* Admin Portal with New Dashboard */}
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
+            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -161,9 +166,11 @@ function App() {
             <Route path="patch/devices" element={<PatchList />} />
           </Route>
 
+          {/* IT Portal with New Dashboard */}
           <Route path="/it" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
+            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -182,9 +189,11 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
+          {/* Audit Portal with New Dashboard */}
           <Route path="/audit" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
+            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -203,10 +212,12 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
+          {/* Employee Portal with New Dashboard */}
           <Route path="/emp" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="profile" element={<UserProfilePage />} />
-            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
+            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="assets" element={<MyAssetsPage />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="requests" element={<MyRequestsPage />} />

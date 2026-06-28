@@ -1,6 +1,7 @@
 @import "tailwindcss";
 
 @theme {
+  /* ITMS Brand Colors */
   --color-brand-50: #f0f9ff;
   --color-brand-100: #e0f2fe;
   --color-brand-200: #bae6fd;
@@ -11,6 +12,18 @@
   --color-brand-700: #0369a1;
   --color-brand-800: #075985;
   --color-brand-900: #0c4a6e;
+  
+  /* ITMS Enterprise SaaS Colors */
+  --color-itms-primary: #2667E8;
+  --color-itms-ink: #0F1B2D;
+  --color-itms-muted: #8C96A4;
+  --color-itms-bg: #F1F4F9;
+  --color-itms-border: #E7EBF1;
+  --color-itms-green: #30A46C;
+  --color-itms-amber: #FFB224;
+  --color-itms-orange: #F76808;
+  --color-itms-red: #E5484D;
+  --color-itms-blue-light: #CFE0FB;
 }
 
 @custom-variant dark (&:is(.dark *));
