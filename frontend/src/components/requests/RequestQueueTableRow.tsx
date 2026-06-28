@@ -1,4 +1,5 @@
 import { actionButtonStyles } from '../../lib/buttonStyles';
+import { formatSLACountdown } from '../../pages/live/requestsQueuePageUtils';
 
 export interface RequestQueueTableRowProps {
   requestIdLabel: string;
@@ -11,6 +12,8 @@ export interface RequestQueueTableRowProps {
   requesterName: string;
   requesterLabel?: string;
   assigneeName: string;
+  slaDeadline?: string | null;
+  createdAt: string;
   isSelected: boolean;
   isEnrollmentRequest: boolean;
   isBulkSelected: boolean;
@@ -39,6 +42,8 @@ export default function RequestQueueTableRow({
   requesterName,
   requesterLabel,
   assigneeName,
+  slaDeadline,
+  createdAt,
   isSelected,
   isEnrollmentRequest,
   isBulkSelected,
@@ -59,6 +64,7 @@ export default function RequestQueueTableRow({
   const rowClassName = isEnrollmentRequest
     ? (isSelected ? 'bg-emerald-50/80 ring-1 ring-inset ring-emerald-200' : 'bg-emerald-50/40 hover:bg-emerald-50/70')
     : (isSelected ? 'bg-emerald-50/70 ring-1 ring-inset ring-emerald-100' : 'hover:bg-emerald-50/40');
+  const slaCountdown = slaDeadline ? formatSLACountdown(slaDeadline, createdAt) : null;
 
   return (
     <tr className={rowClassName}>
@@ -81,6 +87,13 @@ export default function RequestQueueTableRow({
             <span className="text-xs font-semibold uppercase tracking-wider text-zinc-500">{requestIdLabel}</span>
           </div>
           <div className="mt-2 font-semibold text-zinc-900">{title}</div>
+          {slaCountdown && (
+            <div className="mt-2">
+              <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${slaCountdown.tone}`}>
+                {slaCountdown.label}
+              </span>
+            </div>
+          )}
           {isEnrollmentRequest ? (
             <div className="mt-2 space-y-1 text-xs text-emerald-800">
               <div><span className="font-bold uppercase tracking-wider text-emerald-700">Asset</span> {enrollmentAsset}</div>

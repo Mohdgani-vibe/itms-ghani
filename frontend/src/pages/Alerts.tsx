@@ -94,7 +94,6 @@ interface AlertDeviceRecord extends BootstrapDeviceLike {
   status?: string | null;
 }
 
-const PAGE_BG = '#f0f4fa';
 const SOURCE_KEYS: SourceKey[] = ['wazuh', 'openscap', 'clamav'];
 const SEVERITY_FILTER_OPTIONS: SeverityFilter[] = ['all', 'critical', 'high', 'medium', 'low'];
 
@@ -361,8 +360,16 @@ export default function Alerts() {
       setDataLoading(true);
       setAlertsError('');
 
+      const alertsParams = new URLSearchParams({ page: '1', pageSize: '1000' });
+      if (severityFilter !== 'all') {
+        alertsParams.set('severity', severityFilter);
+      }
+      if (sourceFilter !== 'all') {
+        alertsParams.set('source', sourceFilter);
+      }
+
       const settled = await Promise.allSettled([
-        apiRequest<PaginatedAlertsResponse>('/api/alerts?page=1&pageSize=1000'),
+        apiRequest<PaginatedAlertsResponse>(`/api/alerts?${alertsParams.toString()}`),
         ...SOURCE_KEYS.map((source) => apiRequest<AlertsDashboardResponse>(`/api/alerts/dashboard?source=${source}`)),
       ]);
 
@@ -404,7 +411,7 @@ export default function Alerts() {
     return () => {
       cancelled = true;
     };
-  }, [reloadToken]);
+  }, [reloadToken, severityFilter, sourceFilter]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -939,7 +946,7 @@ export default function Alerts() {
   };
 
   return (
-    <div className={`min-h-screen overflow-hidden px-4 py-6 xl:px-6 ${darkMode ? 'text-white' : 'text-zinc-900'}`} style={{ backgroundColor: darkMode ? '#07111f' : PAGE_BG }}>
+    <div className={`min-h-screen overflow-hidden px-4 py-8 xl:px-6 ${darkMode ? 'text-white bg-zinc-950' : 'text-zinc-900 bg-gradient-to-br from-blue-50 via-white to-cyan-50'}`}>
       <style>{`
         @keyframes alerts-fade-in {
           from { opacity: 0; transform: translateY(8px); }
@@ -947,27 +954,23 @@ export default function Alerts() {
         }
       `}</style>
 
-      {!darkMode ? (
-        <>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(circle_at_top_left,_rgba(56,189,248,0.22),_transparent_32%),radial-gradient(circle_at_top_right,_rgba(251,191,36,0.16),_transparent_28%),linear-gradient(180deg,_rgba(255,255,255,0.86)_0%,_rgba(240,244,250,0)_100%)]" />
-          <div aria-hidden="true" className="pointer-events-none absolute left-[-120px] top-[180px] h-[320px] w-[320px] rounded-full bg-sky-200/30 blur-3xl" />
-          <div aria-hidden="true" className="pointer-events-none absolute right-[-80px] top-[120px] h-[280px] w-[280px] rounded-full bg-amber-100/30 blur-3xl" />
-        </>
-      ) : null}
-
       <div className="relative mx-auto max-w-[1600px] space-y-6 pb-10">
-        <div className={`space-y-3 ${view === 'all-alerts' ? 'relative z-10' : 'sticky top-3 z-30'}`}>
-          <div className="rounded-[24px] border border-white/60 bg-[linear-gradient(135deg,_rgba(255,255,255,0.74)_0%,_rgba(255,255,255,0.52)_100%)] px-5 py-4 shadow-[0_22px_48px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Alerts Dashboard</div>
-                <h1 className="mt-1 text-2xl font-black tracking-tight text-zinc-950">Security Alerts</h1>
-                <p className="mt-1 text-sm text-zinc-600">Charts, source cards, and the full alerts queue.</p>
+        <div className={`space-y-4 ${view === 'all-alerts' ? 'relative z-10' : 'sticky top-3 z-30'}`}>
+          <div className="rounded-3xl border border-zinc-200 bg-white/90 backdrop-blur-sm px-8 py-6 shadow-xl">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-4">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
+                  <Shield className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Security Alerts</h1>
+                  <p className="mt-1 text-sm text-zinc-600 font-medium">Monitor threats, compliance scans, and malware detections across your infrastructure.</p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={refreshData}
-                className="inline-flex items-center justify-center rounded-[16px] border border-white/70 bg-[linear-gradient(135deg,_rgba(239,246,255,0.94)_0%,_rgba(219,234,254,0.72)_100%)] px-4 py-2.5 text-sm font-bold text-blue-700 shadow-[0_14px_30px_rgba(59,130,246,0.12)] transition hover:brightness-[1.03]"
+                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-cyan-700 transition-all"
               >
                 Refresh
               </button>
@@ -988,8 +991,8 @@ export default function Alerts() {
             />
           </div>
 
-          <div className="rounded-[24px] border border-white/65 bg-[linear-gradient(135deg,_rgba(255,255,255,0.62)_0%,_rgba(240,248,255,0.42)_100%)] p-3 shadow-[0_24px_54px_rgba(15,23,42,0.10)] backdrop-blur-2xl">
-            <div className="mb-3 flex items-center justify-between gap-3 px-2">
+          <div className="rounded-3xl border border-zinc-200 bg-white/90 backdrop-blur-sm p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between gap-3 px-2">
               <div>
                 <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Source Navigation</div>
                 <div className="mt-1 text-sm text-zinc-600">Jump straight into Wazuh, OpenSCAP, or ClamAV without leaving the Alerts workspace.</div>

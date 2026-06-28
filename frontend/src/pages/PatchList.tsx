@@ -612,6 +612,7 @@ export default function PatchList() {
             patchGroupName={device.patchGroup?.name || 'Default Ring'}
             deviceStatus={device.status}
             patchStatus={device.patchStatus}
+            complianceScore={device.complianceScore}
             canOperate={canOperate}
             isOpeningConsole={openingConsoleDeviceId === device.id}
             onOpenDevice={() => navigate(`${basePath}/devices/${device.id}`)}

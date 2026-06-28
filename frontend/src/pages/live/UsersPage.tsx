@@ -978,19 +978,20 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-6 bg-zinc-50/60 px-4 py-6 xl:px-6">
-      <UsersPageHeader
-        directoryTotal={directoryTotal}
-        departmentCount={departmentCounts.length}
-        assetTotal={directorySummary.assetTotal}
-        auditTotal={auditTotal}
-        unassignedTotal={unassignedTotal}
-        activeTab={activeTab}
-        isSuperAdmin={isSuperAdmin}
-        isAuditor={isAuditor}
-        UsersIcon={UsersIcon}
-        onTabChange={setActiveTab}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      <div className="max-w-7xl mx-auto px-4 py-8 xl:px-6 space-y-6">
+        <UsersPageHeader
+          directoryTotal={directoryTotal}
+          departmentCount={departmentCounts.length}
+          assetTotal={directorySummary.assetTotal}
+          auditTotal={auditTotal}
+          unassignedTotal={unassignedTotal}
+          activeTab={activeTab}
+          isSuperAdmin={isSuperAdmin}
+          isAuditor={isAuditor}
+          UsersIcon={UsersIcon}
+          onTabChange={setActiveTab}
+        />
 
       <input
         ref={userImportInputRef}
@@ -1354,6 +1355,7 @@ export default function UsersPage() {
           />
         </div>
       ) : null}
+      </div>
     </div>
   );
 }

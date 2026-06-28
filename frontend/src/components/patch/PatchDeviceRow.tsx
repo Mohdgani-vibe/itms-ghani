@@ -11,6 +11,7 @@ interface PatchDeviceRowProps {
   patchGroupName?: string | null;
   deviceStatus?: string | null;
   patchStatus: string;
+  complianceScore: number;
   canOperate: boolean;
   isOpeningConsole: boolean;
   onOpenDevice: () => void;
@@ -26,6 +27,7 @@ export default function PatchDeviceRow({
   patchGroupName,
   deviceStatus,
   patchStatus,
+  complianceScore,
   canOperate,
   isOpeningConsole,
   onOpenDevice,
@@ -33,6 +35,8 @@ export default function PatchDeviceRow({
   onOpenConsole,
 }: PatchDeviceRowProps) {
   const actionsReadOnly = patchDeviceActionsReadOnly(deviceStatus);
+  const compliancePercentage = Math.min(100, Math.max(0, complianceScore));
+  const complianceColor = compliancePercentage >= 80 ? 'bg-emerald-500' : compliancePercentage >= 60 ? 'bg-amber-500' : 'bg-rose-500';
 
   return (
     <tr className="transition-colors hover:bg-emerald-50/40">
@@ -47,13 +51,24 @@ export default function PatchDeviceRow({
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-slate-600">{patchGroupName || 'Default Ring'}</span>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center gap-2">
-          {patchStatus === 'up_to_date' && <ShieldCheck className="h-5 w-5 text-emerald-500" />}
-          {patchStatus === 'pending' && <Clock className="h-5 w-5 text-amber-500" />}
-          {patchStatus === 'failed' && <ShieldAlert className="h-5 w-5 text-red-500" />}
-          <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${patchStatus === 'up_to_date' ? 'bg-emerald-100 text-emerald-800' : patchStatus === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>
-            {patchStatus.replace('_', ' ')}
-          </span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            {patchStatus === 'up_to_date' && <ShieldCheck className="h-5 w-5 text-emerald-500" />}
+            {patchStatus === 'pending' && <Clock className="h-5 w-5 text-amber-500" />}
+            {patchStatus === 'failed' && <ShieldAlert className="h-5 w-5 text-red-500" />}
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${patchStatus === 'up_to_date' ? 'bg-emerald-100 text-emerald-800' : patchStatus === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800'}`}>
+              {patchStatus.replace('_', ' ')}
+            </span>
+          </div>
+          <div className="w-full">
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="text-xs font-semibold text-slate-600">Compliance Score</span>
+              <span className="text-xs font-bold text-slate-900">{compliancePercentage}%</span>
+            </div>
+            <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+              <div className={`h-full ${complianceColor} transition-all duration-300`} style={{ width: `${compliancePercentage}%` }} />
+            </div>
+          </div>
         </div>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

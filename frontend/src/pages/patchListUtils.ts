@@ -11,6 +11,7 @@ export interface PatchDevice {
   osName?: string | null;
   status?: string | null;
   patchStatus: string;
+  complianceScore: number;
   department?: { name?: string } | null;
   user?: { fullName?: string } | null;
   patchGroup?: { name?: string } | null;

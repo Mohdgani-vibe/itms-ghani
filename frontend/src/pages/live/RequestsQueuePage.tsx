@@ -901,6 +901,8 @@ export default function RequestsQueuePage() {
                         updatedAtLabel={formatRelativeTime(request.updatedAt)}
                         requesterName={usernameLabel}
                         assigneeName={getRequestAssigneeLabel(request, isEnrollmentRequest)}
+                        slaDeadline={request.slaDeadline}
+                        createdAt={request.createdAt}
                         isSelected={isSelected}
                         isEnrollmentRequest={isEnrollmentRequest}
                         isBulkSelected={isBulkSelected}

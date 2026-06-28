@@ -21,6 +21,7 @@ export interface QueueRequest {
   notes: string;
   createdAt: string;
   updatedAt: string;
+  slaDeadline?: string | null;
   requester: QueuePerson;
   assignee: QueuePerson;
   comments: QueueComment[];
@@ -190,6 +191,41 @@ export function getFreshnessTone(value: string) {
     return 'bg-amber-100 text-amber-700';
   }
   return 'bg-emerald-100 text-emerald-700';
+}
+
+export function formatSLACountdown(slaDeadline: string, createdAt: string): { label: string; tone: string } | null {
+  const deadlineTime = new Date(slaDeadline).getTime();
+  const createdTime = new Date(createdAt).getTime();
+  const now = Date.now();
+  
+  if (Number.isNaN(deadlineTime) || Number.isNaN(createdTime)) {
+    return null;
+  }
+  
+  const remainingMs = deadlineTime - now;
+  const totalDuration = deadlineTime - createdTime;
+  const percentRemaining = Math.max(0, (remainingMs / totalDuration) * 100);
+  
+  if (remainingMs <= 0) {
+    return { label: 'Overdue', tone: 'bg-rose-100 text-rose-700' };
+  }
+  
+  const hours = Math.floor(remainingMs / 3600000);
+  const minutes = Math.floor((remainingMs % 3600000) / 60000);
+  
+  let label = '';
+  if (hours > 24) {
+    const days = Math.floor(hours / 24);
+    label = `${days}d ${hours % 24}h remaining`;
+  } else if (hours > 0) {
+    label = `${hours}h ${minutes}m remaining`;
+  } else {
+    label = `${minutes}m remaining`;
+  }
+  
+  const tone = percentRemaining < 20 ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700';
+  
+  return { label, tone };
 }
 
 export function buildNoteTemplate(kind: 'triage' | 'waiting' | 'resolved') {

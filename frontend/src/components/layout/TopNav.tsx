@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
-  Search, Bell, MonitorSmartphone, ChevronDown, Moon, Sun, LogOut
+  Search, Bell, ChevronDown, Moon, Sun, LogOut
 } from 'lucide-react';
 import { apiRequest, resolveWebSocketUrl } from '../../lib/api';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';

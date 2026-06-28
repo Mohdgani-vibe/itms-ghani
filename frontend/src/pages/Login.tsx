@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MonitorSmartphone, Lock, Eye, EyeOff, Shield } from 'lucide-react';
+import { Lock, Eye, EyeOff, Shield } from 'lucide-react';
 import { apiRequest, resetAuthRedirectState } from '../lib/api';
 import { getPreferredPortalPath, getShortName, normalizeAuthUser, normalizeLoginIdentifier, setStoredSession } from '../lib/session';
 import { normalizeAuthErrorMessage } from './loginUtils';
