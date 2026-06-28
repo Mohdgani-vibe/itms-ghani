@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Shield, 
   Activity, 
@@ -10,7 +11,8 @@ import {
   Package,
   FileText,
   Send,
-  Search
+  Search,
+  LogOut
 } from 'lucide-react';
 
 // Sample data
@@ -91,8 +93,29 @@ const operationsData = {
 };
 
 export default function DashboardPageNew() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [timeRange, setTimeRange] = useState('Last 24h');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Get current portal from URL (admin, it, audit, emp)
+  const portal = location.pathname.split('/')[1] || 'admin';
+  
+  // Navigation items with their routes
+  const navItems = [
+    { label: 'Users', path: 'users' },
+    { label: 'Patch', path: 'patch' },
+    { label: 'Inventory', path: 'inventory' },
+    { label: 'Alerts', path: 'alerts' },
+    { label: 'Request', path: 'requests' },
+    { label: 'Gatepass', path: 'gatepass' },
+    { label: 'Announcement', path: 'announcements' },
+  ];
+  
+  const handleLogout = () => {
+    localStorage.clear();
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
@@ -126,30 +149,36 @@ export default function DashboardPageNew() {
 
             {/* Center: Nav Links */}
             <div className="flex items-center gap-1">
-              {['Users', 'Patch', 'Inventory', 'Alerts', 'Request', 'Gatepass', 'Announcement'].map((link) => (
-                <a
-                  key={link}
-                  href={`#${link.toLowerCase()}`}
+              <button
+                onClick={() => navigate(`/${portal}/dashboard`)}
+                className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
+                style={{
+                  color: '#2667E8',
+                  backgroundColor: '#F0F9FF',
+                }}
+              >
+                Dashboard
+              </button>
+              {navItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => navigate(`/${portal}/${item.path}`)}
                   className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
                   style={{
-                    color: link === 'Alerts' ? '#2667E8' : '#8C96A4',
-                    backgroundColor: link === 'Alerts' ? '#F0F9FF' : 'transparent',
+                    color: '#8C96A4',
+                    backgroundColor: 'transparent',
                   }}
                   onMouseEnter={(e) => {
-                    if (link !== 'Alerts') {
-                      e.currentTarget.style.backgroundColor = '#F1F4F9';
-                      e.currentTarget.style.color = '#0F1B2D';
-                    }
+                    e.currentTarget.style.backgroundColor = '#F1F4F9';
+                    e.currentTarget.style.color = '#0F1B2D';
                   }}
                   onMouseLeave={(e) => {
-                    if (link !== 'Alerts') {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = '#8C96A4';
-                    }
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = '#8C96A4';
                   }}
                 >
-                  {link}
-                </a>
+                  {item.label}
+                </button>
               ))}
             </div>
 
@@ -157,6 +186,7 @@ export default function DashboardPageNew() {
             <div className="flex items-center gap-3">
               {/* Setup Icon */}
               <button 
+                onClick={() => navigate(`/${portal}/settings`)}
                 className="p-2 rounded-lg transition-all duration-200"
                 style={{ color: '#8C96A4' }}
                 onMouseEnter={(e) => {
@@ -173,6 +203,7 @@ export default function DashboardPageNew() {
 
               {/* Alerts Bell with Red Dot */}
               <button 
+                onClick={() => navigate(`/${portal}/alerts`)}
                 className="p-2 rounded-lg transition-all duration-200 relative"
                 style={{ color: '#8C96A4' }}
                 onMouseEnter={(e) => {
@@ -191,29 +222,55 @@ export default function DashboardPageNew() {
                 />
               </button>
 
-              {/* Account Chip */}
-              <button 
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200"
-                style={{ backgroundColor: '#F1F4F9' }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#E7EBF1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F1F4F9';
-                }}
-              >
-                <div 
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-                  style={{ backgroundColor: '#2667E8' }}
+              {/* Account Dropdown */}
+              <div className="relative group">
+                <button 
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200"
+                  style={{ backgroundColor: '#F1F4F9' }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = '#E7EBF1';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F1F4F9';
+                  }}
                 >
-                  AD
+                  <div 
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
+                    style={{ backgroundColor: '#2667E8' }}
+                  >
+                    AD
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs font-medium" style={{ color: '#0F1B2D' }}>Admin User</div>
+                    <div className="text-[10px]" style={{ color: '#8C96A4' }}>admin@zerodha.com</div>
+                  </div>
+                  <ChevronDown className="w-4 h-4" style={{ color: '#8C96A4' }} />
+                </button>
+                
+                {/* Dropdown Menu */}
+                <div 
+                  className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
+                  style={{
+                    backgroundColor: 'white',
+                    border: '1px solid #E7EBF1',
+                  }}
+                >
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left transition-all duration-200 rounded-xl"
+                    style={{ color: '#0F1B2D' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#F1F4F9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Sign out</span>
+                  </button>
                 </div>
-                <div className="text-left">
-                  <div className="text-xs font-medium" style={{ color: '#0F1B2D' }}>Admin User</div>
-                  <div className="text-[10px]" style={{ color: '#8C96A4' }}>admin@zerodha.com</div>
-                </div>
-                <ChevronDown className="w-4 h-4" style={{ color: '#8C96A4' }} />
-              </button>
+              </div>
             </div>
           </div>
 
