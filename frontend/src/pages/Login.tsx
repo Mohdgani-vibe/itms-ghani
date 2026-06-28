@@ -317,46 +317,38 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 flex flex-col justify-center py-16 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center mb-8">
+        <div className="flex justify-center items-center mb-10">
           <img 
             src="/itms-logo-light.svg"
             alt="ITMS - IT Management System - Zerodha" 
-            className="h-32 w-auto object-contain dark:hidden"
+            className="h-28 w-auto object-contain dark:hidden"
           />
           <img 
             src="/itms-logo-dark.svg"
             alt="ITMS - IT Management System - Zerodha" 
-            className="h-32 w-auto object-contain hidden dark:block"
+            className="h-28 w-auto object-contain hidden dark:block"
           />
-        </div>
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl font-light text-zinc-900 dark:text-white tracking-tight">
-            Welcome Back
-          </h1>
-          <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto leading-relaxed">
-            Secure access to your IT infrastructure management portal
-          </p>
         </div>
       </div>
 
-      <div className="mt-12 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl py-12 px-8 border border-zinc-200/50 dark:border-zinc-800/50 rounded-3xl shadow-xl shadow-zinc-200/20 dark:shadow-black/20">
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white dark:bg-zinc-800 py-10 px-8 shadow-lg rounded-xl border border-zinc-200 dark:border-zinc-700">
           {mfaRequired ? (
-            <form className="space-y-6" onSubmit={handleMFAVerification}>
+            <form className="space-y-5" onSubmit={handleMFAVerification}>
               <div className="text-center space-y-2">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-zinc-800 mb-3">
-                  <Shield className="w-6 h-6 text-zinc-700 dark:text-zinc-300" />
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 mb-2">
+                  <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <h2 className="text-xl font-light text-zinc-900 dark:text-white">Two-Factor Authentication</h2>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Two-Factor Authentication</h2>
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   Enter the 6-digit code from your authenticator app
                 </p>
               </div>
 
               <div>
-                <label htmlFor="mfa-code" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                <label htmlFor="mfa-code" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   Verification Code
                 </label>
                 <input
@@ -371,24 +363,24 @@ export default function Login() {
                   pattern="[0-9]*"
                   maxLength={10}
                   placeholder="000000"
-                  className="block w-full px-5 py-4 border border-zinc-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 focus:border-transparent text-center text-lg tracking-widest transition-all duration-200"
+                  className="block w-full px-4 py-3 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest transition"
                 />
-                <p className="mt-3 text-xs text-zinc-500 dark:text-zinc-400 text-center">
+                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400 text-center">
                   Use your authenticator app or 10-digit backup code
                 </p>
               </div>
 
               {error ? (
-                <div className="rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-5 py-4 text-sm text-red-700 dark:text-red-400">
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                   {error}
                 </div>
               ) : null}
 
-              <div className="space-y-3 pt-2">
+              <div className="space-y-3 pt-1">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 px-5 rounded-2xl text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 disabled:opacity-50 transition-all duration-200"
+                  className="w-full py-3 px-4 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
                   {loading ? 'Verifying...' : 'Verify Code'}
                 </button>
@@ -396,38 +388,38 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={handleBackToLogin}
-                  className="w-full py-4 px-5 rounded-2xl text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-300 transition-all duration-200"
+                  className="w-full py-3 px-4 rounded-lg text-sm font-medium text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 dark:hover:bg-zinc-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 transition"
                 >
                   Back to Login
                 </button>
               </div>
             </form>
           ) : !showPasswordForm ? (
-            <div className="space-y-6">
+            <div className="space-y-4">
               {error ? (
-                <div className="rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-5 py-4 text-sm text-red-700 dark:text-red-400">
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                   {error}
                 </div>
               ) : null}
               <button
                 type="button"
                 onClick={revealPasswordForm}
-                className="w-full py-4 px-5 rounded-2xl text-sm font-medium text-zinc-900 dark:text-white bg-white dark:bg-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 transition-all duration-200 shadow-sm hover:shadow"
+                className="w-full py-3 px-4 rounded-lg text-sm font-medium text-zinc-900 dark:text-white bg-white dark:bg-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-600 border border-zinc-300 dark:border-zinc-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition shadow-sm"
               >
                 Continue with email
               </button>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center leading-relaxed">
-                Sign in with your Zerodha employee credentials
+              <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+                Sign in with your Zerodha credentials
               </p>
             </div>
           ) : (
-            <form className="space-y-6" onSubmit={handleLogin} autoComplete="on" action="/login" method="post" data-bwignore="true">
+            <form className="space-y-5" onSubmit={handleLogin} autoComplete="on" action="/login" method="post" data-bwignore="true">
               <div className="hidden" aria-hidden="true">
                 <input tabIndex={-1} name="username" autoComplete="username" data-bwignore="true" data-1p-ignore="true" data-lpignore="true" />
                 <input tabIndex={-1} name="password" type="password" autoComplete="current-password" data-bwignore="true" data-1p-ignore="true" data-lpignore="true" />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                <label htmlFor="email" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   Email / Employee ID
                 </label>
                 <input
@@ -448,13 +440,13 @@ export default function Login() {
                   data-bwignore="true"
                   data-1p-ignore="true"
                   data-lpignore="true"
-                  className="block w-full px-5 py-4 border border-zinc-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 focus:border-transparent transition-all duration-200"
+                  className="block w-full px-4 py-3 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   placeholder="your@zerodha.com"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                <label htmlFor="password" className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -476,12 +468,12 @@ export default function Login() {
                     data-bwignore="true"
                     data-1p-ignore="true"
                     data-lpignore="true"
-                    className="block w-full px-5 py-4 pr-12 border border-zinc-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 focus:border-transparent transition-all duration-200"
+                    className="block w-full px-4 py-3 pr-12 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   />
                   <button
                     type="button"
                     onClick={() => setPasswordVisible((current) => !current)}
-                    className="absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors duration-200"
+                    className="absolute inset-y-0 right-0 flex items-center px-4 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 transition"
                     aria-label={passwordVisible ? 'Hide password' : 'Show password'}
                   >
                     {passwordVisible ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
@@ -489,15 +481,15 @@ export default function Login() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center justify-between">
                 <label className="flex items-center cursor-pointer group">
                   <input
                     id="remember-me"
                     name="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-zinc-900 focus:ring-zinc-400 dark:focus:ring-zinc-500 transition-colors duration-200"
+                    className="h-4 w-4 rounded border-zinc-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 transition"
                   />
-                  <span className="ml-2.5 text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors duration-200">
+                  <span className="ml-2 text-sm text-zinc-700 dark:text-zinc-300 group-hover:text-zinc-900 dark:group-hover:text-white transition">
                     Remember me
                   </span>
                 </label>
@@ -505,50 +497,50 @@ export default function Login() {
                 <button
                   type="button"
                   onClick={handleForgotPassword}
-                  className="text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors duration-200"
+                  className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition"
                 >
                   Forgot password?
                 </button>
               </div>
 
               {error ? (
-                <div className="rounded-2xl bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 px-5 py-4 text-sm text-red-700 dark:text-red-400">
+                <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 px-4 py-3 text-sm text-red-700 dark:text-red-400">
                   {error}
                 </div>
               ) : null}
 
               {supportMessage ? (
-                <div className="rounded-2xl bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 px-5 py-4 text-sm text-blue-700 dark:text-blue-400">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-4 py-3 text-sm text-blue-700 dark:text-blue-400">
                   {supportMessage}
                 </div>
               ) : null}
 
-              <div className="space-y-4 pt-2">
+              <div className="space-y-3 pt-1">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-4 px-5 rounded-2xl text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-zinc-400 dark:focus:ring-zinc-500 disabled:opacity-50 transition-all duration-200 shadow-sm hover:shadow"
+                  className="w-full py-3 px-4 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition shadow-sm"
                 >
                   {loading ? 'Signing in...' : 'Sign in'}
                 </button>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center leading-relaxed">
-                  Secure access for Zerodha employees. Contact IT for support.
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
+                  Contact IT support for account assistance
                 </p>
               </div>
             </form>
           )}
 
-          <div className="mt-10">
+          <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-200/60 dark:border-zinc-800/60" />
+                <div className="w-full border-t border-zinc-200 dark:border-zinc-700" />
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-4 bg-white/80 dark:bg-zinc-900/80 text-zinc-500 dark:text-zinc-400 font-light">Alternative sign-in methods</span>
+                <span className="px-3 bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400">Or continue with</span>
               </div>
             </div>
 
-            <div className="mt-8 space-y-3">
+            <div className="mt-6 space-y-3">
               {googleEnabled ? (
                 <div className="space-y-2">
                   <div ref={googleButtonRef} className="flex justify-center [&>div]:w-full" />
@@ -558,7 +550,7 @@ export default function Login() {
                 <button
                   type="button"
                   disabled
-                  className="w-full py-3.5 px-5 rounded-2xl inline-flex justify-center items-center text-sm font-medium text-zinc-400 dark:text-zinc-600 bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-800/50 cursor-not-allowed"
+                  className="w-full py-3 px-4 rounded-lg inline-flex justify-center items-center text-sm font-medium text-zinc-400 dark:text-zinc-500 bg-zinc-50 dark:bg-zinc-700/50 border border-zinc-200 dark:border-zinc-700 cursor-not-allowed"
                 >
                   <Lock className="w-4 h-4 mr-2" />
                   <span>Google SSO not configured</span>
@@ -571,7 +563,7 @@ export default function Login() {
                     type="button"
                     onClick={handleSSOLogin}
                     disabled={ssoLoading}
-                    className="w-full py-3.5 px-5 rounded-2xl inline-flex justify-center items-center text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 px-4 rounded-lg inline-flex justify-center items-center text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Shield className="w-4 h-4 mr-2" />
                     <span>{ssoLoading ? 'Redirecting...' : 'Enterprise SSO'}</span>
