@@ -324,12 +324,12 @@ export default function Login() {
             <img 
               src="/itms-logo-light.svg"
               alt="ITMS - IT Management System - Zerodha" 
-              className="h-20 w-auto object-contain dark:hidden"
+              className="h-40 w-auto object-contain dark:hidden"
             />
             <img 
               src="/itms-logo-dark.svg"
               alt="ITMS - IT Management System - Zerodha" 
-              className="h-20 w-auto object-contain hidden dark:block"
+              className="h-40 w-auto object-contain hidden dark:block"
             />
           </div>
           
