@@ -79,9 +79,31 @@ export default function LoginNew() {
   };
 
   return (
-    <div className="min-h-screen flex relative overflow-hidden" style={{ fontFamily: 'Inter, sans-serif' }}>
-      {/* Split Background */}
-      <div className="absolute inset-0 flex">
+    <>
+      {/* Force light mode for login page - override dark mode CSS */}
+      <style>{`
+        .login-page-root * {
+          color: inherit !important;
+        }
+        .login-page-root .login-text-ink {
+          color: #0F1B2D !important;
+        }
+        .login-page-root .login-text-muted {
+          color: #8C96A4 !important;
+        }
+        .login-page-root .login-text-primary {
+          color: #2667E8 !important;
+        }
+        .login-page-root .login-text-white {
+          color: white !important;
+        }
+        .login-page-root .login-text-error {
+          color: #E5484D !important;
+        }
+      `}</style>
+      <div className="min-h-screen flex relative overflow-hidden login-page-root" style={{ fontFamily: 'Inter, sans-serif' }}>
+        {/* Split Background */}
+        <div className="absolute inset-0 flex">
         {/* Left half - Light Blue */}
         <div className="w-1/2" style={{ backgroundColor: '#CFE0FB' }} />
         {/* Right half - White */}
@@ -121,9 +143,10 @@ export default function LoginNew() {
                   backgroundColor: '#2667E8',
                 }}
               >
-                <span style={{ color: 'white !important', fontWeight: '700', fontSize: '24px', fontFamily: 'Inter, sans-serif' }}>IT</span>
+                <span className="login-text-white" style={{ fontWeight: '700', fontSize: '24px', fontFamily: 'Inter, sans-serif' }}>IT</span>
                 {/* Z Badge */}
                 <div 
+                  className="login-text-white"
                   style={{
                     position: 'absolute',
                     bottom: '-4px',
@@ -135,7 +158,6 @@ export default function LoginNew() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     backgroundColor: '#0F1B2D',
-                    color: 'white !important',
                     fontSize: '12px',
                     fontWeight: '700',
                     fontFamily: 'Inter, sans-serif',
@@ -145,11 +167,11 @@ export default function LoginNew() {
                 </div>
               </div>
               {/* ITMS Wordmark */}
-              <span style={{ fontSize: '38px', fontWeight: '700', color: '#0F1B2D !important', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
+              <span className="login-text-ink" style={{ fontSize: '38px', fontWeight: '700', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
                 ITMS
               </span>
             </div>
-            <div style={{ fontSize: '9px', fontWeight: '500', color: '#8C96A4 !important', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
+            <div className="login-text-muted" style={{ fontSize: '9px', fontWeight: '500', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
               IT MANAGEMENT SYSTEM / POWERED BY ZERODHA
             </div>
           </div>
@@ -158,7 +180,7 @@ export default function LoginNew() {
           <div style={{ borderTop: '1px solid #E7EBF1', marginBottom: '32px' }} />
 
           {/* Welcome Heading */}
-          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0F1B2D !important', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
+          <h1 className="login-text-ink" style={{ fontSize: '24px', fontWeight: '600', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
             Welcome back
           </h1>
 
@@ -168,13 +190,13 @@ export default function LoginNew() {
               <button
                 type="button"
                 onClick={() => setShowPasswordForm(true)}
+                className="login-text-primary"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
                   borderRadius: '12px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#2667E8 !important',
                   backgroundColor: 'white',
                   border: '1.5px solid #2667E8',
                   cursor: 'pointer',
@@ -192,7 +214,7 @@ export default function LoginNew() {
               </button>
 
               {/* Helper Text */}
-              <p style={{ fontSize: '14px', color: '#8C96A4 !important', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
+              <p className="login-text-muted" style={{ fontSize: '14px', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
                 Sign in with your Zerodha credentials
               </p>
 
@@ -202,7 +224,7 @@ export default function LoginNew() {
                   <div style={{ width: '100%', borderTop: '1px solid #E7EBF1' }} />
                 </div>
                 <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
-                  <span style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', color: '#8C96A4 !important', fontFamily: 'Inter, sans-serif' }}>
+                  <span className="login-text-muted" style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', fontFamily: 'Inter, sans-serif' }}>
                     Or continue with
                   </span>
                 </div>
@@ -212,6 +234,7 @@ export default function LoginNew() {
               <button
                 type="button"
                 disabled
+                className="login-text-muted"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
@@ -221,7 +244,6 @@ export default function LoginNew() {
                   alignItems: 'center',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#8C96A4 !important',
                   backgroundColor: '#F1F4F9',
                   border: '1px solid #E7EBF1',
                   cursor: 'not-allowed',
@@ -236,7 +258,7 @@ export default function LoginNew() {
             <form style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onSubmit={handleLogin}>
               {/* Email Field */}
               <div>
-                <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D !important', fontFamily: 'Inter, sans-serif' }}>
+                <label htmlFor="email" className="login-text-ink" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>
                   Email
                 </label>
                 <input
@@ -247,6 +269,7 @@ export default function LoginNew() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="username"
+                  className="login-text-ink"
                   style={{
                     display: 'block',
                     width: '100%',
@@ -254,7 +277,6 @@ export default function LoginNew() {
                     borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
-                    color: '#0F1B2D !important',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s',
@@ -274,7 +296,7 @@ export default function LoginNew() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D !important', fontFamily: 'Inter, sans-serif' }}>
+                <label htmlFor="password" className="login-text-ink" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', fontFamily: 'Inter, sans-serif' }}>
                   Password
                 </label>
                 <input
@@ -285,6 +307,7 @@ export default function LoginNew() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
+                  className="login-text-ink"
                   style={{
                     display: 'block',
                     width: '100%',
@@ -292,7 +315,6 @@ export default function LoginNew() {
                     borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
-                    color: '#0F1B2D !important',
                     fontSize: '14px',
                     outline: 'none',
                     transition: 'all 0.2s',
@@ -313,13 +335,13 @@ export default function LoginNew() {
               {/* Error Message */}
               {error && (
                 <div 
+                  className="login-text-error"
                   style={{
                     borderRadius: '12px',
                     padding: '12px 16px',
                     fontSize: '14px',
                     backgroundColor: '#FEE2E2',
                     border: '1px solid #E5484D',
-                    color: '#E5484D !important',
                     fontFamily: 'Inter, sans-serif',
                   }}
                 >
@@ -331,13 +353,13 @@ export default function LoginNew() {
               <button
                 type="submit"
                 disabled={loading}
+                className="login-text-white"
                 style={{
                   width: '100%',
                   padding: '12px 16px',
                   borderRadius: '12px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: 'white !important',
                   backgroundColor: '#2667E8',
                   border: 'none',
                   cursor: loading ? 'not-allowed' : 'pointer',
@@ -369,12 +391,12 @@ export default function LoginNew() {
                   setEmail('');
                   setPassword('');
                 }}
+                className="login-text-muted"
                 style={{
                   width: '100%',
                   padding: '8px',
                   fontSize: '14px',
                   fontWeight: '500',
-                  color: '#8C96A4 !important',
                   backgroundColor: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
@@ -394,11 +416,12 @@ export default function LoginNew() {
           )}
 
           {/* Footer */}
-          <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', color: '#8C96A4 !important', fontFamily: 'Inter, sans-serif' }}>
+          <div className="login-text-muted" style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', fontFamily: 'Inter, sans-serif' }}>
             © 2026 ITMS · Powered by Zerodha
           </div>
         </div>
       </div>
     </div>
+    </>
   );
 }
