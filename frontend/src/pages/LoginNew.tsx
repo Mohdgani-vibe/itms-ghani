@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Shield } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { apiRequest, resetAuthRedirectState } from '../lib/api';
 import { getPreferredPortalPath, getShortName, normalizeAuthUser, normalizeLoginIdentifier, setStoredSession } from '../lib/session';
 import { normalizeAuthErrorMessage } from './loginUtils';
@@ -106,24 +106,39 @@ export default function LoginNew() {
           }}
         >
           {/* Logo Section */}
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-3 mb-4">
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
               {/* Logo Mark */}
               <div 
-                className="relative flex items-center justify-center rounded-xl"
                 style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '12px',
                   width: '48px',
                   height: '48px',
                   backgroundColor: '#2667E8',
                 }}
               >
-                <span className="text-white font-bold text-2xl">IT</span>
+                <span style={{ color: 'white', fontWeight: '700', fontSize: '24px', fontFamily: 'Inter, sans-serif' }}>IT</span>
                 {/* Z Badge */}
                 <div 
-                  className="absolute -bottom-1 -right-1 w-5 h-5 rounded-md flex items-center justify-center text-xs font-bold"
                   style={{
+                    position: 'absolute',
+                    bottom: '-4px',
+                    right: '-4px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     backgroundColor: '#0F1B2D',
                     color: 'white',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
                   Z
@@ -140,7 +155,7 @@ export default function LoginNew() {
           </div>
 
           {/* Divider */}
-          <div className="border-t mb-8" style={{ borderColor: '#E7EBF1' }} />
+          <div style={{ borderTop: '1px solid #E7EBF1', marginBottom: '32px' }} />
 
           {/* Welcome Heading */}
           <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0F1B2D', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
@@ -148,7 +163,7 @@ export default function LoginNew() {
           </h1>
 
           {!showPasswordForm ? (
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               {/* Continue with Email Button */}
               <button
                 type="button"
@@ -182,9 +197,9 @@ export default function LoginNew() {
               </p>
 
               {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t" style={{ borderColor: '#E7EBF1' }} />
+              <div style={{ position: 'relative', marginTop: '24px', marginBottom: '24px' }}>
+                <div style={{ position: 'absolute', inset: '0', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: '100%', borderTop: '1px solid #E7EBF1' }} />
                 </div>
                 <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
                   <span style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', color: '#8C96A4', fontFamily: 'Inter, sans-serif' }}>
@@ -218,7 +233,7 @@ export default function LoginNew() {
               </button>
             </div>
           ) : (
-            <form className="space-y-5" onSubmit={handleLogin}>
+            <form style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} onSubmit={handleLogin}>
               {/* Email Field */}
               <div>
                 <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D', fontFamily: 'Inter, sans-serif' }}>

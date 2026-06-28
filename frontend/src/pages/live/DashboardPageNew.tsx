@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Shield, 
@@ -818,7 +818,7 @@ function DonutChart({ data }: { data: Array<{ name: string; value: number; color
 }
 
 // Progress Bar Component
-function ProgressBar({ pass, fail }: { pass: number; fail: number }) {
+function ProgressBar({ pass }: { pass: number; fail: number }) {
   return (
     <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#E7EBF1' }}>
       <div 
