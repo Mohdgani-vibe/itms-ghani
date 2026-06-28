@@ -317,24 +317,30 @@ export default function Login() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-blue-50 to-white dark:from-zinc-900 dark:via-zinc-800 dark:to-zinc-900 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center mb-10">
-          <img 
-            src="/itms-logo-light.svg"
-            alt="ITMS - IT Management System - Zerodha" 
-            className="h-28 w-auto object-contain dark:hidden"
-          />
-          <img 
-            src="/itms-logo-dark.svg"
-            alt="ITMS - IT Management System - Zerodha" 
-            className="h-28 w-auto object-contain hidden dark:block"
-          />
-        </div>
-      </div>
-
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white dark:bg-zinc-800 py-10 px-8 shadow-lg rounded-xl border border-zinc-200 dark:border-zinc-700">
+        <div className="bg-white dark:bg-zinc-800 py-10 px-8 shadow-2xl rounded-2xl border border-zinc-100 dark:border-zinc-700">
+          <div className="flex justify-center items-center mb-8">
+            <img 
+              src="/itms-logo-light.svg"
+              alt="ITMS - IT Management System - Zerodha" 
+              className="h-20 w-auto object-contain dark:hidden"
+            />
+            <img 
+              src="/itms-logo-dark.svg"
+              alt="ITMS - IT Management System - Zerodha" 
+              className="h-20 w-auto object-contain hidden dark:block"
+            />
+          </div>
+          
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white mb-2">
+              Welcome back
+            </h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              Sign in to your IT Management System
+            </p>
+          </div>
           {mfaRequired ? (
             <form className="space-y-5" onSubmit={handleMFAVerification}>
               <div className="text-center space-y-2">
@@ -409,7 +415,7 @@ export default function Login() {
                 Continue with email
               </button>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center">
-                Sign in with your Zerodha credentials
+                Sign in with your <span className="text-blue-600 dark:text-blue-400 font-medium">Zerodha</span> credentials
               </p>
             </div>
           ) : (
@@ -574,6 +580,12 @@ export default function Login() {
             </div>
           </div>
         </div>
+      </div>
+      
+      <div className="mt-8 text-center">
+        <p className="text-xs text-zinc-400 dark:text-zinc-500">
+          © 2026 ITMS • Powered by <span className="text-blue-500 dark:text-blue-400">Zerodha</span>
+        </p>
       </div>
     </div>
   );
