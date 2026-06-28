@@ -218,8 +218,7 @@ export default function DashboardPageNew() {
               {/* Setup Icon */}
               <button 
                 onClick={() => navigate(`/${portal}/settings`)}
-                className="p-2 rounded-lg transition-all duration-200"
-                style={{ color: '#8C96A4' }}
+                className="p-2 rounded-lg transition-all duration-200 text-muted"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#F1F4F9';
                   e.currentTarget.style.color = '#0F1B2D';
@@ -235,8 +234,7 @@ export default function DashboardPageNew() {
               {/* Alerts Bell with Red Dot */}
               <button 
                 onClick={() => navigate(`/${portal}/alerts`)}
-                className="p-2 rounded-lg transition-all duration-200 relative"
-                style={{ color: '#8C96A4' }}
+                className="p-2 rounded-lg transition-all duration-200 relative text-muted"
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#F1F4F9';
                   e.currentTarget.style.color = '#0F1B2D';
@@ -272,10 +270,10 @@ export default function DashboardPageNew() {
                     AD
                   </div>
                   <div className="text-left">
-                    <div className="text-xs font-medium" style={{ color: '#0F1B2D' }}>Admin User</div>
-                    <div className="text-[10px]" style={{ color: '#8C96A4' }}>admin@zerodha.com</div>
+                    <div className="text-xs font-medium text-ink">Admin User</div>
+                    <div className="text-[10px] text-muted">admin@zerodha.com</div>
                   </div>
-                  <ChevronDown className="w-4 h-4" style={{ color: '#8C96A4' }} />
+                  <ChevronDown className="w-4 h-4 text-muted" />
                 </button>
                 
                 {/* Dropdown Menu */}
@@ -288,8 +286,7 @@ export default function DashboardPageNew() {
                 >
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left transition-all duration-200 rounded-xl"
-                    style={{ color: '#0F1B2D' }}
+                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left transition-all duration-200 rounded-xl text-ink"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = '#F1F4F9';
                     }}
@@ -315,8 +312,7 @@ export default function DashboardPageNew() {
               {/* Search Field */}
               <div className="relative">
                 <Search 
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
-                  style={{ color: '#8C96A4' }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted"
                 />
                 <input
                   type="text"
@@ -416,13 +412,13 @@ export default function DashboardPageNew() {
           charts={
             <>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   7-Day Detections
                 </div>
                 <BarChart data={clamavData.weeklyDetections} color="#E5484D" maxValue={5} />
               </div>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   Threat Types
                 </div>
                 <DonutChart data={clamavData.threatTypes} />
@@ -447,13 +443,13 @@ export default function DashboardPageNew() {
           charts={
             <>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   Pass/Fail by Host Group
                 </div>
                 <div className="space-y-3">
                   {openscapData.hostGroups.map((group) => (
                     <div key={group.name}>
-                      <div className="flex justify-between text-xs mb-1" style={{ color: '#0F1B2D' }}>
+                      <div className="flex justify-between text-xs mb-1 text-ink">
                         <span>{group.name}</span>
                         <span>{group.pass}%</span>
                       </div>
@@ -463,7 +459,7 @@ export default function DashboardPageNew() {
                 </div>
               </div>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   Findings by Severity
                 </div>
                 <DonutChart data={openscapData.severity} />
@@ -488,13 +484,13 @@ export default function DashboardPageNew() {
           charts={
             <>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   Alerts by Rule Level
                 </div>
                 <div className="space-y-2">
                   {wazuhData.alertsByLevel.map((item) => (
                     <div key={item.level} className="flex items-center gap-3">
-                      <div className="text-xs font-medium w-8" style={{ color: '#0F1B2D' }}>
+                      <div className="text-xs font-medium w-8 text-ink">
                         {item.level}
                       </div>
                       <div className="flex-1">
@@ -522,23 +518,23 @@ export default function DashboardPageNew() {
                   >
                     <div className="w-24 h-24 rounded-full bg-white flex items-center justify-center">
                       <div>
-                        <div className="text-2xl font-bold" style={{ color: '#0F1B2D' }}>847</div>
-                        <div className="text-xs" style={{ color: '#8C96A4' }}>Agents</div>
+                        <div className="text-2xl font-bold text-ink">847</div>
+                        <div className="text-xs text-muted">Agents</div>
                       </div>
                     </div>
                   </div>
                   <div className="flex gap-3 justify-center text-xs">
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#30A46C' }} />
-                      <span style={{ color: '#8C96A4' }}>Active</span>
+                      <span className="text-muted">Active</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#FFB224' }} />
-                      <span style={{ color: '#8C96A4' }}>Pending</span>
+                      <span className="text-muted">Pending</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#E5484D' }} />
-                      <span style={{ color: '#8C96A4' }}>Offline</span>
+                      <span className="text-muted">Offline</span>
                     </div>
                   </div>
                 </div>
@@ -563,13 +559,13 @@ export default function DashboardPageNew() {
           charts={
             <>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   Patch Status
                 </div>
                 <DonutChart data={patchData.patchStatus} />
               </div>
               <div>
-                <div className="text-xs font-medium mb-3" style={{ color: '#8C96A4' }}>
+                <div className="text-xs font-medium mb-3 text-muted">
                   7-Day Patch Deployment
                 </div>
                 <BarChart data={patchData.weeklyDeployment} color="#30A46C" maxValue={100} />
@@ -679,8 +675,7 @@ function KPICard({
       
       <div className="flex items-center gap-1">
         <span 
-          className="text-xs font-semibold"
-          style={{ color: isPositive ? '#30A46C' : '#E5484D' }}
+          className={`text-xs font-semibold ${isPositive ? 'text-success' : 'text-danger'}`}
         >
           {trend}
         </span>
@@ -723,11 +718,11 @@ function ModulePanel({
             className="w-12 h-12 rounded-xl flex items-center justify-center"
             style={{ backgroundColor: '#2667E815' }}
           >
-            <Icon className="w-6 h-6" style={{ color: '#2667E8' }} />
+            <Icon className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h3 className="text-lg font-semibold" style={{ color: '#0F1B2D' }}>{name}</h3>
-            <p className="text-sm" style={{ color: '#8C96A4' }}>{subtitle}</p>
+            <h3 className="text-lg font-semibold text-ink">{name}</h3>
+            <p className="text-sm text-muted">{subtitle}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -742,8 +737,7 @@ function ModulePanel({
           </div>
           <a 
             href="#"
-            className="text-sm font-medium transition-all duration-200"
-            style={{ color: '#2667E8' }}
+            className="text-sm font-medium transition-all duration-200 text-primary"
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#1e56c8';
             }}
@@ -764,10 +758,10 @@ function ModulePanel({
             className="p-4 rounded-xl"
             style={{ backgroundColor: '#F1F4F9' }}
           >
-            <div className="text-2xl font-bold mb-1" style={{ color: '#0F1B2D' }}>
+            <div className="text-2xl font-bold mb-1 text-ink">
               {stat.value}
             </div>
-            <div className="text-xs font-medium" style={{ color: '#8C96A4' }}>
+            <div className="text-xs font-medium text-muted">
               {stat.label}
             </div>
           </div>
@@ -797,7 +791,7 @@ function BarChart({ data, color, maxValue }: { data: number[]; color: string; ma
               }}
             />
           </div>
-          <div className="text-xs" style={{ color: '#8C96A4' }}>
+          <div className="text-xs text-muted">
             {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
           </div>
         </div>
@@ -837,9 +831,9 @@ function DonutChart({ data }: { data: Array<{ name: string; value: number; color
                 className="w-3 h-3 rounded-full"
                 style={{ backgroundColor: item.color }}
               />
-              <span className="text-xs" style={{ color: '#0F1B2D' }}>{item.name}</span>
+              <span className="text-xs text-ink">{item.name}</span>
             </div>
-            <span className="text-xs font-semibold" style={{ color: '#0F1B2D' }}>
+            <span className="text-xs font-semibold text-ink">
               {item.value}%
             </span>
           </div>
@@ -894,8 +888,8 @@ function OperationsCard({
           <Icon className="w-5 h-5" style={{ color }} />
         </div>
         <div>
-          <h4 className="font-semibold" style={{ color: '#0F1B2D' }}>{title}</h4>
-          <div className="text-2xl font-bold" style={{ color: '#0F1B2D' }}>{total}</div>
+          <h4 className="font-semibold text-ink">{title}</h4>
+          <div className="text-2xl font-bold text-ink">{total}</div>
         </div>
       </div>
       
