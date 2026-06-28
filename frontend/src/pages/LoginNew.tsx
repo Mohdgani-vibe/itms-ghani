@@ -130,11 +130,11 @@ export default function LoginNew() {
                 </div>
               </div>
               {/* ITMS Wordmark */}
-              <span className="text-3xl font-bold" style={{ color: '#0F1B2D', letterSpacing: '-0.02em' }}>
+              <span style={{ fontSize: '38px', fontWeight: '700', color: '#0F1B2D', letterSpacing: '-0.02em', fontFamily: 'Inter, sans-serif' }}>
                 ITMS
               </span>
             </div>
-            <div className="text-xs font-medium tracking-wider" style={{ color: '#8C96A4' }}>
+            <div style={{ fontSize: '9px', fontWeight: '500', color: '#8C96A4', letterSpacing: '0.08em', fontFamily: 'Inter, sans-serif' }}>
               IT MANAGEMENT SYSTEM / POWERED BY ZERODHA
             </div>
           </div>
@@ -143,7 +143,7 @@ export default function LoginNew() {
           <div className="border-t mb-8" style={{ borderColor: '#E7EBF1' }} />
 
           {/* Welcome Heading */}
-          <h1 className="text-2xl font-semibold text-center mb-8" style={{ color: '#0F1B2D' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#0F1B2D', textAlign: 'center', marginBottom: '32px', fontFamily: 'Inter, sans-serif' }}>
             Welcome back
           </h1>
 
@@ -153,11 +153,18 @@ export default function LoginNew() {
               <button
                 type="button"
                 onClick={() => setShowPasswordForm(true)}
-                className="w-full py-3 px-4 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '500',
                   color: '#2667E8',
                   backgroundColor: 'white',
                   border: '1.5px solid #2667E8',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontFamily: 'Inter, sans-serif',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.backgroundColor = '#f0f9ff';
@@ -170,7 +177,7 @@ export default function LoginNew() {
               </button>
 
               {/* Helper Text */}
-              <p className="text-sm text-center" style={{ color: '#8C96A4' }}>
+              <p style={{ fontSize: '14px', color: '#8C96A4', textAlign: 'center', fontFamily: 'Inter, sans-serif' }}>
                 Sign in with your Zerodha credentials
               </p>
 
@@ -179,8 +186,8 @@ export default function LoginNew() {
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t" style={{ borderColor: '#E7EBF1' }} />
                 </div>
-                <div className="relative flex justify-center text-xs">
-                  <span className="px-3 bg-white" style={{ color: '#8C96A4' }}>
+                <div style={{ position: 'relative', display: 'flex', justifyContent: 'center' }}>
+                  <span style={{ paddingLeft: '12px', paddingRight: '12px', backgroundColor: 'white', fontSize: '12px', color: '#8C96A4', fontFamily: 'Inter, sans-serif' }}>
                     Or continue with
                   </span>
                 </div>
@@ -190,14 +197,23 @@ export default function LoginNew() {
               <button
                 type="button"
                 disabled
-                className="w-full py-3 px-4 rounded-xl inline-flex justify-center items-center text-sm font-medium cursor-not-allowed"
                 style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  fontSize: '14px',
+                  fontWeight: '500',
                   color: '#8C96A4',
                   backgroundColor: '#F1F4F9',
                   border: '1px solid #E7EBF1',
+                  cursor: 'not-allowed',
+                  fontFamily: 'Inter, sans-serif',
                 }}
               >
-                <Lock className="w-4 h-4 mr-2" />
+                <Lock className="w-4 h-4" style={{ marginRight: '8px' }} />
                 <span>Google SSO not configured</span>
               </button>
             </div>
@@ -205,7 +221,7 @@ export default function LoginNew() {
             <form className="space-y-5" onSubmit={handleLogin}>
               {/* Email Field */}
               <div>
-                <label htmlFor="email" className="block text-sm font-medium mb-2" style={{ color: '#0F1B2D' }}>
+                <label htmlFor="email" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D', fontFamily: 'Inter, sans-serif' }}>
                   Email
                 </label>
                 <input
@@ -216,11 +232,18 @@ export default function LoginNew() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="username"
-                  className="block w-full px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none"
                   style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
                     color: '#0F1B2D',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    fontFamily: 'Inter, sans-serif',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = '#2667E8';
@@ -236,7 +259,7 @@ export default function LoginNew() {
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium mb-2" style={{ color: '#0F1B2D' }}>
+                <label htmlFor="password" style={{ display: 'block', fontSize: '14px', fontWeight: '500', marginBottom: '8px', color: '#0F1B2D', fontFamily: 'Inter, sans-serif' }}>
                   Password
                 </label>
                 <input
@@ -247,11 +270,18 @@ export default function LoginNew() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   autoComplete="current-password"
-                  className="block w-full px-4 py-3 rounded-xl transition-all duration-200 focus:outline-none"
                   style={{
+                    display: 'block',
+                    width: '100%',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
                     backgroundColor: '#F1F4F9',
                     border: '1px solid #E7EBF1',
                     color: '#0F1B2D',
+                    fontSize: '14px',
+                    outline: 'none',
+                    transition: 'all 0.2s',
+                    fontFamily: 'Inter, sans-serif',
                   }}
                   onFocus={(e) => {
                     e.currentTarget.style.borderColor = '#2667E8';
@@ -268,11 +298,14 @@ export default function LoginNew() {
               {/* Error Message */}
               {error && (
                 <div 
-                  className="rounded-xl px-4 py-3 text-sm"
                   style={{
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontSize: '14px',
                     backgroundColor: '#FEE2E2',
                     border: '1px solid #E5484D',
                     color: '#E5484D',
+                    fontFamily: 'Inter, sans-serif',
                   }}
                 >
                   {error}
@@ -283,10 +316,20 @@ export default function LoginNew() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-xl text-sm font-medium text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: 'white',
                   backgroundColor: '#2667E8',
+                  border: 'none',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.5 : 1,
                   boxShadow: '0 2px 8px rgba(38, 103, 232, 0.25)',
+                  transition: 'all 0.2s',
+                  fontFamily: 'Inter, sans-serif',
                 }}
                 onMouseEnter={(e) => {
                   if (!loading) {
@@ -311,8 +354,18 @@ export default function LoginNew() {
                   setEmail('');
                   setPassword('');
                 }}
-                className="w-full py-2 text-sm font-medium transition-all duration-200"
-                style={{ color: '#8C96A4' }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  color: '#8C96A4',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  fontFamily: 'Inter, sans-serif',
+                }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = '#2667E8';
                 }}
@@ -326,7 +379,7 @@ export default function LoginNew() {
           )}
 
           {/* Footer */}
-          <div className="mt-10 text-center text-xs" style={{ color: '#8C96A4' }}>
+          <div style={{ marginTop: '40px', textAlign: 'center', fontSize: '12px', color: '#8C96A4', fontFamily: 'Inter, sans-serif' }}>
             © 2026 ITMS · Powered by Zerodha
           </div>
         </div>
