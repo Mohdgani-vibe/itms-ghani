@@ -319,16 +319,16 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-50 via-white to-zinc-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-zinc-950 flex flex-col justify-center py-16 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center mb-6">
+        <div className="flex justify-center items-center mb-8">
           <img 
             src="/itms-logo-light.svg"
             alt="ITMS - IT Management System - Zerodha" 
-            className="h-24 w-auto object-contain dark:hidden"
+            className="h-32 w-auto object-contain dark:hidden"
           />
           <img 
             src="/itms-logo-dark.svg"
             alt="ITMS - IT Management System - Zerodha" 
-            className="h-24 w-auto object-contain hidden dark:block"
+            className="h-32 w-auto object-contain hidden dark:block"
           />
         </div>
         <div className="text-center space-y-2">
