@@ -118,9 +118,40 @@ export default function DashboardPageNew() {
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
-      {/* Top Navigation Bar */}
-      <nav className="bg-white shadow-sm" style={{ borderBottom: '1px solid #E7EBF1' }}>
+    <>
+      {/* Force light mode colors - override dark mode CSS */}
+      <style>{`
+        .dashboard-page-root * {
+          color: inherit !important;
+        }
+        .dashboard-page-root .text-ink {
+          color: #0F1B2D !important;
+        }
+        .dashboard-page-root .text-muted {
+          color: #8C96A4 !important;
+        }
+        .dashboard-page-root .text-primary {
+          color: #2667E8 !important;
+        }
+        .dashboard-page-root .text-white {
+          color: white !important;
+        }
+        .dashboard-page-root .text-success {
+          color: #30A46C !important;
+        }
+        .dashboard-page-root .text-warning {
+          color: #FFB224 !important;
+        }
+        .dashboard-page-root .text-danger {
+          color: #E5484D !important;
+        }
+        .dashboard-page-root .bg-white {
+          background-color: white !important;
+        }
+      `}</style>
+      <div className="min-h-screen dashboard-page-root" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
+        {/* Top Navigation Bar */}
+        <nav className="bg-white shadow-sm" style={{ borderBottom: '1px solid #E7EBF1' }}>
         <div className="max-w-[1600px] mx-auto px-6">
           {/* First Row - Logo + Nav Links + User */}
           <div className="flex items-center justify-between h-16">
@@ -142,7 +173,7 @@ export default function DashboardPageNew() {
                   Z
                 </div>
               </div>
-              <span className="text-xl font-bold" style={{ color: '#0F1B2D', letterSpacing: '-0.02em' }}>
+              <span className="text-xl font-bold text-ink" style={{ letterSpacing: '-0.02em' }}>
                 ITMS
               </span>
             </div>
@@ -276,7 +307,7 @@ export default function DashboardPageNew() {
 
           {/* Second Row - Page Title + Search + Time Range */}
           <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: '#E7EBF1' }}>
-            <h1 className="text-2xl font-semibold" style={{ color: '#0F1B2D' }}>
+            <h1 className="text-2xl font-semibold text-ink">
               Security Dashboard
             </h1>
 
@@ -585,6 +616,7 @@ export default function DashboardPageNew() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
@@ -616,10 +648,10 @@ function KPICard({
     >
       <div className="flex items-start justify-between mb-4">
         <div>
-          <div className="text-sm font-medium mb-1" style={{ color: '#8C96A4' }}>
+          <div className="text-sm font-medium mb-1 text-muted">
             {label}
           </div>
-          <div className="text-3xl font-bold" style={{ color: '#0F1B2D' }}>
+          <div className="text-3xl font-bold text-ink">
             {value}
           </div>
         </div>
@@ -652,7 +684,7 @@ function KPICard({
         >
           {trend}
         </span>
-        <span className="text-xs" style={{ color: '#8C96A4' }}>vs last period</span>
+        <span className="text-xs text-muted">vs last period</span>
       </div>
     </div>
   );
@@ -870,8 +902,8 @@ function OperationsCard({
       <div className="space-y-2">
         {breakdown.map((item) => (
           <div key={item.label} className="flex items-center justify-between py-2 border-t" style={{ borderColor: '#E7EBF1' }}>
-            <span className="text-sm" style={{ color: '#8C96A4' }}>{item.label}</span>
-            <span className="text-sm font-semibold" style={{ color: '#0F1B2D' }}>{item.value}</span>
+            <span className="text-sm text-muted">{item.label}</span>
+            <span className="text-sm font-semibold text-ink">{item.value}</span>
           </div>
         ))}
       </div>
