@@ -341,6 +341,19 @@ export default function Login() {
               Sign in to your IT Management System
             </p>
           </div>
+
+          {/* Demo Credentials */}
+          <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-start">
+              <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 mr-2 flex-shrink-0" />
+              <div className="text-xs text-blue-900 dark:text-blue-100">
+                <p className="font-semibold mb-1">Demo Login Credentials:</p>
+                <p className="font-mono">Username: <span className="font-bold">admin@zerodha.com</span></p>
+                <p className="font-mono">Password: <span className="font-bold">admin123</span></p>
+              </div>
+            </div>
+          </div>
+
           {mfaRequired ? (
             <form className="space-y-5" onSubmit={handleMFAVerification}>
               <div className="text-center space-y-2">
