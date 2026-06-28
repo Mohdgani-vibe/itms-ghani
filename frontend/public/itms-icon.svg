@@ -1,0 +1,9 @@
+<svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blue rounded square -->
+  <rect width="48" height="48" rx="12" fill="#2667E8"/>
+  <!-- IT Text -->
+  <text x="24" y="32" font-family="Inter, sans-serif" font-size="22" font-weight="700" fill="white" text-anchor="middle">IT</text>
+  <!-- Z Badge -->
+  <rect x="34" y="34" width="18" height="18" rx="4" fill="#0F1B2D"/>
+  <text x="43" y="46" font-family="Inter, sans-serif" font-size="11" font-weight="700" fill="white" text-anchor="middle">Z</text>
+</svg>

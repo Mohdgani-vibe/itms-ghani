@@ -1,0 +1,18 @@
+<svg width="320" height="120" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo Mark with Z Badge -->
+  <g id="logo-mark">
+    <!-- Blue rounded square -->
+    <rect x="10" y="30" width="60" height="60" rx="12" fill="#2667E8"/>
+    <!-- IT Text -->
+    <text x="40" y="68" font-family="Inter, sans-serif" font-size="28" font-weight="700" fill="white" text-anchor="middle">IT</text>
+    <!-- Z Badge -->
+    <rect x="55" y="75" width="22" height="22" rx="4" fill="#0F1B2D"/>
+    <text x="66" y="90" font-family="Inter, sans-serif" font-size="14" font-weight="700" fill="white" text-anchor="middle">Z</text>
+  </g>
+  
+  <!-- ITMS Wordmark -->
+  <text x="85" y="68" font-family="Inter, sans-serif" font-size="38" font-weight="700" fill="#0F1B2D" letter-spacing="-0.02em">ITMS</text>
+  
+  <!-- Subtitle -->
+  <text x="10" y="105" font-family="Inter, sans-serif" font-size="9" font-weight="500" fill="#8C96A4" letter-spacing="0.08em">IT MANAGEMENT SYSTEM / POWERED BY ZERODHA</text>
+</svg>
