@@ -304,15 +304,12 @@ export default function TopNav() {
       <div className="flex h-14 items-center justify-between gap-3 px-4 xl:px-6">
         
         {/* Logo */}
-        <Link to={`${basePath}/dashboard`} className="mr-4 flex flex-shrink-0 items-center gap-2 group cursor-pointer transition-opacity hover:opacity-90">
-          <div className="bg-brand-600 dark:bg-brand-500 p-1.5 rounded flex items-center justify-center shadow-sm group-hover:bg-brand-700 dark:group-hover:bg-brand-600 transition-colors">
-            <MonitorSmartphone className="h-5 w-5 text-white" />
-          </div>
-          <div className="hidden lg:block">
-            <span className="font-extrabold text-lg tracking-tight text-zinc-900 dark:text-white group-hover:text-brand-700 dark:group-hover:text-brand-400 transition-colors">
-              ITMS
-            </span>
-          </div>
+        <Link to={`${basePath}/dashboard`} className="mr-4 flex flex-shrink-0 items-center group cursor-pointer transition-opacity hover:opacity-90">
+          <img 
+            src={theme === 'dark' ? '/itms-logo-dark.svg' : '/itms-logo-light.svg'}
+            alt="ITMS - IT Management System - Zerodha" 
+            className="h-10 w-auto object-contain"
+          />
         </Link>
 
         {/* Global Navigation */}

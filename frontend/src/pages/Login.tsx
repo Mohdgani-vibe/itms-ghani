@@ -319,16 +319,20 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center items-center gap-3 mb-8">
-          <div className="bg-zinc-900 dark:bg-white p-2.5 rounded-xl">
-            <MonitorSmartphone className="h-7 w-7 text-white dark:text-zinc-900" />
-          </div>
-          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight">
-            ITMS
-          </h1>
+        <div className="flex justify-center items-center mb-8">
+          <img 
+            src="/itms-logo-light.svg"
+            alt="ITMS - IT Management System - Zerodha" 
+            className="h-16 w-auto object-contain dark:hidden"
+          />
+          <img 
+            src="/itms-logo-dark.svg"
+            alt="ITMS - IT Management System - Zerodha" 
+            className="h-16 w-auto object-contain hidden dark:block"
+          />
         </div>
         <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-          Sign in to continue
+          Sign in to your portal
         </p>
       </div>
 
