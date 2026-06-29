@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
-  Search, Bell, ChevronDown, LogOut
+  Search, Bell, ChevronDown, LogOut, Home
 } from 'lucide-react';
 import { apiRequest, resolveWebSocketUrl } from '../../lib/api';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
@@ -78,7 +78,6 @@ function formatRequestStatus(status: string) {
 
 const portalNavItems = {
   admin: [
-    { name: 'Dashboard', path: '/dashboard' },
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
@@ -88,7 +87,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements' },
   ],
   it: [
-    { name: 'Dashboard', path: '/dashboard' },
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
@@ -98,7 +96,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements' },
   ],
   audit: [
-    { name: 'Dashboard', path: '/dashboard' },
     { name: 'Users', path: '/users' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
@@ -108,7 +105,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements' },
   ],
   emp: [
-    { name: 'Dashboard', path: '/dashboard' },
     { name: 'Profile', path: '/profile' },
     { name: 'My Assets', path: '/assets' },
     { name: 'My Alerts', path: '/alerts' },
@@ -289,14 +285,26 @@ export default function TopNav() {
     <header className="bg-white dark:bg-zinc-950 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-40 shadow-sm text-zinc-800 dark:text-zinc-100 transition-colors">
       <div className="flex h-14 items-center justify-between gap-3 px-4 xl:px-6">
         
-        {/* Logo */}
-        <Link to={`${basePath}/dashboard`} className="mr-4 flex flex-shrink-0 items-center group cursor-pointer transition-opacity hover:opacity-90">
+        {/* Logo / Home Button */}
+        <NavLink 
+          to={`${basePath}/dashboard`}
+          className={({ isActive }) => 
+            `mr-4 flex flex-shrink-0 items-center gap-2 group cursor-pointer transition-all rounded-md px-2 py-1 ${
+              isActive 
+                ? 'bg-blue-50 dark:bg-blue-950/30' 
+                : 'hover:bg-zinc-50 dark:hover:bg-zinc-900'
+            }`
+          }
+        >
+          <div className="flex items-center justify-center w-8 h-8 rounded bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-all">
+            <Home className="h-4 w-4" />
+          </div>
           <img 
             src="/itms-logo-light.svg"
             alt="ITMS - IT Management System - Zerodha" 
-            className="h-10 w-auto object-contain"
+            className="h-9 w-auto object-contain"
           />
-        </Link>
+        </NavLink>
 
         {/* Global Navigation */}
         <nav className="custom-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
