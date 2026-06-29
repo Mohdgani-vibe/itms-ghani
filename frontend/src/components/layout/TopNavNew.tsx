@@ -1,9 +1,42 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  Search, Bell, ChevronDown, LogOut, Settings
+  Search, Bell, ChevronDown, LogOut, Settings,
+  Users, UserPlus, Upload, MonitorDown, FileCheck, Lock,
+  BarChart3, Calendar, AlertCircle, Clock, ClipboardList
 } from 'lucide-react';
 import { clearStoredSession, getPortalSegmentForRole, getStoredSession } from '../../lib/session';
+
+// Icon mapping for tabs
+const tabIcons: Record<string, any> = {
+  'Users': Users,
+  'Add Employee': UserPlus,
+  'Import / Export': Upload,
+  'Install Agents': MonitorDown,
+  'Audit': FileCheck,
+  'Portal Access': Lock,
+  'Unassigned': Users,
+  'Dashboard': BarChart3,
+  'Devices': MonitorDown,
+  'Reports': FileCheck,
+  'Assets': ClipboardList,
+  'Categories': BarChart3,
+  'All Alerts': AlertCircle,
+  'Critical': AlertCircle,
+  'Rules': Settings,
+  'Queue': Clock,
+  'Approved': FileCheck,
+  'Rejected': FileCheck,
+  'Active': Calendar,
+  'History': Calendar,
+  'Create': UserPlus,
+  'All': BarChart3,
+  'Urgent': AlertCircle,
+  'All Devices': MonitorDown,
+  'Laptops': MonitorDown,
+  'Desktops': MonitorDown,
+  'Monitors': MonitorDown,
+};
 
 // Page-specific tabs configuration
 const pageTabsConfig: Record<string, { name: string; path: string; badge?: number }[]> = {
@@ -89,34 +122,35 @@ export default function TopNavNew() {
       <div className="flex h-14 items-center justify-between gap-3 px-4 xl:px-6">
         
         {/* Logo */}
-        <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-b from-[#2E73F0] to-[#1B4FD1] flex items-center justify-center text-white font-bold text-sm">
-            IT
-          </div>
-          <span className="text-base font-bold text-[#0F1B2D]">ITMS</span>
+        <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-2">
+          <img src="/itms-logo-new.svg" alt="ITMS" className="h-7" />
         </Link>
 
         {/* Page-Specific Tabs */}
         {pageTabs.length > 0 && (
           <nav className="flex gap-2 flex-1 overflow-x-auto ml-6">
-            {pageTabs.map((tab, index) => (
-              <button
-                key={tab.name}
-                onClick={() => navigate(`${basePath}/${currentPage}${tab.path}`)}
-                className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
-                  index === (activeTabIndex >= 0 ? activeTabIndex : 0)
-                    ? 'bg-[#EAF1FE] text-[#1B4FD1]'
-                    : 'bg-transparent text-[#46505F] hover:bg-zinc-100'
-                }`}
-              >
-                {tab.name}
-                {tab.badge !== undefined && (
-                  <span className="bg-[#C13B40] text-white rounded-full px-2 py-0.5 text-xs font-bold">
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            ))}
+            {pageTabs.map((tab, index) => {
+              const IconComponent = tabIcons[tab.name];
+              return (
+                <button
+                  key={tab.name}
+                  onClick={() => navigate(`${basePath}/${currentPage}${tab.path}`)}
+                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                    index === (activeTabIndex >= 0 ? activeTabIndex : 0)
+                      ? 'bg-[#EAF1FE] text-[#1B4FD1]'
+                      : 'bg-transparent text-[#46505F] hover:bg-zinc-100'
+                  }`}
+                >
+                  {IconComponent && <IconComponent className="h-4 w-4" />}
+                  {tab.name}
+                  {tab.badge !== undefined && (
+                    <span className="bg-[#C13B40] text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         )}
 

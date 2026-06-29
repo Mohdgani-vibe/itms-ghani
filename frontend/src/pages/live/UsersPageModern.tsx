@@ -169,10 +169,11 @@ export default function UsersPageModern() {
           <div style={{
             background: '#fff',
             border: '0.5px solid #E0E0E0',
-            borderRadius: '8px',
+            borderRadius: '18px',
             padding: '14px',
             position: 'sticky',
-            top: '76px'
+            top: '76px',
+            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             <div style={{ 
               fontSize: '10px', 
@@ -228,8 +229,9 @@ export default function UsersPageModern() {
           <div style={{
             background: '#fff',
             border: '0.5px solid #E0E0E0',
-            borderRadius: '8px',
-            padding: '12px'
+            borderRadius: '18px',
+            padding: '12px',
+            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             {/* Filter Bar */}
             <div style={{ marginBottom: '10px' }}>
@@ -377,7 +379,7 @@ export default function UsersPageModern() {
                         style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                       />
                     </th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em', width: '280px' }}>
                       EMPLOYEE
                     </th>
                     <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
@@ -413,7 +415,7 @@ export default function UsersPageModern() {
                           style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '8px 8px' }}>
+                      <td style={{ padding: '8px 8px', width: '280px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
                             width: '30px',
