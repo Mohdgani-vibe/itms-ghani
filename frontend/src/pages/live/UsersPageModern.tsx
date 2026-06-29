@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Users as UsersIcon, 
   UserPlus, 
@@ -51,6 +51,12 @@ export default function UsersPageModern() {
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Force disable dark mode
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }, []);
+
   const filteredUsers = users.filter(user => {
     const matchesDept = selectedDept === 'All Departments' || user.dept === selectedDept;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
@@ -82,7 +88,7 @@ export default function UsersPageModern() {
   const currentUser = selectedUser ? users.find(u => u.id === selectedUser) : null;
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#F1F4F9', minHeight: '100vh', padding: '32px 24px' }}>
+    <div className="users-modern-page-root" style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#F1F4F9', minHeight: '100vh', padding: '32px 24px' }}>
       <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
         {/* Page Header */}
         <div style={{ 
@@ -759,6 +765,24 @@ export default function UsersPageModern() {
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
+        }
+        
+        /* Force light mode with high specificity */
+        .users-modern-page-root.users-modern-page-root,
+        .users-modern-page-root.users-modern-page-root div,
+        .users-modern-page-root.users-modern-page-root span,
+        .users-modern-page-root.users-modern-page-root p,
+        .users-modern-page-root.users-modern-page-root h1,
+        .users-modern-page-root.users-modern-page-root h2,
+        .users-modern-page-root.users-modern-page-root h3,
+        .users-modern-page-root.users-modern-page-root button,
+        .users-modern-page-root.users-modern-page-root a,
+        .users-modern-page-root.users-modern-page-root label,
+        .users-modern-page-root.users-modern-page-root input,
+        .users-modern-page-root.users-modern-page-root select,
+        .users-modern-page-root.users-modern-page-root td,
+        .users-modern-page-root.users-modern-page-root th {
+          color: #0F1B2D !important;
         }
         
         * {
