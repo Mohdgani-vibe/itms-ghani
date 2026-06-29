@@ -103,7 +103,7 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '20px'
+          marginBottom: '12px'
         }}>
           <div>
             <h1 style={{ 
@@ -186,7 +186,7 @@ export default function UsersPageModern() {
             <p style={{ 
               fontSize: '11px', 
               color: '#9AA4B2', 
-              margin: '0 0 12px 0' 
+              margin: '0 0 6px 0' 
             }}>
               Filter users by department
             </p>
@@ -196,7 +196,7 @@ export default function UsersPageModern() {
                   key={dept.name}
                   onClick={() => setSelectedDept(dept.name)}
                   style={{
-                    padding: '6px 10px',
+                    padding: '6px 12px',
                     borderRadius: '4px',
                     border: 'none',
                     background: selectedDept === dept.name ? '#2667E8' : 'transparent',
@@ -229,11 +229,11 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '8px',
-            padding: '16px'
+            padding: '12px'
           }}>
             {/* Filter Bar */}
-            <div style={{ marginBottom: '14px' }}>
-              <div style={{ position: 'relative', marginBottom: '12px' }}>
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ position: 'relative', marginBottom: '6px' }}>
                 <Search 
                   size={16} 
                   style={{ 
@@ -251,7 +251,7 @@ export default function UsersPageModern() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '8px 12px 8px 36px',
+                    padding: '6px 12px 6px 36px',
                     borderRadius: '6px',
                     border: '0.5px solid #E0E0E0',
                     fontSize: '13px',
@@ -261,7 +261,7 @@ export default function UsersPageModern() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* Status Toggle */}
                 <div style={{ 
                   display: 'inline-flex', 
@@ -274,7 +274,7 @@ export default function UsersPageModern() {
                       key={status}
                       onClick={() => setStatusFilter(status)}
                       style={{
-                        padding: '4px 12px',
+                        padding: '4px 10px',
                         borderRadius: '4px',
                         border: 'none',
                         background: statusFilter === status ? '#fff' : 'transparent',
@@ -405,7 +405,7 @@ export default function UsersPageModern() {
                       onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '6px 8px' }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ padding: '8px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedUsers.has(user.id)}
@@ -413,11 +413,11 @@ export default function UsersPageModern() {
                           style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '6px 8px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
-                            width: '28px',
-                            height: '28px',
+                            width: '30px',
+                            height: '30px',
                             borderRadius: '50%',
                             background: user.avatarColor,
                             display: 'flex',
@@ -440,13 +440,13 @@ export default function UsersPageModern() {
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '6px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
+                      <td style={{ padding: '8px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
                         {user.role}
                       </td>
-                      <td style={{ padding: '6px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
+                      <td style={{ padding: '8px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
                         {user.dept}
                       </td>
-                      <td style={{ padding: '6px 8px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         <span style={{
                           padding: '2px 8px',
                           borderRadius: '4px',
@@ -459,7 +459,7 @@ export default function UsersPageModern() {
                           {user.status}
                         </span>
                       </td>
-                      <td style={{ padding: '6px 8px' }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ padding: '8px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <button style={{ 
                           padding: '4px', 
                           border: 'none', 
@@ -478,11 +478,11 @@ export default function UsersPageModern() {
 
             {/* Pagination */}
             <div style={{
-              marginTop: '20px', 
+              marginTop: '8px', 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              paddingTop: '12px',
+              paddingTop: '8px',
               borderTop: '0.5px solid #E0E0E0'
             }}>
               <div style={{ fontSize: '12px', color: '#8C96A4' }}>
