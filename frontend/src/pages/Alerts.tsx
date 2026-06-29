@@ -946,8 +946,18 @@ export default function Alerts() {
   };
 
   return (
-    <div className={`min-h-screen overflow-hidden px-4 py-8 xl:px-6 ${darkMode ? 'text-white bg-zinc-950' : 'text-zinc-900 bg-gradient-to-br from-blue-50 via-white to-cyan-50'}`}>
+    <div className={`min-h-screen overflow-hidden px-4 py-8 xl:px-6 alerts-page-root ${darkMode ? 'text-white bg-zinc-950' : 'text-zinc-900 bg-gradient-to-br from-blue-50 via-white to-cyan-50'}`}>
       <style>{`
+        .alerts-page-root * { color: inherit !important; }
+        .alerts-page-root .text-ink { color: #0F1B2D !important; }
+        .alerts-page-root .text-muted { color: #8C96A4 !important; }
+        .alerts-page-root .text-primary { color: #2667E8 !important; }
+        .alerts-page-root .text-white { color: white !important; }
+        .alerts-page-root .text-success { color: #30A46C !important; }
+        .alerts-page-root .text-warning { color: #FFB224 !important; }
+        .alerts-page-root .text-danger { color: #E5484D !important; }
+        .alerts-page-root .bg-white { background-color: white !important; }
+        
         @keyframes alerts-fade-in {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }

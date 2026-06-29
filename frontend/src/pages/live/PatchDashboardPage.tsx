@@ -1192,7 +1192,19 @@ export default function PatchDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen space-y-2.5 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(180deg,_#f4f7f8_0%,_#eef3f5_44%,_#f8fafb_100%)] p-3 sm:p-4">
+    <>
+    <style>{`
+      .patch-dashboard-root * { color: inherit !important; }
+      .patch-dashboard-root .text-ink { color: #0F1B2D !important; }
+      .patch-dashboard-root .text-muted { color: #8C96A4 !important; }
+      .patch-dashboard-root .text-primary { color: #2667E8 !important; }
+      .patch-dashboard-root .text-white { color: white !important; }
+      .patch-dashboard-root .text-success { color: #30A46C !important; }
+      .patch-dashboard-root .text-warning { color: #FFB224 !important; }
+      .patch-dashboard-root .text-danger { color: #E5484D !important; }
+      .patch-dashboard-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="min-h-screen space-y-2.5 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.16),_transparent_24%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.14),_transparent_22%),linear-gradient(180deg,_#f4f7f8_0%,_#eef3f5_44%,_#f8fafb_100%)] p-3 sm:p-4 patch-dashboard-root">
       {(patchReport || reportInteractionShieldVisible) ? <div aria-hidden="true" className="fixed inset-0 z-[89]" /> : null}
 
       <section className="overflow-hidden rounded-[24px] border border-sky-100 bg-[linear-gradient(180deg,_#ffffff_0%,_#f3f9ff_100%)] shadow-sm">
@@ -2139,5 +2151,6 @@ export default function PatchDashboardPage() {
         }}
       />
     </div>
+    </>
   );
 }

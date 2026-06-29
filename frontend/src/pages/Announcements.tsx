@@ -144,7 +144,19 @@ export default function Announcements() {
    };
 
    return (
-      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6">
+      <>
+      <style>{`
+         .announcements-page-root * { color: inherit !important; }
+         .announcements-page-root .text-ink { color: #0F1B2D !important; }
+         .announcements-page-root .text-muted { color: #8C96A4 !important; }
+         .announcements-page-root .text-primary { color: #2667E8 !important; }
+         .announcements-page-root .text-white { color: white !important; }
+         .announcements-page-root .text-success { color: #30A46C !important; }
+         .announcements-page-root .text-warning { color: #FFB224 !important; }
+         .announcements-page-root .text-danger { color: #E5484D !important; }
+         .announcements-page-root .bg-white { background-color: white !important; }
+      `}</style>
+      <div className="mx-auto max-w-7xl space-y-6 p-4 md:p-6 announcements-page-root">
          <section className="overflow-hidden rounded-[32px] border border-sky-100 bg-[radial-gradient(circle_at_top_left,_rgba(224,242,254,0.95),_rgba(255,255,255,0.98)_45%,_rgba(240,249,255,1)_100%)] shadow-sm">
             <div className="grid gap-6 px-6 py-7 lg:grid-cols-[minmax(0,1.2fr)_360px] lg:px-8">
                <div>
@@ -357,5 +369,6 @@ export default function Announcements() {
             />
          </div>
       </div>
+      </>
    );
 }

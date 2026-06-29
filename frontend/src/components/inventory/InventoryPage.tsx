@@ -758,7 +758,19 @@ export default function InventoryPage() {
   ];
 
   return (
-    <div className="space-y-6 pb-10">
+    <>
+    <style>{`
+      .inventory-page-root * { color: inherit !important; }
+      .inventory-page-root .text-ink { color: #0F1B2D !important; }
+      .inventory-page-root .text-muted { color: #8C96A4 !important; }
+      .inventory-page-root .text-primary { color: #2667E8 !important; }
+      .inventory-page-root .text-white { color: white !important; }
+      .inventory-page-root .text-success { color: #30A46C !important; }
+      .inventory-page-root .text-warning { color: #FFB224 !important; }
+      .inventory-page-root .text-danger { color: #E5484D !important; }
+      .inventory-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 pb-10 inventory-page-root">
       <section className="overflow-hidden rounded-[28px] border border-sky-100 bg-white text-sky-950 shadow-sm shadow-sky-100/70">
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(125,211,252,0.22),_transparent_32%),radial-gradient(circle_at_left,_rgba(224,242,254,0.9),_transparent_28%),linear-gradient(135deg,_#f4fbff_0%,_#ffffff_58%,_#e0f2fe_100%)] p-6">
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -1280,5 +1292,6 @@ export default function InventoryPage() {
         onConfirm={handleDeleteConfirm}
       />
     </div>
+    </>
   );
 }

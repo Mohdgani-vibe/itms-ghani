@@ -545,7 +545,19 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-5 bg-zinc-50/60 px-4 py-5 sm:px-6 lg:px-8">
+    <>
+    <style>{`
+      .settings-page-root * { color: inherit !important; }
+      .settings-page-root .text-ink { color: #0F1B2D !important; }
+      .settings-page-root .text-muted { color: #8C96A4 !important; }
+      .settings-page-root .text-primary { color: #2667E8 !important; }
+      .settings-page-root .text-white { color: white !important; }
+      .settings-page-root .text-success { color: #30A46C !important; }
+      .settings-page-root .text-warning { color: #FFB224 !important; }
+      .settings-page-root .text-danger { color: #E5484D !important; }
+      .settings-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-5 bg-zinc-50/60 px-4 py-5 sm:px-6 lg:px-8 settings-page-root">
       <SettingsOverviewPanel
         canEditWorkflowSettings={canEditWorkflowSettings}
         portalLabel={portalLabel}
@@ -677,5 +689,6 @@ export default function SettingsPage() {
         onConfirm={handleConfirmWorkflowMemberAction}
       />
     </div>
+    </>
   );
 }

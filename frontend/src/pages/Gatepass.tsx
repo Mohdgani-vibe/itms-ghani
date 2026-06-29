@@ -1110,7 +1110,19 @@ export default function Gatepass() {
   };
 
   return (
-    <div className="gatepass-page w-full space-y-6">
+    <>
+    <style>{`
+      .gatepass-page-root * { color: inherit !important; }
+      .gatepass-page-root .text-ink { color: #0F1B2D !important; }
+      .gatepass-page-root .text-muted { color: #8C96A4 !important; }
+      .gatepass-page-root .text-primary { color: #2667E8 !important; }
+      .gatepass-page-root .text-white { color: white !important; }
+      .gatepass-page-root .text-success { color: #30A46C !important; }
+      .gatepass-page-root .text-warning { color: #FFB224 !important; }
+      .gatepass-page-root .text-danger { color: #E5484D !important; }
+      .gatepass-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="gatepass-page gatepass-page-root w-full space-y-6">
       <GatepassPreviewOverlay
         showPreview={showPreview}
         previewGatepassNumber={previewGatepassNumber}
@@ -1225,5 +1237,6 @@ export default function Gatepass() {
         </div>
       </div>
     </div>
+    </>
   );
 }

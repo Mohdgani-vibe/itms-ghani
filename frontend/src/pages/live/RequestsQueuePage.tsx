@@ -781,7 +781,19 @@ export default function RequestsQueuePage() {
   };
 
   return (
-    <div className="space-y-6 rounded-[32px] border border-zinc-200 bg-[linear-gradient(180deg,_#f8fcff_0%,_#eef6ff_100%)] p-4 shadow-[0_20px_60px_rgba(14,165,233,0.08)] lg:p-6">
+    <>
+    <style>{`
+      .requests-queue-root * { color: inherit !important; }
+      .requests-queue-root .text-ink { color: #0F1B2D !important; }
+      .requests-queue-root .text-muted { color: #8C96A4 !important; }
+      .requests-queue-root .text-primary { color: #2667E8 !important; }
+      .requests-queue-root .text-white { color: white !important; }
+      .requests-queue-root .text-success { color: #30A46C !important; }
+      .requests-queue-root .text-warning { color: #FFB224 !important; }
+      .requests-queue-root .text-danger { color: #E5484D !important; }
+      .requests-queue-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 rounded-[32px] border border-zinc-200 bg-[linear-gradient(180deg,_#f8fcff_0%,_#eef6ff_100%)] p-4 shadow-[0_20px_60px_rgba(14,165,233,0.08)] lg:p-6 requests-queue-root">
       <RequestsQueueHero
         totalRequests={totalRequests}
         pendingCount={requestSummary.pending}
@@ -952,5 +964,6 @@ export default function RequestsQueuePage() {
         />
       </div>
     </div>
+    </>
   );
 }

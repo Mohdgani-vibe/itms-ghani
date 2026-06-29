@@ -978,7 +978,19 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+    <>
+    <style>{`
+      .users-page-root * { color: inherit !important; }
+      .users-page-root .text-ink { color: #0F1B2D !important; }
+      .users-page-root .text-muted { color: #8C96A4 !important; }
+      .users-page-root .text-primary { color: #2667E8 !important; }
+      .users-page-root .text-white { color: white !important; }
+      .users-page-root .text-success { color: #30A46C !important; }
+      .users-page-root .text-warning { color: #FFB224 !important; }
+      .users-page-root .text-danger { color: #E5484D !important; }
+      .users-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 users-page-root">
       <div className="max-w-7xl mx-auto px-4 py-8 xl:px-6 space-y-6">
         <UsersPageHeader
           directoryTotal={directoryTotal}
@@ -1357,5 +1369,6 @@ export default function UsersPage() {
       ) : null}
       </div>
     </div>
+    </>
   );
 }
