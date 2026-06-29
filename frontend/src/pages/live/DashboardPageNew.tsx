@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Shield, 
   Activity, 
   AlertTriangle, 
   CheckCircle2,
-  Settings,
-  Bell,
-  ChevronDown,
   Package,
   FileText,
   Send,
-  Search,
-  LogOut
+  Search
 } from 'lucide-react';
 
 // Sample data
@@ -93,29 +88,8 @@ const operationsData = {
 };
 
 export default function DashboardPageNew() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [timeRange, setTimeRange] = useState('Last 24h');
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Get current portal from URL (admin, it, audit, emp)
-  const portal = location.pathname.split('/')[1] || 'admin';
-  
-  // Navigation items with their routes
-  const navItems = [
-    { label: 'Users', path: 'users' },
-    { label: 'Patch', path: 'patch' },
-    { label: 'Inventory', path: 'inventory' },
-    { label: 'Alerts', path: 'alerts' },
-    { label: 'Request', path: 'requests' },
-    { label: 'Gatepass', path: 'gatepass' },
-    { label: 'Announcement', path: 'announcements' },
-  ];
-  
-  const handleLogout = () => {
-    localStorage.clear();
-    navigate('/login', { replace: true });
-  };
 
   return (
     <>
@@ -171,160 +145,9 @@ export default function DashboardPageNew() {
         }
       `}</style>
       <div className="min-h-screen dashboard-page-root" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
-        {/* Top Navigation Bar */}
-        <nav className="bg-white shadow-sm" style={{ borderBottom: '1px solid #E7EBF1' }}>
-        <div className="max-w-[1600px] mx-auto px-6">
-          {/* First Row - Logo + Nav Links + User */}
-          <div className="flex items-center justify-between h-16">
-            {/* Left: Logo */}
-            <div className="flex items-center gap-3">
-              <div 
-                className="relative flex items-center justify-center rounded-lg"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  backgroundColor: '#2667E8',
-                }}
-              >
-                <span className="text-white font-bold text-lg">IT</span>
-                <div 
-                  className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded flex items-center justify-center text-[10px] font-bold"
-                  style={{ backgroundColor: '#0F1B2D', color: 'white' }}
-                >
-                  Z
-                </div>
-              </div>
-              <span className="text-xl font-bold text-ink" style={{ letterSpacing: '-0.02em' }}>
-                ITMS
-              </span>
-            </div>
-
-            {/* Center: Nav Links */}
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => navigate(`/${portal}/dashboard`)}
-                className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
-                style={{
-                  color: '#2667E8',
-                  backgroundColor: '#F0F9FF',
-                }}
-              >
-                Dashboard
-              </button>
-              {navItems.map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => navigate(`/${portal}/${item.path}`)}
-                  className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200"
-                  style={{
-                    color: '#8C96A4',
-                    backgroundColor: 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F1F4F9';
-                    e.currentTarget.style.color = '#0F1B2D';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = '#8C96A4';
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Right: Setup, Alerts, Account */}
-            <div className="flex items-center gap-3">
-              {/* Setup Icon */}
-              <button 
-                onClick={() => navigate(`/${portal}/settings`)}
-                className="p-2 rounded-lg transition-all duration-200 text-muted"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F1F4F9';
-                  e.currentTarget.style.color = '#0F1B2D';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#8C96A4';
-                }}
-              >
-                <Settings className="w-5 h-5" />
-              </button>
-
-              {/* Alerts Bell with Red Dot */}
-              <button 
-                onClick={() => navigate(`/${portal}/alerts`)}
-                className="p-2 rounded-lg transition-all duration-200 relative text-muted"
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F1F4F9';
-                  e.currentTarget.style.color = '#0F1B2D';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = '#8C96A4';
-                }}
-              >
-                <Bell className="w-5 h-5" />
-                <div 
-                  className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full"
-                  style={{ backgroundColor: '#E5484D' }}
-                />
-              </button>
-
-              {/* Account Dropdown */}
-              <div className="relative group">
-                <button 
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200"
-                  style={{ backgroundColor: '#F1F4F9' }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#E7EBF1';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F1F4F9';
-                  }}
-                >
-                  <div 
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold text-white"
-                    style={{ backgroundColor: '#2667E8' }}
-                  >
-                    AD
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs font-medium text-ink">Admin User</div>
-                    <div className="text-[10px] text-muted">admin@zerodha.com</div>
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-muted" />
-                </button>
-                
-                {/* Dropdown Menu */}
-                <div 
-                  className="absolute right-0 top-full mt-2 w-48 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50"
-                  style={{
-                    backgroundColor: 'white',
-                    border: '1px solid #E7EBF1',
-                  }}
-                >
-                  <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2 px-4 py-3 text-sm text-left transition-all duration-200 rounded-xl text-ink"
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = '#F1F4F9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Sign out</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Second Row - Page Title + Search + Time Range */}
-          <div className="flex items-center justify-between py-4 border-t" style={{ borderColor: '#E7EBF1' }}>
+        {/* Page Header */}
+        <div className="max-w-[1600px] mx-auto px-6 pt-6 pb-4">
+          <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-ink">
               Security Dashboard
             </h1>
@@ -342,7 +165,7 @@ export default function DashboardPageNew() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2 rounded-lg text-sm transition-all duration-200 focus:outline-none"
                   style={{
-                    backgroundColor: '#F1F4F9',
+                    backgroundColor: 'white',
                     border: '1px solid #E7EBF1',
                     color: '#0F1B2D',
                     width: '240px',
@@ -364,7 +187,7 @@ export default function DashboardPageNew() {
                 onChange={(e) => setTimeRange(e.target.value)}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 focus:outline-none cursor-pointer"
                 style={{
-                  backgroundColor: '#F1F4F9',
+                  backgroundColor: 'white',
                   border: '1px solid #E7EBF1',
                   color: '#0F1B2D',
                 }}
@@ -377,10 +200,9 @@ export default function DashboardPageNew() {
             </div>
           </div>
         </div>
-      </nav>
 
       {/* Main Content */}
-      <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-6 pb-8 space-y-6">
         {/* Overview KPI Row */}
         <div className="grid grid-cols-4 gap-4">
           <KPICard 
