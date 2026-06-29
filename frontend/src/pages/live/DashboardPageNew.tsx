@@ -121,27 +121,28 @@ export default function DashboardPageNew() {
     <>
       {/* Force light mode colors - override dark mode CSS */}
       <style>{`
-        .dashboard-page-root, 
-        .dashboard-page-root div,
-        .dashboard-page-root span,
-        .dashboard-page-root p,
-        .dashboard-page-root h1,
-        .dashboard-page-root h2,
-        .dashboard-page-root h3,
-        .dashboard-page-root h4,
-        .dashboard-page-root h5,
-        .dashboard-page-root h6,
-        .dashboard-page-root button,
-        .dashboard-page-root a,
-        .dashboard-page-root label,
-        .dashboard-page-root input,
-        .dashboard-page-root select,
-        .dashboard-page-root textarea,
-        .dashboard-page-root td,
-        .dashboard-page-root th,
-        .dashboard-page-root li,
-        .dashboard-page-root ul,
-        .dashboard-page-root ol {
+        /* Double class for higher specificity (0,2,1) to beat .dark div (0,1,1) */
+        .dashboard-page-root.dashboard-page-root,
+        .dashboard-page-root.dashboard-page-root div,
+        .dashboard-page-root.dashboard-page-root span,
+        .dashboard-page-root.dashboard-page-root p,
+        .dashboard-page-root.dashboard-page-root h1,
+        .dashboard-page-root.dashboard-page-root h2,
+        .dashboard-page-root.dashboard-page-root h3,
+        .dashboard-page-root.dashboard-page-root h4,
+        .dashboard-page-root.dashboard-page-root h5,
+        .dashboard-page-root.dashboard-page-root h6,
+        .dashboard-page-root.dashboard-page-root button,
+        .dashboard-page-root.dashboard-page-root a,
+        .dashboard-page-root.dashboard-page-root label,
+        .dashboard-page-root.dashboard-page-root input,
+        .dashboard-page-root.dashboard-page-root select,
+        .dashboard-page-root.dashboard-page-root textarea,
+        .dashboard-page-root.dashboard-page-root td,
+        .dashboard-page-root.dashboard-page-root th,
+        .dashboard-page-root.dashboard-page-root li,
+        .dashboard-page-root.dashboard-page-root ul,
+        .dashboard-page-root.dashboard-page-root ol {
           color: #0F1B2D !important;
         }
         .dashboard-page-root .text-ink {
