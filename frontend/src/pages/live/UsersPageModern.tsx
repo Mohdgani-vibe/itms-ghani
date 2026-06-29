@@ -370,8 +370,12 @@ export default function UsersPageModern() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '0.5px solid #E0E0E0' }}>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', width: '36px' }}>
+                  <tr style={{ 
+                    borderBottom: '0.5px solid #E0E0E0',
+                    display: 'grid',
+                    gridTemplateColumns: '40px 300px 1fr 1fr 130px 40px'
+                  }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left' }}>
                       <input
                         type="checkbox"
                         checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
@@ -379,7 +383,7 @@ export default function UsersPageModern() {
                         style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                       />
                     </th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em', width: '280px' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       EMPLOYEE
                     </th>
                     <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
@@ -391,7 +395,7 @@ export default function UsersPageModern() {
                     <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       STATUS
                     </th>
-                    <th style={{ padding: '6px 8px', width: '36px' }}></th>
+                    <th style={{ padding: '6px 8px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -402,7 +406,9 @@ export default function UsersPageModern() {
                       style={{
                         borderBottom: '0.5px solid #E0E0E0',
                         cursor: 'pointer',
-                        transition: 'background 0.15s'
+                        transition: 'background 0.15s',
+                        display: 'grid',
+                        gridTemplateColumns: '40px 300px 1fr 1fr 130px 40px'
                       }}
                       onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -415,7 +421,7 @@ export default function UsersPageModern() {
                           style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '8px 8px', width: '280px' }}>
+                      <td style={{ padding: '8px 8px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
                             width: '30px',
