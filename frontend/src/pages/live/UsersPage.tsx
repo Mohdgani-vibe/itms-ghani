@@ -1013,8 +1013,8 @@ export default function UsersPage() {
       .users-page-root .text-danger { color: #E5484D !important; }
       .users-page-root .bg-white { background-color: white !important; }
     `}</style>
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50 users-page-root">
-      <div className="max-w-7xl mx-auto px-4 py-8 xl:px-6 space-y-6">
+    <div className="min-h-screen users-page-root" style={{ backgroundColor: '#F1F4F9' }}>
+      <div className="max-w-[1600px] mx-auto px-6 py-8 space-y-6">
         <UsersPageHeader
           directoryTotal={directoryTotal}
           departmentCount={departmentCounts.length}
