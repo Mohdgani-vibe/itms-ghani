@@ -161,7 +161,7 @@ export default function UsersPageModern() {
         {/* Two Column Layout */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '220px minmax(0, 1fr)', 
+          gridTemplateColumns: '200px minmax(0, 1fr)', 
           gap: '0px',
           alignItems: 'start'
         }}>
@@ -170,7 +170,7 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '14px',
+            padding: '14px 14px 14px 10px',
             position: 'sticky',
             top: '76px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
@@ -383,7 +383,7 @@ export default function UsersPageModern() {
                         style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                       />
                     </th>
-                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       EMPLOYEE
                     </th>
                     <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
