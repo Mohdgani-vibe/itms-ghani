@@ -40,6 +40,9 @@ const tabIcons: Record<string, any> = {
 
 // Page-specific tabs configuration
 const pageTabsConfig: Record<string, { name: string; path: string; badge?: number }[]> = {
+  '/dashboard': [
+    { name: 'Dashboard', path: '' },
+  ],
   '/users': [
     { name: 'Users', path: '' },
     { name: 'Add Employee', path: '/add' },
@@ -123,7 +126,7 @@ export default function TopNavNew() {
         
         {/* Logo */}
         <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-2">
-          <img src="/itms-logo-new.svg" alt="ITMS" className="h-12" />
+          <img src="/itms-logo-new.svg" alt="ITMS" className="h-10" />
         </Link>
 
         {/* Page-Specific Tabs */}
