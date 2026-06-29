@@ -3,9 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import AppErrorBoundary from './components/AppErrorBoundary.tsx'
-import { applyStoredTheme } from './lib/theme'
+import { applyTheme } from './lib/theme'
 
-applyStoredTheme()
+// Force light mode - disable dark mode globally
+applyTheme('light')
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
