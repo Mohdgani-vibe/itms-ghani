@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { NavLink, Link, useLocation } from 'react-router-dom';
 import { 
   Search, Bell, ChevronDown, LogOut
 } from 'lucide-react';
 import { apiRequest, resolveWebSocketUrl } from '../../lib/api';
 import { chatPreviewText, sortByRecentChatActivity, type ChatLatestMessageLike } from '../../lib/chat';
+import { getPageAccessRedirect } from '../../lib/portalGuards';
 import { clearStoredSession, getPortalSegmentForRole, getPreferredPortalPath, getStoredSession } from '../../lib/session';
 import { getTopNavNotificationAccess } from '../../lib/topNavNotifications';
 
@@ -75,6 +76,43 @@ function formatRequestStatus(status: string) {
   return status.replace(/_/g, ' ');
 }
 
+const portalNavItems = {
+  admin: [
+    { name: 'Users', path: '/users' },
+    { name: 'Patch', path: '/patch' },
+    { name: 'Inventory', path: '/inventory' },
+    { name: 'Alerts', path: '/alerts' },
+    { name: 'Request', path: '/requests' },
+    { name: 'Gatepass', path: '/gatepass' },
+    { name: 'Announcement', path: '/announcements' },
+  ],
+  it: [
+    { name: 'Users', path: '/users' },
+    { name: 'Patch', path: '/patch' },
+    { name: 'Inventory', path: '/inventory' },
+    { name: 'Alerts', path: '/alerts' },
+    { name: 'Request', path: '/requests' },
+    { name: 'Gatepass', path: '/gatepass' },
+    { name: 'Announcement', path: '/announcements' },
+  ],
+  audit: [
+    { name: 'Users', path: '/users' },
+    { name: 'Patch', path: '/patch' },
+    { name: 'Inventory', path: '/inventory' },
+    { name: 'Alerts', path: '/alerts' },
+    { name: 'Request', path: '/requests' },
+    { name: 'Gatepass', path: '/gatepass' },
+    { name: 'Announcement', path: '/announcements' },
+  ],
+  emp: [
+    { name: 'Profile', path: '/profile' },
+    { name: 'My Assets', path: '/assets' },
+    { name: 'My Alerts', path: '/alerts' },
+    { name: 'My Requests', path: '/requests' },
+    { name: 'Announcements', path: '/announcements' },
+  ],
+} as const;
+
 export default function TopNav() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -93,6 +131,8 @@ export default function TopNav() {
   const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/);
   const currentPortal = portalMatch?.[1] || (session ? getPortalSegmentForRole(session.user.role) : 'emp');
   const basePath = portalMatch ? `/${portalMatch[1]}` : `/${currentPortal}`;
+  const navItems = (portalNavItems[currentPortal as keyof typeof portalNavItems] || portalNavItems.emp)
+    .filter((item) => !session || !getPageAccessRedirect(`${basePath}${item.path}`, session.user));
   const notificationAudiences = getNotificationAudiences(sessionRole);
 
   useEffect(() => {
@@ -254,8 +294,35 @@ export default function TopNav() {
           />
         </Link>
 
+        {/* Horizontal Navigation */}
+        <nav className="custom-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden ml-6">
+          {navItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={`${basePath}${item.path}`}
+              onClick={(e) => {
+                // Prevent navigation if already on this page
+                const currentPath = location.pathname;
+                const targetPath = `${basePath}${item.path}`;
+                if (currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)) {
+                  e.preventDefault();
+                }
+              }}
+              className={({ isActive }) =>
+                `relative px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'text-muted hover:text-ink hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`
+              }
+            >
+              {item.name}
+            </NavLink>
+          ))}
+        </nav>
+
         {/* Right Actions */}
-        <div className="ml-auto flex flex-shrink-0 items-center gap-3">
+        <div className="ml-3 flex flex-shrink-0 items-center gap-3">
           {!isAuditor ? <div className="relative hidden lg:block">
             <div className="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-zinc-400 dark:text-zinc-500" />
