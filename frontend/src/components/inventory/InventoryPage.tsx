@@ -972,7 +972,6 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 text-zinc-600">{formatCurrency(asset.cost)}</td>
                         <td className="px-4 py-3">
                           <div className="flex flex-wrap gap-1.5">
-                            <button type="button" onClick={() => openAssignDialog(asset)} className="rounded-lg border border-blue-200 px-2.5 py-1.5 font-semibold text-blue-700 hover:bg-blue-50">{asset.assignedUserId ? 'Reassign' : 'Assign'}</button>
                             <button type="button" onClick={() => openEditDialog(asset)} className="rounded-lg border border-blue-200 px-2.5 py-1.5 font-semibold text-blue-700 hover:bg-blue-50">Edit</button>
                             <button type="button" onClick={() => setDeleteTarget({ kind: 'asset', id: asset.id, label: asset.subItem })} className="rounded-lg border border-red-200 px-2.5 py-1.5 font-semibold text-red-600 hover:bg-red-50">Delete</button>
                           </div>
