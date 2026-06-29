@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import TopNav from './TopNav';
+import Sidebar from './Sidebar';
 import { getAllowedPortalSegments, getPortalSegmentForRole, getStoredSession } from '../../lib/session';
 
 type PortalSegment = 'admin' | 'it' | 'audit' | 'emp';
@@ -111,7 +112,8 @@ export default function PortalLayout() {
       `}</style>
       <div className="min-h-screen portal-layout-root flex flex-col" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
         <TopNav />
-        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8">
+        <Sidebar />
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 ml-16">
            <Outlet />
         </main>
       </div>
