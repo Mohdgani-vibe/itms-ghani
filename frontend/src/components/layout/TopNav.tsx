@@ -87,10 +87,6 @@ const portalNavItems = {
     { name: 'Request', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Announcement', path: '/announcements' },
-    { name: 'Chat', path: '/chat' },
-    { name: 'Vault', path: '/vault' },
-    { name: 'Docs', path: '/docs' },
-    { name: 'Settings', path: '/settings' },
   ],
   it: [
     { name: 'Dashboard', path: '/dashboard' },
@@ -101,10 +97,6 @@ const portalNavItems = {
     { name: 'Request', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Announcement', path: '/announcements' },
-    { name: 'Chat', path: '/chat' },
-    { name: 'Vault', path: '/vault' },
-    { name: 'Docs', path: '/docs' },
-    { name: 'Settings', path: '/settings' },
   ],
   audit: [
     { name: 'Dashboard', path: '/dashboard' },
@@ -115,10 +107,6 @@ const portalNavItems = {
     { name: 'Request', path: '/requests' },
     { name: 'Gatepass', path: '/gatepass' },
     { name: 'Announcement', path: '/announcements' },
-    { name: 'Chat', path: '/chat' },
-    { name: 'Vault', path: '/vault' },
-    { name: 'Docs', path: '/docs' },
-    { name: 'Settings', path: '/settings' },
   ],
   emp: [
     { name: 'Dashboard', path: '/dashboard' },
@@ -126,7 +114,6 @@ const portalNavItems = {
     { name: 'My Assets', path: '/assets' },
     { name: 'My Alerts', path: '/alerts' },
     { name: 'My Requests', path: '/requests' },
-    { name: 'Chat', path: '/chat' },
     { name: 'Announcements', path: '/announcements' },
   ],
 } as const;
