@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Users as UsersIcon, 
   UserPlus, 
@@ -7,6 +7,9 @@ import {
   MonitorDown, 
   FileCheck, 
   Lock,
+  Search, 
+  Settings, 
+  Bell, 
   ChevronDown,
   MoreVertical,
   Laptop,
@@ -51,12 +54,6 @@ export default function UsersPageModern() {
   const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Force disable dark mode
-  useEffect(() => {
-    document.documentElement.classList.remove('dark');
-    document.body.classList.remove('dark');
-  }, []);
-
   const filteredUsers = users.filter(user => {
     const matchesDept = selectedDept === 'All Departments' || user.dept === selectedDept;
     const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
@@ -88,8 +85,136 @@ export default function UsersPageModern() {
   const currentUser = selectedUser ? users.find(u => u.id === selectedUser) : null;
 
   return (
-    <div className="users-modern-page-root" style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#F1F4F9', minHeight: '100vh', padding: '32px 24px' }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+    <div style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#EEF2F7', minHeight: '100vh' }}>
+      {/* Top Bar */}
+      <div style={{ 
+        position: 'sticky', 
+        top: 0, 
+        zIndex: 40,
+        backgroundColor: '#fff', 
+        borderBottom: '1px solid #EAEDF2',
+        padding: '0 24px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '24px'
+      }}>
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <div style={{ 
+            width: '32px', 
+            height: '32px', 
+            borderRadius: '8px',
+            background: 'linear-gradient(180deg, #2E73F0, #1B4FD1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#fff',
+            fontWeight: '700',
+            fontSize: '14px'
+          }}>IT</div>
+          <span style={{ fontWeight: '700', fontSize: '16px', color: '#0F1B2D' }}>ITMS</span>
+        </div>
+
+        {/* Navigation */}
+        <nav style={{ display: 'flex', gap: '8px', flex: 1, overflowX: 'auto' }}>
+          {['Users', 'Add Employee', 'Import / Export', 'Install Agents', 'Audit', 'Portal Access'].map((item, i) => (
+            <button
+              key={item}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '20px',
+                border: 'none',
+                background: i === 0 ? '#EAF1FE' : 'transparent',
+                color: i === 0 ? '#1B4FD1' : '#46505F',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                transition: 'all 0.2s'
+              }}
+            >
+              {item}
+            </button>
+          ))}
+          <button
+            style={{
+              padding: '8px 16px',
+              borderRadius: '20px',
+              border: 'none',
+              background: 'transparent',
+              color: '#46505F',
+              fontWeight: '600',
+              fontSize: '14px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            Unassigned
+            <span style={{
+              background: '#C13B40',
+              color: '#fff',
+              borderRadius: '10px',
+              padding: '2px 8px',
+              fontSize: '12px',
+              fontWeight: '700'
+            }}>3</span>
+          </button>
+        </nav>
+
+        {/* Right Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <button style={{ padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#8C96A4' }}>
+            <Search size={20} />
+          </button>
+          <button style={{ padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#8C96A4' }}>
+            <Settings size={20} />
+          </button>
+          <button style={{ padding: '8px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#8C96A4', position: 'relative' }}>
+            <Bell size={20} />
+            <span style={{ 
+              position: 'absolute', 
+              top: '6px', 
+              right: '6px', 
+              width: '8px', 
+              height: '8px', 
+              borderRadius: '50%', 
+              background: '#C13B40' 
+            }} />
+          </button>
+          <button style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '6px 12px 6px 6px',
+            border: '1px solid #EAEDF2',
+            borderRadius: '20px',
+            background: '#fff',
+            cursor: 'pointer'
+          }}>
+            <div style={{
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              background: 'linear-gradient(180deg, #2E73F0, #1B4FD1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              fontWeight: '700',
+              fontSize: '12px'
+            }}>SA</div>
+            <ChevronDown size={16} color="#8C96A4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Page Content */}
+      <div style={{ padding: '32px 24px', maxWidth: '1600px', margin: '0 auto' }}>
         {/* Page Header */}
         <div style={{ 
           display: 'flex', 
@@ -765,24 +890,6 @@ export default function UsersPageModern() {
         @keyframes fadeIn {
           from { opacity: 0; }
           to { opacity: 1; }
-        }
-        
-        /* Force light mode with high specificity */
-        .users-modern-page-root.users-modern-page-root,
-        .users-modern-page-root.users-modern-page-root div,
-        .users-modern-page-root.users-modern-page-root span,
-        .users-modern-page-root.users-modern-page-root p,
-        .users-modern-page-root.users-modern-page-root h1,
-        .users-modern-page-root.users-modern-page-root h2,
-        .users-modern-page-root.users-modern-page-root h3,
-        .users-modern-page-root.users-modern-page-root button,
-        .users-modern-page-root.users-modern-page-root a,
-        .users-modern-page-root.users-modern-page-root label,
-        .users-modern-page-root.users-modern-page-root input,
-        .users-modern-page-root.users-modern-page-root select,
-        .users-modern-page-root.users-modern-page-root td,
-        .users-modern-page-root.users-modern-page-root th {
-          color: #0F1B2D !important;
         }
         
         * {

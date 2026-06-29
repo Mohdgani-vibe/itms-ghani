@@ -9,7 +9,6 @@ const Login = lazy(() => import('./pages/Login'));
 const LoginNew = lazy(() => import('./pages/LoginNew'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPageNew = lazy(() => import('./pages/live/DashboardPageNew'));
-const UsersPage = lazy(() => import('./pages/live/UsersPage'));
 const UsersPageModern = lazy(() => import('./pages/live/UsersPageModern'));
 const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
@@ -147,8 +146,7 @@ function App() {
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users-modern" element={<UsersPageModern />} />
+            <Route path="users" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
@@ -170,8 +168,7 @@ function App() {
           <Route path="/it" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users-modern" element={<UsersPageModern />} />
+            <Route path="users" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
@@ -193,8 +190,7 @@ function App() {
           <Route path="/audit" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
-            <Route path="users" element={<UsersPage />} />
-            <Route path="users-modern" element={<UsersPageModern />} />
+            <Route path="users" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
