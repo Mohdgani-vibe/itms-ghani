@@ -7,7 +7,8 @@ import {
   Package,
   FileText,
   Send,
-  Search
+  Search,
+  Bell
 } from 'lucide-react';
 
 // Sample data
