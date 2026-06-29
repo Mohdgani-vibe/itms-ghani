@@ -139,10 +139,6 @@ export default function TopNav() {
     .filter((item) => !session || !getPageAccessRedirect(`${basePath}${item.path}`, session.user));
   const notificationAudiences = getNotificationAudiences(sessionRole);
 
-  const isActive = (path: string) => {
-    return location.pathname === `${basePath}${path}` || location.pathname.startsWith(`${basePath}${path}/`);
-  };
-
   useEffect(() => {
     let cancelled = false;
     let announcementSocket: WebSocket | null = null;
@@ -304,22 +300,29 @@ export default function TopNav() {
 
         {/* Global Navigation */}
         <nav className="custom-scrollbar hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] md:flex [&::-webkit-scrollbar]:hidden">
-          {navItems.map((item) => {
-            const active = isActive(item.path);
-            return (
-              <NavLink
-                key={item.name}
-                to={`${basePath}${item.path}`}
-                className={`portal-nav-link px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
-                  active
-                    ? 'portal-nav-link-active border shadow-sm'
-                    : 'portal-nav-link-inactive border border-transparent'
-                }`}
-              >
-                {item.name}
-              </NavLink>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.name}
+              to={`${basePath}${item.path}`}
+              onClick={(e) => {
+                // Prevent navigation if already on this page
+                const currentPath = location.pathname;
+                const targetPath = `${basePath}${item.path}`;
+                if (currentPath === targetPath || currentPath.startsWith(`${targetPath}/`)) {
+                  e.preventDefault();
+                }
+              }}
+              className={({ isActive }) =>
+                `relative px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
+                  isActive
+                    ? 'bg-primary text-white shadow-sm border-b-2 border-blue-600'
+                    : 'text-muted hover:text-ink hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                }`
+              }
+            >
+              {item.name}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Right Actions */}
