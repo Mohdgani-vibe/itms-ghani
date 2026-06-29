@@ -58,12 +58,6 @@ export default function PortalLayout() {
   const session = getStoredSession();
   const sessionRole = session?.user.role || '';
 
-  // Check if current page is dashboard
-  const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/);
-  const currentPortal = portalMatch?.[1] || (session ? getPortalSegmentForRole(session.user.role) : 'emp');
-  const basePath = portalMatch ? `/${portalMatch[1]}` : `/${currentPortal}`;
-  const isDashboard = location.pathname === `${basePath}/dashboard` || location.pathname === `${basePath}/dashboard/`;
-
   useEffect(() => {
     // Force disable dark mode
     document.documentElement.classList.remove('dark');
@@ -86,12 +80,14 @@ export default function PortalLayout() {
         if (preloadedChunks.has(candidate.key)) {
           return;
         }
-
         preloadedChunks.add(candidate.key);
         void candidate.load();
       });
     });
   }, [location.pathname, session, sessionRole]);
+
+  // Check if current page is dashboard
+  const isDashboard = location.pathname.endsWith('/dashboard');
 
   return (
     <>
@@ -119,7 +115,7 @@ export default function PortalLayout() {
       <div className="min-h-screen portal-layout-root flex flex-col" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
         <TopNavNew />
         <Sidebar />
-        <main className="flex-1">
+        <main className={`flex-1 ${isDashboard ? '' : 'ml-16'}`}>
            <Outlet />
         </main>
       </div>

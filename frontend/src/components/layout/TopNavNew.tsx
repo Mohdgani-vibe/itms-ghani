@@ -2,48 +2,91 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Search, Bell, ChevronDown, LogOut, Settings,
-  Users, Package, HardDrive, AlertTriangle, FileText,
-  LogOut as GatepassIcon, Home
+  Users, UserPlus, Upload, MonitorDown, FileCheck, Lock,
+  BarChart3, Calendar, AlertCircle, Clock, ClipboardList,
+  Package, HardDrive
 } from 'lucide-react';
 import { clearStoredSession, getPortalSegmentForRole, getStoredSession } from '../../lib/session';
 
-// Main navigation items for different portals
-const portalNavItems = {
-  admin: [
-    { name: 'Users', path: '/users', icon: Users },
-    { name: 'Patch', path: '/patch', icon: Package },
-    { name: 'Inventory', path: '/inventory', icon: HardDrive },
-    { name: 'Alerts', path: '/alerts', icon: AlertTriangle },
-    { name: 'Request', path: '/requests', icon: FileText },
-    { name: 'Gatepass', path: '/gatepass', icon: GatepassIcon },
-    { name: 'Announcement', path: '/announcements', icon: Bell },
+// Icon mapping for tabs
+const tabIcons: Record<string, any> = {
+  'Users': Users,
+  'Add Employee': UserPlus,
+  'Import / Export': Upload,
+  'Install Agents': MonitorDown,
+  'Audit': FileCheck,
+  'Portal Access': Lock,
+  'Unassigned': Users,
+  'Dashboard': BarChart3,
+  'Devices': MonitorDown,
+  'Reports': FileCheck,
+  'Assets': ClipboardList,
+  'Categories': BarChart3,
+  'All Alerts': AlertCircle,
+  'Critical': AlertCircle,
+  'Rules': Settings,
+  'Queue': Clock,
+  'Approved': FileCheck,
+  'Rejected': FileCheck,
+  'Active': Calendar,
+  'History': Calendar,
+  'Create': UserPlus,
+  'All': BarChart3,
+  'Urgent': AlertCircle,
+  'All Devices': MonitorDown,
+  'Laptops': MonitorDown,
+  'Desktops': MonitorDown,
+  'Monitors': MonitorDown,
+};
+
+// Page-specific tabs configuration
+const pageTabsConfig: Record<string, { name: string; path: string; badge?: number }[]> = {
+  '/users': [
+    { name: 'Users', path: '' },
+    { name: 'Add Employee', path: '/add' },
+    { name: 'Import / Export', path: '/import' },
+    { name: 'Install Agents', path: '/install' },
+    { name: 'Audit', path: '/audit' },
+    { name: 'Portal Access', path: '/access' },
+    { name: 'Unassigned', path: '/unassigned', badge: 3 },
   ],
-  it: [
-    { name: 'Users', path: '/users', icon: Users },
-    { name: 'Patch', path: '/patch', icon: Package },
-    { name: 'Inventory', path: '/inventory', icon: HardDrive },
-    { name: 'Alerts', path: '/alerts', icon: AlertTriangle },
-    { name: 'Request', path: '/requests', icon: FileText },
-    { name: 'Gatepass', path: '/gatepass', icon: GatepassIcon },
-    { name: 'Announcement', path: '/announcements', icon: Bell },
+  '/patch': [
+    { name: 'Dashboard', path: '' },
+    { name: 'Devices', path: '/devices' },
+    { name: 'Reports', path: '/reports' },
   ],
-  audit: [
-    { name: 'Users', path: '/users', icon: Users },
-    { name: 'Patch', path: '/patch', icon: Package },
-    { name: 'Inventory', path: '/inventory', icon: HardDrive },
-    { name: 'Alerts', path: '/alerts', icon: AlertTriangle },
-    { name: 'Request', path: '/requests', icon: FileText },
-    { name: 'Gatepass', path: '/gatepass', icon: GatepassIcon },
-    { name: 'Announcement', path: '/announcements', icon: Bell },
+  '/inventory': [
+    { name: 'Assets', path: '' },
+    { name: 'Categories', path: '/categories' },
+    { name: 'Reports', path: '/reports' },
   ],
-  emp: [
-    { name: 'Profile', path: '/profile', icon: Users },
-    { name: 'My Assets', path: '/assets', icon: HardDrive },
-    { name: 'My Alerts', path: '/alerts', icon: AlertTriangle },
-    { name: 'My Requests', path: '/requests', icon: FileText },
-    { name: 'Announcements', path: '/announcements', icon: Bell },
+  '/alerts': [
+    { name: 'All Alerts', path: '' },
+    { name: 'Critical', path: '/critical' },
+    { name: 'Rules', path: '/rules' },
   ],
-} as const;
+  '/requests': [
+    { name: 'Queue', path: '' },
+    { name: 'Approved', path: '/approved' },
+    { name: 'Rejected', path: '/rejected' },
+  ],
+  '/gatepass': [
+    { name: 'Active', path: '' },
+    { name: 'History', path: '/history' },
+    { name: 'Create', path: '/create' },
+  ],
+  '/announcements': [
+    { name: 'All', path: '' },
+    { name: 'Urgent', path: '/urgent' },
+    { name: 'Create', path: '/create' },
+  ],
+  '/devices': [
+    { name: 'All Devices', path: '' },
+    { name: 'Laptops', path: '/laptops' },
+    { name: 'Desktops', path: '/desktops' },
+    { name: 'Monitors', path: '/monitors' },
+  ],
+};
 
 export default function TopNavNew() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,13 +95,23 @@ export default function TopNavNew() {
   const navigate = useNavigate();
   const session = getStoredSession();
   
-  // Extract portal from path
-  const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/|$)/);
+  // Extract portal and page from path
+  const portalMatch = location.pathname.match(/^\/(admin|it|audit|emp)(?:\/([^/]+))?/);
   const currentPortal = portalMatch?.[1] || (session ? getPortalSegmentForRole(session.user.role) : 'emp');
+  const currentPage = portalMatch?.[2] || 'dashboard';
   const basePath = `/${currentPortal}`;
   
-  // Get navigation items for current portal
-  const navItems = portalNavItems[currentPortal as keyof typeof portalNavItems] || portalNavItems.admin;
+  // Get page tabs - match against the main page segment (e.g., /users, /patch, etc.)
+  const pageKey = `/${currentPage}`;
+  const pageTabs = pageTabsConfig[pageKey] || [];
+  
+  // Determine active tab
+  const activeTabIndex = pageTabs.findIndex(tab => {
+    if (tab.path === '') {
+      return location.pathname === `${basePath}/${currentPage}`;
+    }
+    return location.pathname.startsWith(`${basePath}/${currentPage}${tab.path}`);
+  });
 
   const handleLogout = () => {
     clearStoredSession();
@@ -74,27 +127,33 @@ export default function TopNavNew() {
           <img src="/itms-logo-new.svg" alt="ITMS" className="h-12" />
         </Link>
 
-        {/* Main Navigation Items */}
-        <nav className="flex gap-1.5 flex-1 overflow-x-auto ml-4">
-          {navItems.map((item) => {
-            const IconComponent = item.icon;
-            const isActive = location.pathname.startsWith(`${basePath}${item.path}`);
-            return (
-              <button
-                key={item.name}
-                onClick={() => navigate(`${basePath}${item.path}`)}
-                className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
-                  isActive
-                    ? 'bg-[#EAF1FE] text-[#1B4FD1]'
-                    : 'bg-transparent text-[#46505F] hover:bg-zinc-100'
-                }`}
-              >
-                <IconComponent className="h-4 w-4" />
-                {item.name}
-              </button>
-            );
-          })}
-        </nav>
+        {/* Page-Specific Tabs */}
+        {pageTabs.length > 0 && (
+          <nav className="flex gap-1.5 flex-1 overflow-x-auto ml-4">
+            {pageTabs.map((tab, index) => {
+              const IconComponent = tabIcons[tab.name];
+              return (
+                <button
+                  key={tab.name}
+                  onClick={() => navigate(`${basePath}/${currentPage}${tab.path}`)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
+                    index === (activeTabIndex >= 0 ? activeTabIndex : 0)
+                      ? 'bg-[#EAF1FE] text-[#1B4FD1]'
+                      : 'bg-transparent text-[#46505F] hover:bg-zinc-100'
+                  }`}
+                >
+                  {IconComponent && <IconComponent className="h-4 w-4" />}
+                  {tab.name}
+                  {tab.badge !== undefined && (
+                    <span className="bg-[#C13B40] text-white rounded-full px-2 py-0.5 text-xs font-bold">
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        )}
 
         {/* Right Actions */}
         <div className="ml-3 flex flex-shrink-0 items-center gap-2">
