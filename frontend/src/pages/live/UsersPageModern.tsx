@@ -95,7 +95,7 @@ export default function UsersPageModern() {
       <div style={{ 
         maxWidth: '1600px', 
         margin: '0 auto', 
-        padding: '32px',
+        padding: '20px 24px',
         width: '100%'
       }}>
         {/* Page Header */}
@@ -103,35 +103,35 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '32px'
+          marginBottom: '20px'
         }}>
           <div>
             <h1 style={{ 
-              fontSize: '32px', 
-              fontWeight: '800', 
+              fontSize: '24px', 
+              fontWeight: '700', 
               color: '#0F1B2D', 
-              margin: '0 0 8px 0',
-              letterSpacing: '-0.02em'
+              margin: '0 0 4px 0',
+              letterSpacing: '-0.01em'
             }}>
               User Management
             </h1>
             <p style={{ 
-              fontSize: '14px', 
+              fontSize: '13px', 
               color: '#8C96A4', 
               margin: 0 
             }}>
               Manage employees, roles, and access permissions
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
             <select style={{
-              padding: '10px 16px',
-              borderRadius: '12px',
-              border: '1px solid #EAEDF2',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '0.5px solid #E0E0E0',
               background: '#fff',
               color: '#46505F',
-              fontWeight: '600',
-              fontSize: '14px',
+              fontWeight: '500',
+              fontSize: '13px',
               cursor: 'pointer',
               fontFamily: 'Inter, sans-serif'
             }}>
@@ -140,20 +140,19 @@ export default function UsersPageModern() {
               <option>Last 30 days</option>
             </select>
             <button style={{
-              padding: '10px 20px',
-              borderRadius: '12px',
+              padding: '6px 14px',
+              borderRadius: '6px',
               border: 'none',
-              background: 'linear-gradient(180deg, #2E73F0, #1B4FD1)',
+              background: '#2667E8',
               color: '#fff',
               fontWeight: '600',
-              fontSize: '14px',
+              fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 12px rgba(38, 103, 232, 0.3)'
+              gap: '6px'
             }}>
-              <UserPlus size={18} />
+              <UserPlus size={16} />
               Add Employee
             </button>
           </div>
@@ -162,45 +161,45 @@ export default function UsersPageModern() {
         {/* Two Column Layout */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '240px minmax(0, 1fr)', 
-          gap: '18px',
+          gridTemplateColumns: '180px minmax(0, 1fr)', 
+          gap: '16px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
           <div style={{
             background: '#fff',
-            borderRadius: '18px',
-            padding: '20px',
-            boxShadow: '0 6px 20px -12px rgba(15, 27, 45, 0.18)',
+            border: '0.5px solid #E0E0E0',
+            borderRadius: '8px',
+            padding: '14px',
             position: 'sticky',
-            top: '96px'
+            top: '76px'
           }}>
             <div style={{ 
-              fontSize: '11px', 
+              fontSize: '10px', 
               fontWeight: '700', 
               color: '#8C96A4',
               letterSpacing: '0.05em',
-              marginBottom: '8px'
+              marginBottom: '4px'
             }}>
               DEPARTMENTS
             </div>
             <p style={{ 
-              fontSize: '12px', 
+              fontSize: '11px', 
               color: '#9AA4B2', 
-              margin: '0 0 16px 0' 
+              margin: '0 0 12px 0' 
             }}>
               Filter users by department
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {departments.map((dept) => (
                 <button
                   key={dept.name}
                   onClick={() => setSelectedDept(dept.name)}
                   style={{
-                    padding: '10px 12px',
-                    borderRadius: '10px',
+                    padding: '6px 10px',
+                    borderRadius: '4px',
                     border: 'none',
-                    background: selectedDept === dept.name ? 'linear-gradient(180deg, #2E73F0, #1B4FD1)' : 'transparent',
+                    background: selectedDept === dept.name ? '#2667E8' : 'transparent',
                     color: selectedDept === dept.name ? '#fff' : '#46505F',
                     fontSize: '13px',
                     fontWeight: selectedDept === dept.name ? '600' : '500',
@@ -209,14 +208,14 @@ export default function UsersPageModern() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    transition: 'all 0.2s'
+                    transition: 'all 0.15s'
                   }}
                 >
                   <span>{dept.name}</span>
                   <span style={{ 
-                    fontSize: '12px', 
-                    fontWeight: '700',
-                    opacity: selectedDept === dept.name ? 1 : 0.6
+                    fontSize: '11px', 
+                    fontWeight: '600',
+                    opacity: selectedDept === dept.name ? 0.9 : 0.5
                   }}>
                     {dept.count}
                   </span>
@@ -228,18 +227,18 @@ export default function UsersPageModern() {
           {/* Main Content */}
           <div style={{
             background: '#fff',
-            borderRadius: '18px',
-            padding: '24px',
-            boxShadow: '0 6px 20px -12px rgba(15, 27, 45, 0.18)'
+            border: '0.5px solid #E0E0E0',
+            borderRadius: '8px',
+            padding: '16px'
           }}>
             {/* Filter Bar */}
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ position: 'relative', marginBottom: '12px' }}>
                 <Search 
-                  size={18} 
+                  size={16} 
                   style={{ 
                     position: 'absolute', 
-                    left: '14px', 
+                    left: '12px', 
                     top: '50%', 
                     transform: 'translateY(-50%)',
                     color: '#8C96A4'
@@ -252,40 +251,39 @@ export default function UsersPageModern() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   style={{
                     width: '100%',
-                    padding: '12px 16px 12px 44px',
-                    borderRadius: '12px',
-                    border: '1px solid #EAEDF2',
-                    fontSize: '14px',
+                    padding: '8px 12px 8px 36px',
+                    borderRadius: '6px',
+                    border: '0.5px solid #E0E0E0',
+                    fontSize: '13px',
                     fontFamily: 'Inter, sans-serif',
                     color: '#0F1B2D'
                   }}
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* Status Toggle */}
                 <div style={{ 
                   display: 'inline-flex', 
-                  background: '#F4F8FF', 
-                  borderRadius: '10px', 
-                  padding: '4px' 
+                  background: '#F8F8F8', 
+                  borderRadius: '6px', 
+                  padding: '2px' 
                 }}>
                   {(['all', 'active', 'inactive'] as const).map((status) => (
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
                       style={{
-                        padding: '6px 14px',
-                        borderRadius: '8px',
+                        padding: '4px 12px',
+                        borderRadius: '4px',
                         border: 'none',
                         background: statusFilter === status ? '#fff' : 'transparent',
                         color: statusFilter === status ? '#1B4FD1' : '#46505F',
                         fontSize: '13px',
-                        fontWeight: '600',
+                        fontWeight: '500',
                         cursor: 'pointer',
                         textTransform: 'capitalize',
-                        boxShadow: statusFilter === status ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
-                        transition: 'all 0.2s'
+                        transition: 'all 0.15s'
                       }}
                     >
                       {status}
@@ -298,9 +296,9 @@ export default function UsersPageModern() {
                   <select
                     key={filter}
                     style={{
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid #EAEDF2',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      border: '0.5px solid #E0E0E0',
                       background: '#fff',
                       color: '#46505F',
                       fontSize: '13px',
@@ -318,7 +316,7 @@ export default function UsersPageModern() {
             {/* Selection Toolbar */}
             {selectedUsers.size > 0 && (
               <div style={{
-                padding: '12px 16px',
+                padding: '8px 12px',
                 background: '#F4F8FF',
                 borderRadius: '12px',
                 marginBottom: '16px',
@@ -370,28 +368,28 @@ export default function UsersPageModern() {
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '1px solid #EAEDF2' }}>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', width: '40px' }}>
+                  <tr style={{ borderBottom: '0.5px solid #E0E0E0' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', width: '36px' }}>
                       <input
                         type="checkbox"
                         checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
                         onChange={toggleSelectAll}
-                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                       />
                     </th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       EMPLOYEE
                     </th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       ROLE
                     </th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       DEPARTMENT
                     </th>
-                    <th style={{ padding: '12px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
+                    <th style={{ padding: '6px 8px', textAlign: 'left', fontSize: '10px', fontWeight: '700', color: '#8C96A4', letterSpacing: '0.05em' }}>
                       STATUS
                     </th>
-                    <th style={{ padding: '12px 8px', width: '40px' }}></th>
+                    <th style={{ padding: '6px 8px', width: '36px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -400,26 +398,26 @@ export default function UsersPageModern() {
                       key={user.id}
                       onClick={() => setSelectedUser(user.id)}
                       style={{
-                        borderBottom: '1px solid #EAEDF2',
+                        borderBottom: '0.5px solid #E0E0E0',
                         cursor: 'pointer',
-                        transition: 'background 0.2s'
+                        transition: 'background 0.15s'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#F4F8FF'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
                       onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                     >
-                      <td style={{ padding: '12px 8px' }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ padding: '6px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
                           checked={selectedUsers.has(user.id)}
                           onChange={() => toggleSelectUser(user.id)}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                          style={{ width: '14px', height: '14px', cursor: 'pointer' }}
                         />
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <td style={{ padding: '6px 8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div style={{
-                            width: '36px',
-                            height: '36px',
+                            width: '28px',
+                            height: '28px',
                             borderRadius: '50%',
                             background: user.avatarColor,
                             display: 'flex',
@@ -427,32 +425,32 @@ export default function UsersPageModern() {
                             justifyContent: 'center',
                             color: '#fff',
                             fontWeight: '700',
-                            fontSize: '13px',
+                            fontSize: '11px',
                             flexShrink: 0
                           }}>
                             {user.initials}
                           </div>
                           <div>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: '#0F1B2D' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#0F1B2D', lineHeight: '1.3' }}>
                               {user.name}
                             </div>
-                            <div style={{ fontSize: '12px', color: '#8C96A4' }}>
+                            <div style={{ fontSize: '11px', color: '#8C96A4', lineHeight: '1.3' }}>
                               {user.email}
                             </div>
                           </div>
                         </div>
                       </td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
+                      <td style={{ padding: '6px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
                         {user.role}
                       </td>
-                      <td style={{ padding: '12px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
+                      <td style={{ padding: '6px 8px', fontSize: '13px', color: '#46505F', fontWeight: '500' }}>
                         {user.dept}
                       </td>
-                      <td style={{ padding: '12px 8px' }}>
+                      <td style={{ padding: '6px 8px' }}>
                         <span style={{
-                          padding: '4px 10px',
-                          borderRadius: '12px',
-                          fontSize: '12px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
                           fontWeight: '600',
                           background: user.status === 'active' ? '#E7F6EE' : user.status === 'inactive' ? '#FEEFEF' : '#FFF7E8',
                           color: user.status === 'active' ? '#1F8A50' : user.status === 'inactive' ? '#C13B40' : '#B7791F',
@@ -461,15 +459,15 @@ export default function UsersPageModern() {
                           {user.status}
                         </span>
                       </td>
-                      <td style={{ padding: '12px 8px' }} onClick={(e) => e.stopPropagation()}>
+                      <td style={{ padding: '6px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <button style={{ 
-                          padding: '6px', 
+                          padding: '4px', 
                           border: 'none', 
                           background: 'transparent', 
                           cursor: 'pointer',
                           color: '#8C96A4'
                         }}>
-                          <MoreVertical size={18} />
+                          <MoreVertical size={16} />
                         </button>
                       </td>
                     </tr>
@@ -479,75 +477,75 @@ export default function UsersPageModern() {
             </div>
 
             {/* Pagination */}
-            <div style={{ 
+            <div style={{
               marginTop: '20px', 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              paddingTop: '20px',
-              borderTop: '1px solid #EAEDF2'
+              paddingTop: '12px',
+              borderTop: '0.5px solid #E0E0E0'
             }}>
-              <div style={{ fontSize: '13px', color: '#8C96A4' }}>
+              <div style={{ fontSize: '12px', color: '#8C96A4' }}>
                 Showing 1–{filteredUsers.length} of {departments.find(d => d.name === selectedDept)?.count || 0} users
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '4px' }}>
                 <button style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #EAEDF2',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  border: '0.5px solid #E0E0E0',
                   background: '#fff',
                   color: '#46505F',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  fontSize: '12px',
+                  fontWeight: '500',
                   cursor: 'pointer'
                 }}>
                   Prev
                 </button>
                 <button style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
                   border: 'none',
-                  background: 'linear-gradient(180deg, #2E73F0, #1B4FD1)',
+                  background: '#2667E8',
                   color: '#fff',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   cursor: 'pointer'
                 }}>
                   1
                 </button>
                 <button style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #EAEDF2',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  border: '0.5px solid #E0E0E0',
                   background: '#fff',
                   color: '#46505F',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  fontSize: '12px',
+                  fontWeight: '500',
                   cursor: 'pointer'
                 }}>
                   2
                 </button>
                 <button style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #EAEDF2',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  border: '0.5px solid #E0E0E0',
                   background: '#fff',
                   color: '#46505F',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  fontSize: '12px',
+                  fontWeight: '500',
                   cursor: 'pointer'
                 }}>
                   3
                 </button>
-                <span style={{ padding: '8px 12px', color: '#8C96A4' }}>...</span>
+                <span style={{ padding: '4px 8px', color: '#8C96A4', fontSize: '12px' }}>...</span>
                 <button style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #EAEDF2',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  border: '0.5px solid #E0E0E0',
                   background: '#fff',
                   color: '#46505F',
-                  fontSize: '13px',
-                  fontWeight: '600',
+                  fontSize: '12px',
+                  fontWeight: '500',
                   cursor: 'pointer'
                 }}>
                   Next
