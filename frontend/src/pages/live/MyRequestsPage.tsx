@@ -99,7 +99,20 @@ export default function MyRequestsPage() {
   };
 
   return (
-    <div className="space-y-6 bg-zinc-50/60">
+    <>
+    <style>{`
+      .my-requests-page-root { color: #0F1B2D !important; }
+      .my-requests-page-root *, .my-requests-page-root *::before, .my-requests-page-root *::after { color: #0F1B2D !important; }
+      .my-requests-page-root .text-ink { color: #0F1B2D !important; }
+      .my-requests-page-root .text-muted { color: #8C96A4 !important; }
+      .my-requests-page-root .text-primary { color: #2667E8 !important; }
+      .my-requests-page-root .text-white { color: white !important; }
+      .my-requests-page-root .text-success { color: #30A46C !important; }
+      .my-requests-page-root .text-warning { color: #FFB224 !important; }
+      .my-requests-page-root .text-danger { color: #E5484D !important; }
+      .my-requests-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 bg-zinc-50/60 my-requests-page-root">
       <section className="overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-sm">
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(251,191,36,0.12),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#fff8eb_100%)] px-6 py-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -268,5 +281,6 @@ export default function MyRequestsPage() {
         />
       </div>
     </div>
+    </>
   );
 }

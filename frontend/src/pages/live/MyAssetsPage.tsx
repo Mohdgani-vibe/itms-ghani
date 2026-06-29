@@ -88,7 +88,20 @@ export default function MyAssetsPage() {
   };
 
   return (
-    <div className="space-y-6 bg-zinc-50/60">
+    <>
+    <style>{`
+      .my-assets-page-root { color: #0F1B2D !important; }
+      .my-assets-page-root *, .my-assets-page-root *::before, .my-assets-page-root *::after { color: #0F1B2D !important; }
+      .my-assets-page-root .text-ink { color: #0F1B2D !important; }
+      .my-assets-page-root .text-muted { color: #8C96A4 !important; }
+      .my-assets-page-root .text-primary { color: #2667E8 !important; }
+      .my-assets-page-root .text-white { color: white !important; }
+      .my-assets-page-root .text-success { color: #30A46C !important; }
+      .my-assets-page-root .text-warning { color: #FFB224 !important; }
+      .my-assets-page-root .text-danger { color: #E5484D !important; }
+      .my-assets-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 bg-zinc-50/60 my-assets-page-root">
       <section className="overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-sm">
         <div className="bg-[radial-gradient(circle_at_top_right,_rgba(56,189,248,0.16),_transparent_28%),radial-gradient(circle_at_left,_rgba(16,185,129,0.10),_transparent_24%),linear-gradient(135deg,_#f8fcff_0%,_#ffffff_58%,_#f6fbf7_100%)] px-6 py-7">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -212,5 +225,6 @@ export default function MyAssetsPage() {
           </div>
         </section> : null}
     </div>
+    </>
   );
 }

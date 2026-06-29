@@ -784,7 +784,20 @@ export default function DashboardPage() {
   const userName = session?.user?.fullName || 'User';
 
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <>
+    <style>{`
+      .dashboard-page-old-root { color: #0F1B2D !important; }
+      .dashboard-page-old-root *, .dashboard-page-old-root *::before, .dashboard-page-old-root *::after { color: #0F1B2D !important; }
+      .dashboard-page-old-root .text-ink { color: #0F1B2D !important; }
+      .dashboard-page-old-root .text-muted { color: #8C96A4 !important; }
+      .dashboard-page-old-root .text-primary { color: #2667E8 !important; }
+      .dashboard-page-old-root .text-white { color: white !important; }
+      .dashboard-page-old-root .text-success { color: #30A46C !important; }
+      .dashboard-page-old-root .text-warning { color: #FFB224 !important; }
+      .dashboard-page-old-root .text-danger { color: #E5484D !important; }
+      .dashboard-page-old-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="min-h-screen bg-zinc-50 dashboard-page-old-root">
       {/* Header - Ultra Modern */}
       <div className="relative overflow-hidden border-b border-zinc-200 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 px-6 py-8">
         <div className="absolute inset-0 bg-grid-white/[0.05] bg-[size:20px_20px]" />
@@ -1340,5 +1353,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }

@@ -161,7 +161,20 @@ export default function VaultPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+    <style>{`
+      .vault-page-root { color: #0F1B2D !important; }
+      .vault-page-root *, .vault-page-root *::before, .vault-page-root *::after { color: #0F1B2D !important; }
+      .vault-page-root .text-ink { color: #0F1B2D !important; }
+      .vault-page-root .text-muted { color: #8C96A4 !important; }
+      .vault-page-root .text-primary { color: #2667E8 !important; }
+      .vault-page-root .text-white { color: white !important; }
+      .vault-page-root .text-success { color: #30A46C !important; }
+      .vault-page-root .text-warning { color: #FFB224 !important; }
+      .vault-page-root .text-danger { color: #E5484D !important; }
+      .vault-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 vault-page-root">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
@@ -448,5 +461,6 @@ export default function VaultPage() {
         />
       )}
     </div>
+    </>
   );
 }

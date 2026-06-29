@@ -224,7 +224,20 @@ export default function DocsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <>
+    <style>{`
+      .docs-page-root { color: #0F1B2D !important; }
+      .docs-page-root *, .docs-page-root *::before, .docs-page-root *::after { color: #0F1B2D !important; }
+      .docs-page-root .text-ink { color: #0F1B2D !important; }
+      .docs-page-root .text-muted { color: #8C96A4 !important; }
+      .docs-page-root .text-primary { color: #2667E8 !important; }
+      .docs-page-root .text-white { color: white !important; }
+      .docs-page-root .text-success { color: #30A46C !important; }
+      .docs-page-root .text-warning { color: #FFB224 !important; }
+      .docs-page-root .text-danger { color: #E5484D !important; }
+      .docs-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="space-y-6 docs-page-root">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center">
@@ -646,5 +659,6 @@ export default function DocsPage() {
         />
       )}
     </div>
+    </>
   );
 }

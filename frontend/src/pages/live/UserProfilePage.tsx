@@ -284,7 +284,20 @@ export default function UserProfilePage() {
       };
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-4 xl:px-2">
+    <>
+    <style>{`
+      .user-profile-page-root { color: #0F1B2D !important; }
+      .user-profile-page-root *, .user-profile-page-root *::before, .user-profile-page-root *::after { color: #0F1B2D !important; }
+      .user-profile-page-root .text-ink { color: #0F1B2D !important; }
+      .user-profile-page-root .text-muted { color: #8C96A4 !important; }
+      .user-profile-page-root .text-primary { color: #2667E8 !important; }
+      .user-profile-page-root .text-white { color: white !important; }
+      .user-profile-page-root .text-success { color: #30A46C !important; }
+      .user-profile-page-root .text-warning { color: #FFB224 !important; }
+      .user-profile-page-root .text-danger { color: #E5484D !important; }
+      .user-profile-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="mx-auto max-w-6xl space-y-6 px-4 py-4 xl:px-2 user-profile-page-root">
       <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_18px_60px_-28px_rgba(15,23,42,0.35)]">
         <div className="relative overflow-hidden border-b border-zinc-200 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_34%),linear-gradient(135deg,_#f8fafc_0%,_#fff7ed_52%,_#ffffff_100%)] px-6 py-6 sm:px-8">
           <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-amber-200/30 blur-3xl" />
@@ -559,6 +572,7 @@ export default function UserProfilePage() {
         }}
       />
     </div>
+    </>
   );
 }
 export { UserProfilePage };

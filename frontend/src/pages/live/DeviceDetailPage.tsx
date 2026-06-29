@@ -958,7 +958,20 @@ export default function DeviceDetailPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 xl:px-6">
+    <>
+    <style>{`
+      .device-detail-page-root { color: #0F1B2D !important; }
+      .device-detail-page-root *, .device-detail-page-root *::before, .device-detail-page-root *::after { color: #0F1B2D !important; }
+      .device-detail-page-root .text-ink { color: #0F1B2D !important; }
+      .device-detail-page-root .text-muted { color: #8C96A4 !important; }
+      .device-detail-page-root .text-primary { color: #2667E8 !important; }
+      .device-detail-page-root .text-white { color: white !important; }
+      .device-detail-page-root .text-success { color: #30A46C !important; }
+      .device-detail-page-root .text-warning { color: #FFB224 !important; }
+      .device-detail-page-root .text-danger { color: #E5484D !important; }
+      .device-detail-page-root .bg-white { background-color: white !important; }
+    `}</style>
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 xl:px-6 device-detail-page-root">
       {isAuditor ? <div className="rounded-2xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-medium text-sky-900 shadow-sm">Auditor access is read-only. Operational actions are hidden, but device context, OpenSCAP findings, ClamScan findings, and related alert details remain visible for verification.</div> : null}
 
       <DeviceDetailOverview
@@ -1156,5 +1169,6 @@ export default function DeviceDetailPage() {
         }}
       />
     </div>
+    </>
   );
 }
