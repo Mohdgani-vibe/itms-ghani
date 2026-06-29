@@ -79,6 +79,7 @@ function formatRequestStatus(status: string) {
 const portalNavItems = {
   admin: [
     { name: 'Users', path: '/users' },
+    { name: 'Users Modern', path: '/users-modern' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
@@ -88,6 +89,7 @@ const portalNavItems = {
   ],
   it: [
     { name: 'Users', path: '/users' },
+    { name: 'Users Modern', path: '/users-modern' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
@@ -97,6 +99,7 @@ const portalNavItems = {
   ],
   audit: [
     { name: 'Users', path: '/users' },
+    { name: 'Users Modern', path: '/users-modern' },
     { name: 'Patch', path: '/patch' },
     { name: 'Inventory', path: '/inventory' },
     { name: 'Alerts', path: '/alerts' },
