@@ -162,7 +162,7 @@ export default function UsersPageModern() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '180px minmax(0, 1fr)', 
-          gap: '16px',
+          gap: '12px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
@@ -170,7 +170,7 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '14px',
+            padding: '12px',
             position: 'sticky',
             top: '76px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
@@ -180,14 +180,14 @@ export default function UsersPageModern() {
               fontWeight: '700', 
               color: '#8C96A4',
               letterSpacing: '0.05em',
-              marginBottom: '4px'
+              marginBottom: '2px'
             }}>
               DEPARTMENTS
             </div>
             <p style={{ 
               fontSize: '11px', 
               color: '#9AA4B2', 
-              margin: '0 0 6px 0' 
+              margin: '0 0 4px 0' 
             }}>
               Filter users by department
             </p>
