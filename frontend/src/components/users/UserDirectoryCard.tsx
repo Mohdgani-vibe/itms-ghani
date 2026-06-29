@@ -1,4 +1,4 @@
-import { ChevronRight, Mail } from 'lucide-react';
+import { ChevronRight, Mail, MapPin, Building2, Shield, Package, User } from 'lucide-react';
 
 interface UserDirectoryCardRecord {
   id: string;
@@ -46,6 +46,13 @@ export default function UserDirectoryCard({
   onManageAccess,
   onToggleStatus,
 }: UserDirectoryCardProps) {
+  const initials = user.fullName
+    .split(' ')
+    .map(n => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+
   return <div
     role="button"
     tabIndex={0}
@@ -56,120 +63,171 @@ export default function UserDirectoryCard({
         onSelect();
       }
     }}
-    className={`cursor-pointer rounded-2xl border p-4 shadow-sm transition-colors ${active ? 'border-emerald-300 bg-emerald-100/70' : 'border-zinc-200 bg-white hover:border-emerald-200 hover:bg-emerald-50/40'}`}
+    className={`group cursor-pointer rounded-xl border bg-white shadow-sm transition-all hover:shadow-md ${
+      active 
+        ? 'border-primary ring-2 ring-primary/20' 
+        : 'border-zinc-200 hover:border-zinc-300'
+    }`}
   >
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex min-w-0 items-start gap-3">
-        {isSuperAdmin ? (
-          <input
-            type="checkbox"
-            checked={selectedForBulk}
-            disabled={isCurrentSessionUser}
-            onChange={(event) => onToggleBulkSelection(event.target.checked)}
-            onClick={(event) => event.stopPropagation()}
-            className="mt-1 h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
-          />
-        ) : null}
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-left text-lg font-bold text-zinc-900 hover:text-brand-700">
-              {user.fullName}
+    <div className="p-5">
+      {/* Header with avatar and status */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          {isSuperAdmin && (
+            <input
+              type="checkbox"
+              checked={selectedForBulk}
+              disabled={isCurrentSessionUser}
+              onChange={(event) => onToggleBulkSelection(event.target.checked)}
+              onClick={(event) => event.stopPropagation()}
+              className="mt-3 h-4 w-4 rounded border-zinc-300 text-primary focus:ring-primary"
+            />
+          )}
+          
+          {/* Avatar */}
+          <div className="flex-shrink-0">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+              {initials}
             </div>
-            <span className={`inline-flex h-2.5 w-2.5 rounded-full ${user.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
           </div>
-          <div className="mt-1 text-xs font-semibold uppercase tracking-wider text-zinc-500">{user.employeeCode}</div>
-          <div className="mt-2 flex items-center text-sm text-brand-700 hover:text-brand-800">
-            <Mail className="mr-2 h-4 w-4" />
-            {user.email}
+
+          {/* User info */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-lg font-bold text-ink truncate">
+                {user.fullName}
+              </h3>
+              <span className={`inline-flex h-2 w-2 rounded-full ${
+                user.status === 'active' ? 'bg-green-500' : 'bg-red-500'
+              }`} />
+            </div>
+            
+            <div className="mt-1 text-xs font-medium text-muted uppercase tracking-wider">
+              {user.employeeCode}
+            </div>
+            
+            <div className="mt-2 flex items-center gap-1.5 text-sm text-muted">
+              <Mail className="h-3.5 w-3.5" />
+              <span className="truncate">{user.email}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Assets count badge */}
+        <div className="flex-shrink-0 text-center">
+          <div className="w-14 h-14 rounded-lg bg-zinc-50 flex flex-col items-center justify-center">
+            <Package className="h-5 w-5 text-primary mb-1" />
+            <span className="text-lg font-bold text-ink">{user._count?.assets || 0}</span>
+          </div>
+          <div className="mt-1 text-[10px] font-medium text-muted uppercase">Assets</div>
+        </div>
+      </div>
+
+      {/* Info Grid */}
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="rounded-lg bg-zinc-50 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Building2 className="h-3.5 w-3.5 text-muted" />
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted">Department</div>
+          </div>
+          <div className="text-sm font-semibold text-ink truncate">
+            {user.department?.name || 'Unassigned'}
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-zinc-50 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <MapPin className="h-3.5 w-3.5 text-muted" />
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted">Location</div>
+          </div>
+          <div className="text-sm font-semibold text-ink truncate">
+            {user.branch?.name || 'Unassigned'}
+          </div>
+        </div>
+
+        <div className="rounded-lg bg-zinc-50 p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="h-3.5 w-3.5 text-muted" />
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted">Access</div>
+          </div>
+          <div className="text-sm font-semibold text-ink truncate">
+            {accessSummary}
           </div>
         </div>
       </div>
-      <div className="text-right">
-        <div className="text-xs font-bold uppercase tracking-wider text-zinc-500">Assets</div>
-        <div className="mt-2 text-xl font-bold text-zinc-900">{user._count?.assets || 0}</div>
-      </div>
+
+      {/* Portal badges */}
+      {portalLabels.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          {portalLabels.map((portal) => (
+            <span 
+              key={portal} 
+              className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary border border-primary/20"
+            >
+              {portal}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Action buttons for superadmin */}
+      {isSuperAdmin && (
+        <div className="mt-4 pt-4 border-t border-zinc-100 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onQuickEdit();
+            }}
+            className="flex-1 min-w-[120px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-zinc-50 transition-colors"
+          >
+            Quick Edit
+          </button>
+          
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onManageAccess();
+            }}
+            className="flex-1 min-w-[120px] rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-semibold text-ink hover:bg-zinc-50 transition-colors"
+          >
+            Manage Access
+          </button>
+          
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleStatus();
+            }}
+            disabled={userActionLoading || isCurrentSessionUser}
+            className={`flex-1 min-w-[120px] rounded-lg px-3 py-2 text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+              user.status === 'active'
+                ? 'border border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                : 'border border-green-200 bg-green-50 text-green-700 hover:bg-green-100'
+            }`}
+          >
+            {userActionLoading ? 'Updating...' : user.status === 'active' ? 'Deactivate' : 'Reactivate'}
+          </button>
+        </div>
+      )}
     </div>
 
-    <div className="mt-4 grid gap-3 md:grid-cols-3">
-      <div className="rounded-xl bg-zinc-50 px-3 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Department</div>
-        <div className="mt-2 text-sm font-semibold text-zinc-900">{user.department?.name || 'Unassigned'}</div>
-      </div>
-      <div className="rounded-xl bg-zinc-50 px-3 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Location</div>
-        <div className="mt-2 text-sm font-semibold text-zinc-900">{user.branch?.name || 'Unassigned'}</div>
-      </div>
-      <div className="rounded-xl bg-zinc-50 px-3 py-3">
-        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Access</div>
-        <div className="mt-2 text-sm font-semibold text-zinc-900">{accessSummary}</div>
-      </div>
-    </div>
-
-    <div className="mt-4 flex items-center justify-between">
-      <div className="flex flex-wrap gap-2">
-        {portalLabels.map((portal) => (
-          <span key={portal} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-zinc-700 ring-1 ring-zinc-200">
-            {portal}
-          </span>
-        ))}
-      </div>
+    {/* View Profile button - always at bottom */}
+    <div className="border-t border-zinc-100 px-5 py-3 bg-zinc-50/50 rounded-b-xl">
       <button
         type="button"
         onClick={(event) => {
           event.stopPropagation();
           onOpenProfile();
         }}
-        className="inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-800"
+        className="w-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-primary hover:text-blue-700 transition-colors"
       >
-        Open profile
-        <ChevronRight className="ml-1 h-4 w-4" />
+        <User className="h-4 w-4" />
+        View Full Profile
+        <ChevronRight className="h-4 w-4" />
       </button>
     </div>
-
-    {isSuperAdmin ? (
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onQuickEdit();
-          }}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50"
-        >
-          Quick Edit
-        </button>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onResetPassword();
-          }}
-          className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100"
-        >
-          Reset Password
-        </button>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onManageAccess();
-          }}
-          className="rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs font-bold text-zinc-700 hover:bg-zinc-50"
-        >
-          Manage Access
-        </button>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onToggleStatus();
-          }}
-          disabled={userActionLoading || isCurrentSessionUser}
-          className={`rounded-lg px-3 py-2 text-xs font-bold disabled:opacity-60 ${user.status === 'active' ? 'border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100' : 'border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100'}`}
-        >
-          {userActionLoading ? 'Updating...' : user.status === 'active' ? 'Deactivate User' : 'Reactivate User'}
-        </button>
-      </div>
-    ) : null}
   </div>;
 }
