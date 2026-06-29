@@ -121,9 +121,8 @@ export default function DashboardPageNew() {
     <>
       {/* Force light mode colors - override dark mode CSS */}
       <style>{`
-        .dashboard-page-root * {
-          color: inherit !important;
-        }
+        .dashboard-page-root { color: #0F1B2D !important; }
+        .dashboard-page-root *, .dashboard-page-root *::before, .dashboard-page-root *::after { color: #0F1B2D !important; }
         .dashboard-page-root .text-ink {
           color: #0F1B2D !important;
         }
