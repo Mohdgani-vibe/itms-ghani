@@ -142,15 +142,10 @@ function App() {
           <Route path="/terminal/:minionId" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><TerminalConsole /></RequireRoles></RequireAuth>} />
           <Route path="/ssh/assets/:id" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><SshTerminalPage /></RequireRoles></RequireAuth>} />
 
-          {/* Standalone New Dashboard Routes (no PortalLayout wrapper) */}
-          <Route path="/admin/dashboard" element={<RequireAuth><DashboardPageNew /></RequireAuth>} />
-          <Route path="/it/dashboard" element={<RequireAuth><DashboardPageNew /></RequireAuth>} />
-          <Route path="/audit/dashboard" element={<RequireAuth><DashboardPageNew /></RequireAuth>} />
-          <Route path="/emp/dashboard" element={<RequireAuth><DashboardPageNew /></RequireAuth>} />
-
-          {/* Admin Portal with PortalLayout (for other pages) */}
+          {/* Admin Portal with PortalLayout */}
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -169,9 +164,10 @@ function App() {
             <Route path="patch/devices" element={<PatchList />} />
           </Route>
 
-          {/* IT Portal with PortalLayout (for other pages) */}
+          {/* IT Portal with PortalLayout */}
           <Route path="/it" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -190,9 +186,10 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          {/* Audit Portal with PortalLayout (for other pages) */}
+          {/* Audit Portal with PortalLayout */}
           <Route path="/audit" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -211,9 +208,10 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
           </Route>
 
-          {/* Employee Portal with PortalLayout (for other pages) */}
+          {/* Employee Portal with PortalLayout */}
           <Route path="/emp" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="profile" element={<UserProfilePage />} />
             <Route path="assets" element={<MyAssetsPage />} />
             <Route path="alerts" element={<Alerts />} />

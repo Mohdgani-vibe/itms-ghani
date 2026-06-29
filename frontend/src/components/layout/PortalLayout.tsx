@@ -58,6 +58,12 @@ export default function PortalLayout() {
   const sessionRole = session?.user.role || '';
 
   useEffect(() => {
+    // Force disable dark mode
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }, []);
+
+  useEffect(() => {
     if (!sessionRole) {
       return;
     }
@@ -81,11 +87,34 @@ export default function PortalLayout() {
   }, [location.pathname, session, sessionRole]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900 transition-colors dark:bg-zinc-950 dark:text-zinc-100 flex flex-col">
-      <TopNav />
-      <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8">
-         <Outlet />
-      </main>
-    </div>
+    <>
+      <style>{`
+        /* Force light mode - double class for higher specificity (0,2,1) */
+        .portal-layout-root.portal-layout-root,
+        .portal-layout-root.portal-layout-root div,
+        .portal-layout-root.portal-layout-root span,
+        .portal-layout-root.portal-layout-root p,
+        .portal-layout-root.portal-layout-root h1,
+        .portal-layout-root.portal-layout-root h2,
+        .portal-layout-root.portal-layout-root h3,
+        .portal-layout-root.portal-layout-root button,
+        .portal-layout-root.portal-layout-root a,
+        .portal-layout-root.portal-layout-root label,
+        .portal-layout-root.portal-layout-root input,
+        .portal-layout-root.portal-layout-root select,
+        .portal-layout-root.portal-layout-root textarea,
+        .portal-layout-root.portal-layout-root td,
+        .portal-layout-root.portal-layout-root th,
+        .portal-layout-root.portal-layout-root li {
+          color: #0F1B2D !important;
+        }
+      `}</style>
+      <div className="min-h-screen portal-layout-root flex flex-col" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
+        <TopNav />
+        <main className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8">
+           <Outlet />
+        </main>
+      </div>
+    </>
   );
 }
