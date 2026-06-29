@@ -786,15 +786,15 @@ export default function InventoryPage() {
       .inventory-page-root .text-danger { color: #E5484D !important; }
       .inventory-page-root .bg-white { background-color: white !important; }
     `}</style>
-    <div className="space-y-6 pb-10 inventory-page-root">
-      <section className="overflow-hidden rounded-[28px] border border-sky-100 bg-white text-sky-950 shadow-sm shadow-sky-100/70">
-        <div className="bg-[radial-gradient(circle_at_top_right,_rgba(125,211,252,0.22),_transparent_32%),radial-gradient(circle_at_left,_rgba(224,242,254,0.9),_transparent_28%),linear-gradient(135deg,_#f4fbff_0%,_#ffffff_58%,_#e0f2fe_100%)] p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-4 pb-8 inventory-page-root">
+      <section className="overflow-hidden rounded-[18px] border border-sky-100 bg-white text-sky-950 shadow-sm shadow-sky-100/70">
+        <div className="bg-[radial-gradient(circle_at_top_right,_rgba(125,211,252,0.22),_transparent_32%),radial-gradient(circle_at_left,_rgba(224,242,254,0.9),_transparent_28%),linear-gradient(135deg,_#f4fbff_0%,_#ffffff_58%,_#e0f2fe_100%)] p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Inventory Management</div>
-            <h1 className="mt-2 text-3xl font-bold text-sky-950">Inventory and asset control by branch</h1>
-            <p className="mt-2 max-w-3xl text-sm text-sky-800">Manage assets, stock movement, catalog definitions, suppliers, branches, imports, audit history, and direct user assignment from one workspace.</p>
-            <div className="mt-4 inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">
+            <h1 className="mt-1 text-2xl font-bold text-sky-950">Inventory and asset control by branch</h1>
+            <p className="mt-1.5 max-w-3xl text-sm text-sky-800">Manage assets, stock movement, catalog definitions, suppliers, branches, imports, audit history, and direct user assignment from one workspace.</p>
+            <div className="mt-3 inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">
               <Mail className="mr-2 h-3.5 w-3.5" />
               New assets can be assigned to a user by employee email, name, or employee ID.
             </div>
@@ -907,7 +907,7 @@ export default function InventoryPage() {
           </aside>
 
           <section className="space-y-4">
-            <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="rounded-[18px] border border-zinc-200 bg-white p-4 shadow-sm">
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]">
                 <label className="relative block">
                   <Search className="pointer-events-none absolute left-3 top-3.5 h-4 w-4 text-zinc-400" />
@@ -929,8 +929,8 @@ export default function InventoryPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
+            <div className="rounded-[18px] border border-zinc-200 bg-white shadow-sm">
+              <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3">
                 <div>
                   <div className="text-lg font-bold text-zinc-950">Asset register</div>
                   <div className="text-sm text-zinc-500">Tracked assets, branch stock, assignment and purchase details.</div>
