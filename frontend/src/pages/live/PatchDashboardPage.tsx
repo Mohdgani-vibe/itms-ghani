@@ -1194,7 +1194,8 @@ export default function PatchDashboardPage() {
   return (
     <>
     <style>{`
-      .patch-dashboard-root * { color: inherit !important; }
+      .patch-dashboard-root { color: #0F1B2D !important; }
+      .patch-dashboard-root *, .patch-dashboard-root *::before, .patch-dashboard-root *::after { color: #0F1B2D !important; }
       .patch-dashboard-root .text-ink { color: #0F1B2D !important; }
       .patch-dashboard-root .text-muted { color: #8C96A4 !important; }
       .patch-dashboard-root .text-primary { color: #2667E8 !important; }

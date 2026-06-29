@@ -146,7 +146,8 @@ export default function Announcements() {
    return (
       <>
       <style>{`
-         .announcements-page-root * { color: inherit !important; }
+         .announcements-page-root { color: #0F1B2D !important; }
+         .announcements-page-root *, .announcements-page-root *::before, .announcements-page-root *::after { color: #0F1B2D !important; }
          .announcements-page-root .text-ink { color: #0F1B2D !important; }
          .announcements-page-root .text-muted { color: #8C96A4 !important; }
          .announcements-page-root .text-primary { color: #2667E8 !important; }

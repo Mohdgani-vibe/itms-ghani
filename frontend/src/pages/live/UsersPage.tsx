@@ -980,7 +980,8 @@ export default function UsersPage() {
   return (
     <>
     <style>{`
-      .users-page-root * { color: inherit !important; }
+      .users-page-root { color: #0F1B2D !important; }
+      .users-page-root *, .users-page-root *::before, .users-page-root *::after { color: #0F1B2D !important; }
       .users-page-root .text-ink { color: #0F1B2D !important; }
       .users-page-root .text-muted { color: #8C96A4 !important; }
       .users-page-root .text-primary { color: #2667E8 !important; }

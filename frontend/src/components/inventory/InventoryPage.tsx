@@ -760,7 +760,8 @@ export default function InventoryPage() {
   return (
     <>
     <style>{`
-      .inventory-page-root * { color: inherit !important; }
+      .inventory-page-root { color: #0F1B2D !important; }
+      .inventory-page-root *, .inventory-page-root *::before, .inventory-page-root *::after { color: #0F1B2D !important; }
       .inventory-page-root .text-ink { color: #0F1B2D !important; }
       .inventory-page-root .text-muted { color: #8C96A4 !important; }
       .inventory-page-root .text-primary { color: #2667E8 !important; }

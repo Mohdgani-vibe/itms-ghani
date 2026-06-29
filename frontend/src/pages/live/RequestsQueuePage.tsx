@@ -783,7 +783,8 @@ export default function RequestsQueuePage() {
   return (
     <>
     <style>{`
-      .requests-queue-root * { color: inherit !important; }
+      .requests-queue-root { color: #0F1B2D !important; }
+      .requests-queue-root *, .requests-queue-root *::before, .requests-queue-root *::after { color: #0F1B2D !important; }
       .requests-queue-root .text-ink { color: #0F1B2D !important; }
       .requests-queue-root .text-muted { color: #8C96A4 !important; }
       .requests-queue-root .text-primary { color: #2667E8 !important; }

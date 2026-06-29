@@ -1112,7 +1112,8 @@ export default function Gatepass() {
   return (
     <>
     <style>{`
-      .gatepass-page-root * { color: inherit !important; }
+      .gatepass-page-root { color: #0F1B2D !important; }
+      .gatepass-page-root *, .gatepass-page-root *::before, .gatepass-page-root *::after { color: #0F1B2D !important; }
       .gatepass-page-root .text-ink { color: #0F1B2D !important; }
       .gatepass-page-root .text-muted { color: #8C96A4 !important; }
       .gatepass-page-root .text-primary { color: #2667E8 !important; }

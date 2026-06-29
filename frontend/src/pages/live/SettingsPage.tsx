@@ -547,7 +547,8 @@ export default function SettingsPage() {
   return (
     <>
     <style>{`
-      .settings-page-root * { color: inherit !important; }
+      .settings-page-root { color: #0F1B2D !important; }
+      .settings-page-root *, .settings-page-root *::before, .settings-page-root *::after { color: #0F1B2D !important; }
       .settings-page-root .text-ink { color: #0F1B2D !important; }
       .settings-page-root .text-muted { color: #8C96A4 !important; }
       .settings-page-root .text-primary { color: #2667E8 !important; }
