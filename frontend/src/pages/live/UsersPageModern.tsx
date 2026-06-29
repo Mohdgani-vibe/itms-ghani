@@ -85,9 +85,9 @@ export default function UsersPageModern() {
   const currentUser = selectedUser ? users.find(u => u.id === selectedUser) : null;
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#EEF2F7', minHeight: '100vh' }}>
+    <div style={{ fontFamily: 'Inter, sans-serif', backgroundColor: '#F1F4F9', minHeight: 'calc(100vh - 56px)', padding: '24px 32px' }}>
       {/* Page Content */}
-      <div style={{ padding: '32px 24px', maxWidth: '1600px', margin: '0 auto' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto', width: '100%' }}>
         {/* Page Header */}
         <div style={{ 
           display: 'flex', 

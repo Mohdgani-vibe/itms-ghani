@@ -119,7 +119,7 @@ export default function PortalLayout() {
       <div className="min-h-screen portal-layout-root flex flex-col" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
         <TopNavNew />
         <Sidebar />
-        <main className={`flex-1 flex flex-col px-4 sm:px-6 lg:px-8 ${isDashboard ? '' : 'ml-16'}`}>
+        <main className={`flex-1 ${isDashboard ? '' : 'ml-16'}`}>
            <Outlet />
         </main>
       </div>
