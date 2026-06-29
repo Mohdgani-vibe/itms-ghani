@@ -123,7 +123,7 @@ export default function TopNavNew() {
         
         {/* Logo */}
         <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-2">
-          <img src="/itms-logo-new.svg" alt="ITMS" className="h-7" />
+          <img src="/itms-logo-new.svg" alt="ITMS" className="h-9" />
         </Link>
 
         {/* Page-Specific Tabs */}
