@@ -8,7 +8,6 @@ import { validateStoredSession } from './lib/api';
 const Login = lazy(() => import('./pages/Login'));
 const LoginNew = lazy(() => import('./pages/LoginNew'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
-const DashboardPage = lazy(() => import('./pages/live/DashboardPage'));
 const DashboardPageNew = lazy(() => import('./pages/live/DashboardPageNew'));
 const UsersPage = lazy(() => import('./pages/live/UsersPage'));
 const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
@@ -152,7 +151,6 @@ function App() {
           {/* Admin Portal with PortalLayout (for other pages) */}
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -174,7 +172,6 @@ function App() {
           {/* IT Portal with PortalLayout (for other pages) */}
           <Route path="/it" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -196,7 +193,6 @@ function App() {
           {/* Audit Portal with PortalLayout (for other pages) */}
           <Route path="/audit" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
@@ -219,7 +215,6 @@ function App() {
           <Route path="/emp" element={<RequireAuth><PortalLayout /></RequireAuth>}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="profile" element={<UserProfilePage />} />
-            <Route path="dashboard/old" element={<DashboardPage />} />
             <Route path="assets" element={<MyAssetsPage />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="requests" element={<MyRequestsPage />} />

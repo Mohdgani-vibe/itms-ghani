@@ -887,6 +887,12 @@ export default function UsersPage() {
   }, [auditSummary.moduleCounts]);
 
   useEffect(() => {
+    // Force disable dark mode
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+  }, []);
+
+  useEffect(() => {
     setAuditPage(1);
   }, [auditActionFilter, auditModuleFilter, auditSearchQuery]);
 
@@ -980,21 +986,22 @@ export default function UsersPage() {
   return (
     <>
     <style>{`
-      .users-page-root,
-      .users-page-root div,
-      .users-page-root span,
-      .users-page-root p,
-      .users-page-root h1,
-      .users-page-root h2,
-      .users-page-root h3,
-      .users-page-root button,
-      .users-page-root a,
-      .users-page-root label,
-      .users-page-root input,
-      .users-page-root select,
-      .users-page-root td,
-      .users-page-root th,
-      .users-page-root li {
+      /* Double class for higher specificity (0,2,1) to beat .dark div (0,1,1) */
+      .users-page-root.users-page-root,
+      .users-page-root.users-page-root div,
+      .users-page-root.users-page-root span,
+      .users-page-root.users-page-root p,
+      .users-page-root.users-page-root h1,
+      .users-page-root.users-page-root h2,
+      .users-page-root.users-page-root h3,
+      .users-page-root.users-page-root button,
+      .users-page-root.users-page-root a,
+      .users-page-root.users-page-root label,
+      .users-page-root.users-page-root input,
+      .users-page-root.users-page-root select,
+      .users-page-root.users-page-root td,
+      .users-page-root.users-page-root th,
+      .users-page-root.users-page-root li {
         color: #0F1B2D !important;
       }
       .users-page-root .text-ink { color: #0F1B2D !important; }
