@@ -119,23 +119,23 @@ export default function TopNavNew() {
 
   return (
     <header className="bg-white border-b border-zinc-200 sticky top-0 z-40 shadow-sm">
-      <div className="flex h-14 items-center justify-between gap-3 px-4 xl:px-6">
+      <div className="flex h-14 items-center justify-between gap-1.5 px-4 xl:px-6">
         
         {/* Logo */}
         <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-2">
-          <img src="/itms-logo-new.svg" alt="ITMS" className="h-9" />
+          <img src="/itms-logo-new.svg" alt="ITMS" className="h-12" />
         </Link>
 
         {/* Page-Specific Tabs */}
         {pageTabs.length > 0 && (
-          <nav className="flex gap-2 flex-1 overflow-x-auto ml-6">
+          <nav className="flex gap-1 flex-1 overflow-x-auto ml-4">
             {pageTabs.map((tab, index) => {
               const IconComponent = tabIcons[tab.name];
               return (
                 <button
                   key={tab.name}
                   onClick={() => navigate(`${basePath}/${currentPage}${tab.path}`)}
-                  className={`px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
+                  className={`px-3 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                     index === (activeTabIndex >= 0 ? activeTabIndex : 0)
                       ? 'bg-[#EAF1FE] text-[#1B4FD1]'
                       : 'bg-transparent text-[#46505F] hover:bg-zinc-100'
@@ -155,7 +155,7 @@ export default function TopNavNew() {
         )}
 
         {/* Right Actions */}
-        <div className="ml-3 flex flex-shrink-0 items-center gap-3">
+        <div className="ml-2 flex flex-shrink-0 items-center gap-1.5">
           <button className="p-2 rounded-md text-[#8C96A4] hover:bg-zinc-100 transition-colors">
             <Search className="h-5 w-5" />
           </button>

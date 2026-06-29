@@ -95,7 +95,7 @@ export default function UsersPageModern() {
       <div style={{ 
         maxWidth: '1600px', 
         margin: '0 auto', 
-        padding: '20px 24px',
+        padding: '16px 20px',
         width: '100%'
       }}>
         {/* Page Header */}
@@ -103,7 +103,7 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '12px'
+          marginBottom: '8px'
         }}>
           <div>
             <h1 style={{ 
@@ -162,7 +162,7 @@ export default function UsersPageModern() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '180px minmax(0, 1fr)', 
-          gap: '12px',
+          gap: '8px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
@@ -170,7 +170,7 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '12px',
+            padding: '10px',
             position: 'sticky',
             top: '76px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
@@ -230,11 +230,11 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '12px',
+            padding: '10px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             {/* Filter Bar */}
-            <div style={{ marginBottom: '10px' }}>
+            <div style={{ marginBottom: '6px' }}>
               <div style={{ position: 'relative', marginBottom: '6px' }}>
                 <Search 
                   size={16} 
