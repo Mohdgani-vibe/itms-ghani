@@ -161,8 +161,8 @@ export default function UsersPageModern() {
         {/* Two Column Layout */}
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: '180px minmax(0, 1fr)', 
-          gap: '8px',
+          gridTemplateColumns: '220px minmax(0, 1fr)', 
+          gap: '0px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
@@ -170,13 +170,13 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '10px',
+            padding: '14px',
             position: 'sticky',
             top: '76px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             <div style={{ 
-              fontSize: '10px', 
+              fontSize: '11px', 
               fontWeight: '700', 
               color: '#8C96A4',
               letterSpacing: '0.05em',
@@ -185,9 +185,9 @@ export default function UsersPageModern() {
               DEPARTMENTS
             </div>
             <p style={{ 
-              fontSize: '11px', 
+              fontSize: '12px', 
               color: '#9AA4B2', 
-              margin: '0 0 4px 0' 
+              margin: '0 0 6px 0' 
             }}>
               Filter users by department
             </p>
@@ -197,12 +197,12 @@ export default function UsersPageModern() {
                   key={dept.name}
                   onClick={() => setSelectedDept(dept.name)}
                   style={{
-                    padding: '6px 12px',
-                    borderRadius: '4px',
+                    padding: '8px 12px',
+                    borderRadius: '6px',
                     border: 'none',
                     background: selectedDept === dept.name ? '#2667E8' : 'transparent',
                     color: selectedDept === dept.name ? '#fff' : '#46505F',
-                    fontSize: '13px',
+                    fontSize: '14px',
                     fontWeight: selectedDept === dept.name ? '600' : '500',
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -214,7 +214,7 @@ export default function UsersPageModern() {
                 >
                   <span>{dept.name}</span>
                   <span style={{ 
-                    fontSize: '11px', 
+                    fontSize: '12px', 
                     fontWeight: '600',
                     opacity: selectedDept === dept.name ? 0.9 : 0.5
                   }}>
