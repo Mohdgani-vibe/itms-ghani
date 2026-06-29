@@ -10,6 +10,7 @@ const LoginNew = lazy(() => import('./pages/LoginNew'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPageNew = lazy(() => import('./pages/live/DashboardPageNew'));
 const UsersPage = lazy(() => import('./pages/live/UsersPage'));
+const UsersPageModern = lazy(() => import('./pages/live/UsersPageModern'));
 const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
 const DeviceDetailPage = lazy(() => import('./pages/live/DeviceDetailPage'));
@@ -147,6 +148,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="users-modern" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
@@ -169,6 +171,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="users-modern" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
@@ -191,6 +194,7 @@ function App() {
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DashboardPageNew />} />
             <Route path="users" element={<UsersPage />} />
+            <Route path="users-modern" element={<UsersPageModern />} />
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
