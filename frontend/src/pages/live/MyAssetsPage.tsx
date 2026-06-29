@@ -90,8 +90,23 @@ export default function MyAssetsPage() {
   return (
     <>
     <style>{`
-      .my-assets-page-root { color: #0F1B2D !important; }
-      .my-assets-page-root *, .my-assets-page-root *::before, .my-assets-page-root *::after { color: #0F1B2D !important; }
+      .my-assets-page-root,
+      .my-assets-page-root div,
+      .my-assets-page-root span,
+      .my-assets-page-root p,
+      .my-assets-page-root h1,
+      .my-assets-page-root h2,
+      .my-assets-page-root h3,
+      .my-assets-page-root button,
+      .my-assets-page-root a,
+      .my-assets-page-root label,
+      .my-assets-page-root input,
+      .my-assets-page-root select,
+      .my-assets-page-root td,
+      .my-assets-page-root th,
+      .my-assets-page-root li {
+        color: #0F1B2D !important;
+      }
       .my-assets-page-root .text-ink { color: #0F1B2D !important; }
       .my-assets-page-root .text-muted { color: #8C96A4 !important; }
       .my-assets-page-root .text-primary { color: #2667E8 !important; }

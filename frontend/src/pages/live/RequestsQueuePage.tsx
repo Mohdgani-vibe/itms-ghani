@@ -783,8 +783,23 @@ export default function RequestsQueuePage() {
   return (
     <>
     <style>{`
-      .requests-queue-root { color: #0F1B2D !important; }
-      .requests-queue-root *, .requests-queue-root *::before, .requests-queue-root *::after { color: #0F1B2D !important; }
+      .requests-queue-root,
+      .requests-queue-root div,
+      .requests-queue-root span,
+      .requests-queue-root p,
+      .requests-queue-root h1,
+      .requests-queue-root h2,
+      .requests-queue-root h3,
+      .requests-queue-root button,
+      .requests-queue-root a,
+      .requests-queue-root label,
+      .requests-queue-root input,
+      .requests-queue-root select,
+      .requests-queue-root td,
+      .requests-queue-root th,
+      .requests-queue-root li {
+        color: #0F1B2D !important;
+      }
       .requests-queue-root .text-ink { color: #0F1B2D !important; }
       .requests-queue-root .text-muted { color: #8C96A4 !important; }
       .requests-queue-root .text-primary { color: #2667E8 !important; }

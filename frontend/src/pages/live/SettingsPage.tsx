@@ -547,8 +547,23 @@ export default function SettingsPage() {
   return (
     <>
     <style>{`
-      .settings-page-root { color: #0F1B2D !important; }
-      .settings-page-root *, .settings-page-root *::before, .settings-page-root *::after { color: #0F1B2D !important; }
+      .settings-page-root,
+      .settings-page-root div,
+      .settings-page-root span,
+      .settings-page-root p,
+      .settings-page-root h1,
+      .settings-page-root h2,
+      .settings-page-root h3,
+      .settings-page-root button,
+      .settings-page-root a,
+      .settings-page-root label,
+      .settings-page-root input,
+      .settings-page-root select,
+      .settings-page-root td,
+      .settings-page-root th,
+      .settings-page-root li {
+        color: #0F1B2D !important;
+      }
       .settings-page-root .text-ink { color: #0F1B2D !important; }
       .settings-page-root .text-muted { color: #8C96A4 !important; }
       .settings-page-root .text-primary { color: #2667E8 !important; }

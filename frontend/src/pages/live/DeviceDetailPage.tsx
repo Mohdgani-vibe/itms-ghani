@@ -960,8 +960,23 @@ export default function DeviceDetailPage() {
   return (
     <>
     <style>{`
-      .device-detail-page-root { color: #0F1B2D !important; }
-      .device-detail-page-root *, .device-detail-page-root *::before, .device-detail-page-root *::after { color: #0F1B2D !important; }
+      .device-detail-page-root,
+      .device-detail-page-root div,
+      .device-detail-page-root span,
+      .device-detail-page-root p,
+      .device-detail-page-root h1,
+      .device-detail-page-root h2,
+      .device-detail-page-root h3,
+      .device-detail-page-root button,
+      .device-detail-page-root a,
+      .device-detail-page-root label,
+      .device-detail-page-root input,
+      .device-detail-page-root select,
+      .device-detail-page-root td,
+      .device-detail-page-root th,
+      .device-detail-page-root li {
+        color: #0F1B2D !important;
+      }
       .device-detail-page-root .text-ink { color: #0F1B2D !important; }
       .device-detail-page-root .text-muted { color: #8C96A4 !important; }
       .device-detail-page-root .text-primary { color: #2667E8 !important; }

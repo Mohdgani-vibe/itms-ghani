@@ -1112,8 +1112,23 @@ export default function Gatepass() {
   return (
     <>
     <style>{`
-      .gatepass-page-root { color: #0F1B2D !important; }
-      .gatepass-page-root *, .gatepass-page-root *::before, .gatepass-page-root *::after { color: #0F1B2D !important; }
+      .gatepass-page-root,
+      .gatepass-page-root div,
+      .gatepass-page-root span,
+      .gatepass-page-root p,
+      .gatepass-page-root h1,
+      .gatepass-page-root h2,
+      .gatepass-page-root h3,
+      .gatepass-page-root button,
+      .gatepass-page-root a,
+      .gatepass-page-root label,
+      .gatepass-page-root input,
+      .gatepass-page-root select,
+      .gatepass-page-root td,
+      .gatepass-page-root th,
+      .gatepass-page-root li {
+        color: #0F1B2D !important;
+      }
       .gatepass-page-root .text-ink { color: #0F1B2D !important; }
       .gatepass-page-root .text-muted { color: #8C96A4 !important; }
       .gatepass-page-root .text-primary { color: #2667E8 !important; }

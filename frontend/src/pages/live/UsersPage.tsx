@@ -980,8 +980,23 @@ export default function UsersPage() {
   return (
     <>
     <style>{`
-      .users-page-root { color: #0F1B2D !important; }
-      .users-page-root *, .users-page-root *::before, .users-page-root *::after { color: #0F1B2D !important; }
+      .users-page-root,
+      .users-page-root div,
+      .users-page-root span,
+      .users-page-root p,
+      .users-page-root h1,
+      .users-page-root h2,
+      .users-page-root h3,
+      .users-page-root button,
+      .users-page-root a,
+      .users-page-root label,
+      .users-page-root input,
+      .users-page-root select,
+      .users-page-root td,
+      .users-page-root th,
+      .users-page-root li {
+        color: #0F1B2D !important;
+      }
       .users-page-root .text-ink { color: #0F1B2D !important; }
       .users-page-root .text-muted { color: #8C96A4 !important; }
       .users-page-root .text-primary { color: #2667E8 !important; }

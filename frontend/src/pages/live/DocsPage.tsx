@@ -226,8 +226,23 @@ export default function DocsPage() {
   return (
     <>
     <style>{`
-      .docs-page-root { color: #0F1B2D !important; }
-      .docs-page-root *, .docs-page-root *::before, .docs-page-root *::after { color: #0F1B2D !important; }
+      .docs-page-root,
+      .docs-page-root div,
+      .docs-page-root span,
+      .docs-page-root p,
+      .docs-page-root h1,
+      .docs-page-root h2,
+      .docs-page-root h3,
+      .docs-page-root button,
+      .docs-page-root a,
+      .docs-page-root label,
+      .docs-page-root input,
+      .docs-page-root select,
+      .docs-page-root td,
+      .docs-page-root th,
+      .docs-page-root li {
+        color: #0F1B2D !important;
+      }
       .docs-page-root .text-ink { color: #0F1B2D !important; }
       .docs-page-root .text-muted { color: #8C96A4 !important; }
       .docs-page-root .text-primary { color: #2667E8 !important; }

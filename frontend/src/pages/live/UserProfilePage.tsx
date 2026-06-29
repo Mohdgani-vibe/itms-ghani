@@ -286,8 +286,23 @@ export default function UserProfilePage() {
   return (
     <>
     <style>{`
-      .user-profile-page-root { color: #0F1B2D !important; }
-      .user-profile-page-root *, .user-profile-page-root *::before, .user-profile-page-root *::after { color: #0F1B2D !important; }
+      .user-profile-page-root,
+      .user-profile-page-root div,
+      .user-profile-page-root span,
+      .user-profile-page-root p,
+      .user-profile-page-root h1,
+      .user-profile-page-root h2,
+      .user-profile-page-root h3,
+      .user-profile-page-root button,
+      .user-profile-page-root a,
+      .user-profile-page-root label,
+      .user-profile-page-root input,
+      .user-profile-page-root select,
+      .user-profile-page-root td,
+      .user-profile-page-root th,
+      .user-profile-page-root li {
+        color: #0F1B2D !important;
+      }
       .user-profile-page-root .text-ink { color: #0F1B2D !important; }
       .user-profile-page-root .text-muted { color: #8C96A4 !important; }
       .user-profile-page-root .text-primary { color: #2667E8 !important; }

@@ -101,8 +101,23 @@ export default function MyRequestsPage() {
   return (
     <>
     <style>{`
-      .my-requests-page-root { color: #0F1B2D !important; }
-      .my-requests-page-root *, .my-requests-page-root *::before, .my-requests-page-root *::after { color: #0F1B2D !important; }
+      .my-requests-page-root,
+      .my-requests-page-root div,
+      .my-requests-page-root span,
+      .my-requests-page-root p,
+      .my-requests-page-root h1,
+      .my-requests-page-root h2,
+      .my-requests-page-root h3,
+      .my-requests-page-root button,
+      .my-requests-page-root a,
+      .my-requests-page-root label,
+      .my-requests-page-root input,
+      .my-requests-page-root select,
+      .my-requests-page-root td,
+      .my-requests-page-root th,
+      .my-requests-page-root li {
+        color: #0F1B2D !important;
+      }
       .my-requests-page-root .text-ink { color: #0F1B2D !important; }
       .my-requests-page-root .text-muted { color: #8C96A4 !important; }
       .my-requests-page-root .text-primary { color: #2667E8 !important; }

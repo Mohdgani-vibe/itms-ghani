@@ -146,8 +146,23 @@ export default function Announcements() {
    return (
       <>
       <style>{`
-         .announcements-page-root { color: #0F1B2D !important; }
-         .announcements-page-root *, .announcements-page-root *::before, .announcements-page-root *::after { color: #0F1B2D !important; }
+         .announcements-page-root,
+         .announcements-page-root div,
+         .announcements-page-root span,
+         .announcements-page-root p,
+         .announcements-page-root h1,
+         .announcements-page-root h2,
+         .announcements-page-root h3,
+         .announcements-page-root button,
+         .announcements-page-root a,
+         .announcements-page-root label,
+         .announcements-page-root input,
+         .announcements-page-root select,
+         .announcements-page-root td,
+         .announcements-page-root th,
+         .announcements-page-root li {
+           color: #0F1B2D !important;
+         }
          .announcements-page-root .text-ink { color: #0F1B2D !important; }
          .announcements-page-root .text-muted { color: #8C96A4 !important; }
          .announcements-page-root .text-primary { color: #2667E8 !important; }

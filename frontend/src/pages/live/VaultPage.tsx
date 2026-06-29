@@ -163,8 +163,23 @@ export default function VaultPage() {
   return (
     <>
     <style>{`
-      .vault-page-root { color: #0F1B2D !important; }
-      .vault-page-root *, .vault-page-root *::before, .vault-page-root *::after { color: #0F1B2D !important; }
+      .vault-page-root,
+      .vault-page-root div,
+      .vault-page-root span,
+      .vault-page-root p,
+      .vault-page-root h1,
+      .vault-page-root h2,
+      .vault-page-root h3,
+      .vault-page-root button,
+      .vault-page-root a,
+      .vault-page-root label,
+      .vault-page-root input,
+      .vault-page-root select,
+      .vault-page-root td,
+      .vault-page-root th,
+      .vault-page-root li {
+        color: #0F1B2D !important;
+      }
       .vault-page-root .text-ink { color: #0F1B2D !important; }
       .vault-page-root .text-muted { color: #8C96A4 !important; }
       .vault-page-root .text-primary { color: #2667E8 !important; }

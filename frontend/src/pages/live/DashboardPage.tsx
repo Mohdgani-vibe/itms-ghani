@@ -786,8 +786,23 @@ export default function DashboardPage() {
   return (
     <>
     <style>{`
-      .dashboard-page-old-root { color: #0F1B2D !important; }
-      .dashboard-page-old-root *, .dashboard-page-old-root *::before, .dashboard-page-old-root *::after { color: #0F1B2D !important; }
+      .dashboard-page-old-root,
+      .dashboard-page-old-root div,
+      .dashboard-page-old-root span,
+      .dashboard-page-old-root p,
+      .dashboard-page-old-root h1,
+      .dashboard-page-old-root h2,
+      .dashboard-page-old-root h3,
+      .dashboard-page-old-root button,
+      .dashboard-page-old-root a,
+      .dashboard-page-old-root label,
+      .dashboard-page-old-root input,
+      .dashboard-page-old-root select,
+      .dashboard-page-old-root td,
+      .dashboard-page-old-root th,
+      .dashboard-page-old-root li {
+        color: #0F1B2D !important;
+      }
       .dashboard-page-old-root .text-ink { color: #0F1B2D !important; }
       .dashboard-page-old-root .text-muted { color: #8C96A4 !important; }
       .dashboard-page-old-root .text-primary { color: #2667E8 !important; }

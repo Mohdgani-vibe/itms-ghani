@@ -82,8 +82,19 @@ export default function LoginNew() {
     <>
       {/* Force light mode for login page - override dark mode CSS */}
       <style>{`
-        .login-page-root { color: #0F1B2D !important; }
-        .login-page-root *, .login-page-root *::before, .login-page-root *::after { color: #0F1B2D !important; }
+        .login-page-root,
+        .login-page-root div,
+        .login-page-root span,
+        .login-page-root p,
+        .login-page-root h1,
+        .login-page-root h2,
+        .login-page-root h3,
+        .login-page-root button,
+        .login-page-root a,
+        .login-page-root label,
+        .login-page-root input {
+          color: #0F1B2D !important;
+        }
         .login-page-root .login-text-ink {
           color: #0F1B2D !important;
         }

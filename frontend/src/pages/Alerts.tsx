@@ -948,8 +948,23 @@ export default function Alerts() {
   return (
     <div className={`min-h-screen overflow-hidden px-4 py-8 xl:px-6 alerts-page-root ${darkMode ? 'text-white bg-zinc-950' : 'text-zinc-900 bg-gradient-to-br from-blue-50 via-white to-cyan-50'}`}>
       <style>{`
-        .alerts-page-root { color: #0F1B2D !important; }
-        .alerts-page-root *, .alerts-page-root *::before, .alerts-page-root *::after { color: #0F1B2D !important; }
+        .alerts-page-root,
+        .alerts-page-root div,
+        .alerts-page-root span,
+        .alerts-page-root p,
+        .alerts-page-root h1,
+        .alerts-page-root h2,
+        .alerts-page-root h3,
+        .alerts-page-root button,
+        .alerts-page-root a,
+        .alerts-page-root label,
+        .alerts-page-root input,
+        .alerts-page-root select,
+        .alerts-page-root td,
+        .alerts-page-root th,
+        .alerts-page-root li {
+          color: #0F1B2D !important;
+        }
         .alerts-page-root .text-ink { color: #0F1B2D !important; }
         .alerts-page-root .text-muted { color: #8C96A4 !important; }
         .alerts-page-root .text-primary { color: #2667E8 !important; }

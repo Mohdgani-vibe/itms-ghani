@@ -1194,8 +1194,23 @@ export default function PatchDashboardPage() {
   return (
     <>
     <style>{`
-      .patch-dashboard-root { color: #0F1B2D !important; }
-      .patch-dashboard-root *, .patch-dashboard-root *::before, .patch-dashboard-root *::after { color: #0F1B2D !important; }
+      .patch-dashboard-root,
+      .patch-dashboard-root div,
+      .patch-dashboard-root span,
+      .patch-dashboard-root p,
+      .patch-dashboard-root h1,
+      .patch-dashboard-root h2,
+      .patch-dashboard-root h3,
+      .patch-dashboard-root button,
+      .patch-dashboard-root a,
+      .patch-dashboard-root label,
+      .patch-dashboard-root input,
+      .patch-dashboard-root select,
+      .patch-dashboard-root td,
+      .patch-dashboard-root th,
+      .patch-dashboard-root li {
+        color: #0F1B2D !important;
+      }
       .patch-dashboard-root .text-ink { color: #0F1B2D !important; }
       .patch-dashboard-root .text-muted { color: #8C96A4 !important; }
       .patch-dashboard-root .text-primary { color: #2667E8 !important; }
