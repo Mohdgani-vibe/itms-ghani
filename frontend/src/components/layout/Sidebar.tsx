@@ -62,6 +62,12 @@ export default function Sidebar() {
   const currentPortal = portalMatch?.[1] || (session ? getPortalSegmentForRole(session.user.role) : 'emp');
   const basePath = portalMatch ? `/${portalMatch[1]}` : `/${currentPortal}`;
   
+  // Hide sidebar on dashboard page
+  const isDashboard = location.pathname.match(/^\/(admin|it|audit|emp)\/dashboard$/);
+  if (isDashboard) {
+    return null;
+  }
+  
   const navItems = (portalNavItems[currentPortal as keyof typeof portalNavItems] || portalNavItems.emp)
     .filter((item) => !session || !getPageAccessRedirect(`${basePath}${item.path}`, session.user));
 
