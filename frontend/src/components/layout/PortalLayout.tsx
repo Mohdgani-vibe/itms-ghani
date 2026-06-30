@@ -91,8 +91,8 @@ export default function PortalLayout() {
       <style>{`
         /* Force light mode - double class for higher specificity (0,2,1) */
         .portal-layout-root.portal-layout-root,
-        .portal-layout-root.portal-layout-root div,
-        .portal-layout-root.portal-layout-root span,
+        .portal-layout-root.portal-layout-root div:not(.sidebar-tooltip):not(.sidebar-tooltip *),
+        .portal-layout-root.portal-layout-root span:not(.sidebar-tooltip *),
         .portal-layout-root.portal-layout-root p,
         .portal-layout-root.portal-layout-root h1,
         .portal-layout-root.portal-layout-root h2,
@@ -107,6 +107,13 @@ export default function PortalLayout() {
         .portal-layout-root.portal-layout-root th,
         .portal-layout-root.portal-layout-root li {
           color: #0F1B2D !important;
+        }
+        
+        /* Sidebar tooltip override */
+        .sidebar-tooltip,
+        .sidebar-tooltip * {
+          background-color: #0F1B2D !important;
+          color: #ffffff !important;
         }
       `}</style>
       <div className="min-h-screen portal-layout-root flex flex-col" style={{ backgroundColor: '#F1F4F9', fontFamily: 'Inter, sans-serif' }}>
