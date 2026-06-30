@@ -1,65 +1,156 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, 
   UserPlus, 
-  ChevronDown,
   Edit2,
-  MoreVertical,
-  Check
+  MoreVertical
 } from 'lucide-react';
+import { fetchUsers, fetchUserMetaOptions } from '../../lib/usersApi';
 
-// Sample data with exact names and roles from spec
-const users = [
-  { id: 1, name: 'Ananya Mehta', email: 'ananya.mehta@zerodha.com', empId: 'EMP1001', role: 'Engineering Lead', dept: 'Engineering', status: 'active' as const, initials: 'AM', avatarColor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { id: 2, name: 'Rohit Sharma', email: 'rohit.sharma@zerodha.com', empId: 'EMP1002', role: 'DevOps Engineer', dept: 'Engineering', status: 'active' as const, initials: 'RS', avatarColor: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { id: 3, name: 'Priya Nair', email: 'priya.nair@zerodha.com', empId: 'EMP1003', role: 'Compliance Analyst', dept: 'Compliance', status: 'active' as const, initials: 'PN', avatarColor: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { id: 4, name: 'Karan Patel', email: 'karan.patel@zerodha.com', empId: 'EMP1004', role: 'SecOps Engineer', dept: 'Operations', status: 'active' as const, initials: 'KP', avatarColor: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { id: 5, name: 'Sneha Reddy', email: 'sneha.reddy@zerodha.com', empId: 'EMP1005', role: 'Finance Manager', dept: 'Finance', status: 'inactive' as const, initials: 'SR', avatarColor: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { id: 6, name: 'Arjun Iyer', email: 'arjun.iyer@zerodha.com', empId: 'EMP1006', role: 'Support Lead', dept: 'Support', status: 'active' as const, initials: 'AI', avatarColor: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)' },
-  { id: 7, name: 'Divya Krishnan', email: 'divya.krishnan@zerodha.com', empId: 'EMP1007', role: 'HR Specialist', dept: 'HR & Admin', status: 'active' as const, initials: 'DK', avatarColor: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)' },
-  { id: 8, name: 'Vikram Singh', email: 'vikram.singh@zerodha.com', empId: 'EMP1008', role: 'Backend Engineer', dept: 'Engineering', status: 'pending' as const, initials: 'VS', avatarColor: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)' },
-];
+// Helper function to generate avatar color
+const getAvatarColor = (index: number) => {
+  const colors = [
+    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+    'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+    'linear-gradient(135deg, #30cfd0 0%, #330867 100%)',
+    'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+  ];
+  return colors[index % colors.length];
+};
 
-const departments = [
-  { name: 'All Departments', count: 1284 },
-  { name: 'Engineering', count: 412 },
-  { name: 'Operations', count: 286 },
-  { name: 'Compliance', count: 94 },
-  { name: 'Finance', count: 147 },
-  { name: 'Support', count: 203 },
-  { name: 'HR & Admin', count: 142 },
-];
+// Helper function to get initials
+const getInitials = (name: string) => {
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
 
 const formatCount = (num: number) => num.toLocaleString('en-US');
 
 type StatusType = 'all' | 'active' | 'inactive' | 'pending';
 
+interface DisplayUser {
+  id: string;
+  name: string;
+  email: string;
+  empId: string;
+  role: string;
+  dept: string;
+  status: 'active' | 'inactive' | 'pending';
+  initials: string;
+  avatarColor: string;
+}
+
 export default function UsersPageModernNew() {
+  const [users, setUsers] = useState<DisplayUser[]>([]);
+  const [allUsers, setAllUsers] = useState<DisplayUser[]>([]);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [selectedDept, setSelectedDept] = useState('All Departments');
   const [statusFilter, setStatusFilter] = useState<StatusType>('all');
-  const [selectedUsers, setSelectedUsers] = useState<Set<number>>(new Set());
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredUsers = users.filter(user => {
-    const matchesDept = selectedDept === 'All Departments' || user.dept === selectedDept;
-    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
-    const matchesSearch = searchQuery === '' || 
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.empId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.role.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesDept && matchesStatus && matchesSearch;
-  });
+  // Department counts (will be calculated from fetched data)
+  const [departments, setDepartments] = useState([
+    { name: 'All Departments', count: 0 },
+  ]);
+
+  // Fetch users from API
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        const [usersResponse] = await Promise.all([
+          fetchUsers({ page_size: 1000 }), // Fetch all users for client-side filtering
+          fetchUserMetaOptions()
+        ]);
+
+        // Transform API users to display format
+        const displayUsers: DisplayUser[] = usersResponse.items.map((user, index) => ({
+          id: user.id,
+          name: user.full_name,
+          email: user.email,
+          empId: user.emp_id,
+          role: user.role || 'Employee',
+          dept: user.department || 'Unassigned',
+          status: user.status === 'active' ? 'active' : user.status === 'pending' ? 'pending' : 'inactive',
+          initials: getInitials(user.full_name),
+          avatarColor: getAvatarColor(index)
+        }));
+
+        setAllUsers(displayUsers);
+        setUsers(displayUsers);
+        setTotalUsers(usersResponse.total);
+
+        // Use department counts from API summary
+        const deptList = [
+          { name: 'All Departments', count: usersResponse.total },
+          ...usersResponse.summary.departmentCounts.map(d => ({
+            name: d.label,
+            count: d.count
+          }))
+        ];
+
+        setDepartments(deptList);
+        setLoading(false);
+      } catch (err) {
+        console.error('Failed to load users:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load users');
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Filter users based on department, status, and search
+  useEffect(() => {
+    let filtered = [...allUsers];
+
+    // Filter by department
+    if (selectedDept !== 'All Departments') {
+      filtered = filtered.filter(user => user.dept === selectedDept);
+    }
+
+    // Filter by status
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(user => user.status === statusFilter);
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(user =>
+        user.name.toLowerCase().includes(query) ||
+        user.email.toLowerCase().includes(query) ||
+        user.empId.toLowerCase().includes(query) ||
+        user.role.toLowerCase().includes(query)
+      );
+    }
+
+    setUsers(filtered);
+  }, [selectedDept, statusFilter, searchQuery, allUsers]);
 
   const toggleSelectAll = () => {
-    if (selectedUsers.size === filteredUsers.length) {
+    if (selectedUsers.size === users.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(filteredUsers.map(u => u.id)));
+      setSelectedUsers(new Set(users.map(u => u.id)));
     }
   };
 
-  const toggleSelectUser = (id: number) => {
+  const toggleSelectUser = (id: string) => {
     const newSet = new Set(selectedUsers);
     if (newSet.has(id)) {
       newSet.delete(id);
@@ -152,13 +243,45 @@ export default function UsersPageModernNew() {
           </button>
         </div>
 
-        {/* Two Column Grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '248px 1fr',
-          gap: '20px',
-          alignItems: 'start'
-        }}>
+        {/* Loading State */}
+        {loading && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            padding: '60px 0',
+            color: '#6b7280',
+            fontSize: '14px'
+          }}>
+            Loading users...
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <div style={{
+            padding: '16px',
+            background: '#fee',
+            border: '1px solid #fcc',
+            borderRadius: '8px',
+            color: '#c00',
+            fontSize: '14px',
+            marginBottom: '20px'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Content - Only render when not loading */}
+        {!loading && !error && (
+          <>
+            {/* Two Column Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '248px 1fr',
+              gap: '20px',
+              alignItems: 'start'
+            }}>
           {/* Department Rail */}
           <div style={{
             background: '#ffffff',
@@ -366,7 +489,7 @@ export default function UsersPageModernNew() {
                   fontSize: '13px',
                   color: '#9aa1ab'
                 }}>
-                  {formatCount(filteredUsers.length)} results
+                  {formatCount(users.length)} results
                 </div>
               </div>
             </div>
@@ -385,7 +508,7 @@ export default function UsersPageModernNew() {
                     <th style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                       <input
                         type="checkbox"
-                        checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                        checked={selectedUsers.size === users.length && users.length > 0}
                         onChange={toggleSelectAll}
                         style={{
                           width: '17px',
@@ -437,7 +560,7 @@ export default function UsersPageModernNew() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => {
+                  {users.map((user) => {
                     const statusStyle = getStatusStyle(user.status);
                     return (
                       <tr
@@ -616,7 +739,7 @@ export default function UsersPageModernNew() {
                 fontSize: '13px',
                 color: '#8b919b'
               }}>
-                Showing 1–{filteredUsers.length} of {formatCount(departments.find(d => d.name === selectedDept)?.count || 0)} users
+                Showing 1–{users.length} of {formatCount(totalUsers)} users
               </div>
               <div style={{ display: 'flex', gap: '6px' }}>
                 <button style={{
@@ -702,6 +825,8 @@ export default function UsersPageModernNew() {
             </div>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
