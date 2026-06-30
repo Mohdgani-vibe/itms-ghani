@@ -9,7 +9,7 @@ const Login = lazy(() => import('./pages/Login'));
 const LoginNew = lazy(() => import('./pages/LoginNew'));
 const PortalLayout = lazy(() => import('./components/layout/PortalLayout'));
 const DashboardPageNew = lazy(() => import('./pages/live/DashboardPageNew'));
-const UsersPageModern = lazy(() => import('./pages/live/UsersPageModern'));
+const UsersPageModern = lazy(() => import('./pages/live/UsersPageModernNew'));
 const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
 const DeviceDetailPage = lazy(() => import('./pages/live/DeviceDetailPage'));
