@@ -170,7 +170,7 @@ export default function UsersPageModern() {
             background: '#fff',
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
-            padding: '14px 14px 14px 10px',
+            padding: '14px 14px 14px 6px',
             position: 'sticky',
             top: '76px',
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
@@ -197,7 +197,7 @@ export default function UsersPageModern() {
                   key={dept.name}
                   onClick={() => setSelectedDept(dept.name)}
                   style={{
-                    padding: '8px 12px',
+                    padding: '8px 12px 8px 8px',
                     borderRadius: '6px',
                     border: 'none',
                     background: selectedDept === dept.name ? '#2667E8' : 'transparent',
