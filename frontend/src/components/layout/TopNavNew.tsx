@@ -41,6 +41,9 @@ const tabIcons: Record<string, any> = {
 
 // Page-specific tabs configuration
 const pageTabsConfig: Record<string, { name: string; path: string; badge?: number }[]> = {
+  '/dashboard': [
+    { name: 'Overview', path: '' },
+  ],
   '/users': [
     { name: 'Users', path: '' },
     { name: 'Add Employee', path: '/add' },
