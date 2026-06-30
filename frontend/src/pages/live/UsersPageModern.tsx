@@ -103,7 +103,7 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '20px'
+          marginBottom: '24px'
         }}>
           <div>
             <h1 style={{ 
@@ -123,7 +123,7 @@ export default function UsersPageModern() {
               Manage employees, roles, and access permissions
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
             <select style={{
               padding: '6px 12px',
               borderRadius: '6px',
@@ -162,7 +162,7 @@ export default function UsersPageModern() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '200px minmax(0, 1fr)', 
-          gap: '20px',
+          gap: '24px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
@@ -187,11 +187,11 @@ export default function UsersPageModern() {
             <p style={{ 
               fontSize: '12px', 
               color: '#9AA4B2', 
-              margin: '0 0 12px 0' 
+              margin: '0 0 14px 0' 
             }}>
               Filter users by department
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {departments.map((dept) => (
                 <button
                   key={dept.name}
@@ -234,8 +234,8 @@ export default function UsersPageModern() {
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             {/* Filter Bar */}
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ position: 'relative', marginBottom: '16px' }}>
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ position: 'relative', marginBottom: '18px' }}>
                 <Search 
                   size={16} 
                   style={{ 
@@ -263,7 +263,7 @@ export default function UsersPageModern() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* Status Toggle */}
                 <div style={{ 
                   display: 'inline-flex', 
@@ -486,17 +486,17 @@ export default function UsersPageModern() {
 
             {/* Pagination */}
             <div style={{
-              marginTop: '20px', 
+              marginTop: '24px', 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              paddingTop: '16px',
+              paddingTop: '18px',
               borderTop: '0.5px solid #E0E0E0'
             }}>
               <div style={{ fontSize: '12px', color: '#8C96A4' }}>
                 Showing 1–{filteredUsers.length} of {departments.find(d => d.name === selectedDept)?.count || 0} users
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '9px' }}>
                 <button style={{
                   padding: '4px 10px',
                   borderRadius: '4px',
@@ -655,7 +655,7 @@ export default function UsersPageModern() {
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
                 <div style={{
                   padding: '12px',
                   borderRadius: '12px',
@@ -703,7 +703,7 @@ export default function UsersPageModern() {
                 }}>
                   ASSIGNED ASSETS
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
                   {assets.map((asset) => {
                     const Icon = asset.icon;
                     return (
@@ -716,7 +716,7 @@ export default function UsersPageModern() {
                           background: '#fff',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '16px'
+                          gap: '18px'
                         }}
                       >
                         <div style={{
