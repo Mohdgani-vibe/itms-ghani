@@ -89,15 +89,36 @@ export default function Sidebar() {
           >
             <Icon className="h-5 w-5" />
             
-            {/* Tooltip */}
+            {/* Modern Tooltip */}
             <div 
-              className="sidebar-tooltip absolute left-full ml-3 px-4 py-2 rounded-lg text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg"
-              style={{ backgroundColor: '#0F1B2D !important', color: '#ffffff !important', boxShadow: '0 4px 12px rgba(15, 27, 45, 0.15)' }}
+              className="sidebar-tooltip absolute left-full ml-4 px-5 py-3 rounded-xl text-sm font-semibold opacity-0 invisible group-hover:opacity-100 group-hover:visible group-hover:scale-100 scale-95 transition-all duration-300 ease-out whitespace-nowrap z-50 pointer-events-none"
+              style={{ 
+                background: 'linear-gradient(135deg, #2667E8 0%, #1B4FD1 100%)',
+                color: '#ffffff',
+                boxShadow: '0 8px 32px rgba(38, 103, 232, 0.4), 0 2px 8px rgba(0, 0, 0, 0.1)',
+                backdropFilter: 'blur(8px)',
+                letterSpacing: '0.02em'
+              }}
             >
-              <span style={{ color: '#ffffff !important', fontFamily: 'Inter, sans-serif', letterSpacing: '0.01em' }}>{item.name}</span>
+              <span style={{ 
+                color: '#ffffff', 
+                fontFamily: 'Inter, sans-serif',
+                textShadow: '0 1px 2px rgba(0, 0, 0, 0.1)'
+              }}>
+                {item.name}
+              </span>
+              
+              {/* Animated Arrow */}
               <div 
-                className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0"
-                style={{ borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '6px solid #0F1B2D' }}
+                className="absolute right-full top-1/2 -translate-y-1/2 transition-transform duration-300 group-hover:-translate-x-0.5"
+                style={{ 
+                  width: 0,
+                  height: 0,
+                  borderTop: '8px solid transparent',
+                  borderBottom: '8px solid transparent',
+                  borderRight: '8px solid #2667E8',
+                  filter: 'drop-shadow(-1px 0 2px rgba(38, 103, 232, 0.3))'
+                }}
               ></div>
             </div>
           </NavLink>

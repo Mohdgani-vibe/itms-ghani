@@ -112,10 +112,16 @@ export default function PortalLayout() {
           color: #0F1B2D !important;
         }
         
-        /* Sidebar tooltip override */
+        /* Sidebar tooltip override - allow custom background and styling */
         .sidebar-tooltip,
-        .sidebar-tooltip * {
-          background-color: #0F1B2D !important;
+        .sidebar-tooltip *,
+        .sidebar-tooltip span {
+          color: #ffffff !important;
+          /* Allow inline background styles to override */
+        }
+        
+        /* Prevent color override on tooltip */
+        .sidebar-tooltip {
           color: #ffffff !important;
         }
       `}</style>
