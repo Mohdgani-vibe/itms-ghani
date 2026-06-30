@@ -103,7 +103,7 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '0px'
+          marginBottom: '16px'
         }}>
           <div>
             <h1 style={{ 
@@ -123,7 +123,7 @@ export default function UsersPageModern() {
               Manage employees, roles, and access permissions
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '0px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
             <select style={{
               padding: '6px 12px',
               borderRadius: '6px',
@@ -162,7 +162,7 @@ export default function UsersPageModern() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: '200px minmax(0, 1fr)', 
-          gap: '0px',
+          gap: '16px',
           alignItems: 'start'
         }}>
           {/* Department Sidebar */}
@@ -180,18 +180,18 @@ export default function UsersPageModern() {
               fontWeight: '700', 
               color: '#8C96A4',
               letterSpacing: '0.05em',
-              marginBottom: '0px'
+              marginBottom: '4px'
             }}>
               DEPARTMENTS
             </div>
             <p style={{ 
               fontSize: '12px', 
               color: '#9AA4B2', 
-              margin: '0 0 0px 0' 
+              margin: '0 0 12px 0' 
             }}>
               Filter users by department
             </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {departments.map((dept) => (
                 <button
                   key={dept.name}
@@ -234,8 +234,8 @@ export default function UsersPageModern() {
             boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
           }}>
             {/* Filter Bar */}
-            <div style={{ marginBottom: '0px' }}>
-              <div style={{ position: 'relative', marginBottom: '0px' }}>
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ position: 'relative', marginBottom: '12px' }}>
                 <Search 
                   size={16} 
                   style={{ 
@@ -263,7 +263,7 @@ export default function UsersPageModern() {
                 />
               </div>
 
-              <div style={{ display: 'flex', gap: '0px', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* Status Toggle */}
                 <div style={{ 
                   display: 'inline-flex', 
@@ -326,7 +326,7 @@ export default function UsersPageModern() {
                 justifyContent: 'space-between',
                 alignItems: 'center'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                   <input
                     type="checkbox"
                     checked={selectedUsers.size === filteredUsers.length}
@@ -337,7 +337,7 @@ export default function UsersPageModern() {
                     · showing {selectedUsers.size} of {filteredUsers.length}
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: '0px' }}>
+                <div style={{ display: 'flex', gap: '12px' }}>
                   <button style={{
                     padding: '8px 16px',
                     borderRadius: '8px',
@@ -422,7 +422,7 @@ export default function UsersPageModern() {
                         />
                       </td>
                       <td style={{ padding: '8px 8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
                             width: '30px',
                             height: '30px',
@@ -486,17 +486,17 @@ export default function UsersPageModern() {
 
             {/* Pagination */}
             <div style={{
-              marginTop: '0px', 
+              marginTop: '16px', 
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              paddingTop: '0px',
+              paddingTop: '16px',
               borderTop: '0.5px solid #E0E0E0'
             }}>
               <div style={{ fontSize: '12px', color: '#8C96A4' }}>
                 Showing 1–{filteredUsers.length} of {departments.find(d => d.name === selectedDept)?.count || 0} users
               </div>
-              <div style={{ display: 'flex', gap: '0px' }}>
+              <div style={{ display: 'flex', gap: '6px' }}>
                 <button style={{
                   padding: '4px 10px',
                   borderRadius: '4px',
@@ -655,7 +655,7 @@ export default function UsersPageModern() {
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div style={{
                   padding: '12px',
                   borderRadius: '12px',
@@ -703,7 +703,7 @@ export default function UsersPageModern() {
                 }}>
                   ASSIGNED ASSETS
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   {assets.map((asset) => {
                     const Icon = asset.icon;
                     return (
@@ -716,7 +716,7 @@ export default function UsersPageModern() {
                           background: '#fff',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '12px'
+                          gap: '16px'
                         }}
                       >
                         <div style={{
