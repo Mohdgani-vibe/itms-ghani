@@ -18,6 +18,7 @@ const tabIcons: Record<string, any> = {
   'Audit': FileCheck,
   'Portal Access': Lock,
   'Unassigned': Users,
+  'Unassigned Assets': Package,
   'Dashboard': BarChart3,
   'Devices': MonitorDown,
   'Reports': FileCheck,
@@ -53,12 +54,9 @@ const pageTabsConfig: Record<string, { name: string; path: string; badge?: numbe
   ],
   '/users': [
     { name: 'Users', path: '' },
-    { name: 'Add Employee', path: '/add' },
-    { name: 'Import / Export', path: '/import' },
-    { name: 'Install Agents', path: '/install' },
     { name: 'Audit', path: '/audit' },
     { name: 'Portal Access', path: '/access' },
-    { name: 'Unassigned', path: '/unassigned', badge: 3 },
+    { name: 'Unassigned Assets', path: '/unassigned', badge: 3 },
   ],
   '/patch': [
     { name: 'Dashboard', path: '' },

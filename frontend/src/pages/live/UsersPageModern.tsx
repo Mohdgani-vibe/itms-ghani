@@ -41,6 +41,9 @@ const departments = [
   { name: 'HR & Admin', count: 142 },
 ];
 
+// Format number with thousand separators
+const formatCount = (num: number) => num.toLocaleString('en-US');
+
 const assets = [
   { name: 'MacBook Pro 14"', id: 'AST-MBP-2024-001', icon: Laptop },
   { name: 'Dell 27" Monitor', id: 'AST-MON-2024-089', icon: Monitor },
@@ -125,24 +128,6 @@ export default function UsersPageModern() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            <select 
-              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-              style={{
-              padding: '6px 12px',
-              borderRadius: '6px',
-              border: '0.5px solid #E0E0E0',
-              background: '#fff',
-              color: '#46505F',
-              fontWeight: '500',
-              fontSize: '13px',
-              cursor: 'pointer',
-              fontFamily: 'Inter, sans-serif'
-            }}>
-              <option>Last 24h</option>
-              <option>Last 7 days</option>
-              <option>Last 30 days</option>
-            </select>
             <button 
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = 'translateY(-2px)';
@@ -248,7 +233,7 @@ export default function UsersPageModern() {
                     fontWeight: '600',
                     opacity: selectedDept === dept.name ? 0.9 : 0.5
                   }}>
-                    {dept.count}
+                    {formatCount(dept.count)}
                   </span>
                 </button>
               ))}
@@ -547,7 +532,7 @@ export default function UsersPageModern() {
               borderTop: '0.5px solid #E0E0E0'
             }}>
               <div style={{ fontSize: '12px', color: '#8C96A4' }}>
-                Showing 1–{filteredUsers.length} of {departments.find(d => d.name === selectedDept)?.count || 0} users
+                Showing 1–{filteredUsers.length} of {formatCount(departments.find(d => d.name === selectedDept)?.count || 0)} users
               </div>
               <div style={{ display: 'flex', gap: '9px' }}>
                 <button style={{
