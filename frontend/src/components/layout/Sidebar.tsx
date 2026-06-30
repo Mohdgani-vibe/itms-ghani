@@ -17,7 +17,6 @@ import { getPortalSegmentForRole, getStoredSession } from '../../lib/session';
 
 const portalNavItems = {
   admin: [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Users', path: '/users', icon: Users },
     { name: 'Patch', path: '/patch', icon: Package },
     { name: 'Inventory', path: '/inventory', icon: HardDrive },
@@ -27,7 +26,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements', icon: Bell },
   ],
   it: [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Users', path: '/users', icon: Users },
     { name: 'Patch', path: '/patch', icon: Package },
     { name: 'Inventory', path: '/inventory', icon: HardDrive },
@@ -37,7 +35,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements', icon: Bell },
   ],
   audit: [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Users', path: '/users', icon: Users },
     { name: 'Patch', path: '/patch', icon: Package },
     { name: 'Inventory', path: '/inventory', icon: HardDrive },
@@ -47,7 +44,6 @@ const portalNavItems = {
     { name: 'Announcement', path: '/announcements', icon: Bell },
   ],
   emp: [
-    { name: 'Dashboard', path: '/dashboard', icon: Home },
     { name: 'Profile', path: '/profile', icon: UserCircle },
     { name: 'My Assets', path: '/assets', icon: FolderOpen },
     { name: 'My Alerts', path: '/alerts', icon: AlertTriangle },

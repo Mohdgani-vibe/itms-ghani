@@ -42,6 +42,15 @@ const tabIcons: Record<string, any> = {
 
 // Page-specific tabs configuration
 const pageTabsConfig: Record<string, { name: string; path: string; badge?: number }[]> = {
+  '/dashboard': [
+    { name: 'Users', path: '/users' },
+    { name: 'Patch', path: '/patch' },
+    { name: 'Inventory', path: '/inventory' },
+    { name: 'Alerts', path: '/alerts' },
+    { name: 'Request', path: '/requests' },
+    { name: 'Gatepass', path: '/gatepass' },
+    { name: 'Announcement', path: '/announcements' },
+  ],
   '/users': [
     { name: 'Users', path: '' },
     { name: 'Add Employee', path: '/add' },
@@ -108,6 +117,10 @@ export default function TopNavNew() {
   
   // Determine active tab
   const activeTabIndex = pageTabs.findIndex(tab => {
+    if (currentPage === 'dashboard') {
+      // For dashboard tabs, check if current path matches the tab's target page
+      return location.pathname.startsWith(`${basePath}${tab.path}`);
+    }
     if (tab.path === '') {
       return location.pathname === `${basePath}/${currentPage}`;
     }
@@ -133,10 +146,14 @@ export default function TopNavNew() {
           <nav className="flex gap-1.5 flex-1 overflow-x-auto ml-4">
             {pageTabs.map((tab, index) => {
               const IconComponent = tabIcons[tab.name];
+              // For dashboard, navigate to base + tab.path; for other pages, navigate to base/page + tab.path
+              const targetPath = currentPage === 'dashboard' 
+                ? `${basePath}${tab.path}` 
+                : `${basePath}/${currentPage}${tab.path}`;
               return (
                 <button
                   key={tab.name}
-                  onClick={() => navigate(`${basePath}/${currentPage}${tab.path}`)}
+                  onClick={() => navigate(targetPath)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2 ${
                     index === (activeTabIndex >= 0 ? activeTabIndex : 0)
                       ? 'bg-[#EAF1FE] text-[#1B4FD1]'
