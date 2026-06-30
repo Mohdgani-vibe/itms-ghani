@@ -103,7 +103,8 @@ export default function UsersPageModern() {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'flex-start',
-          marginBottom: '24px'
+          marginBottom: '24px',
+          animation: 'slideInUp 0.4s ease-out'
         }}>
           <div>
             <h1 style={{ 
@@ -124,7 +125,10 @@ export default function UsersPageModern() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            <select style={{
+            <select 
+              onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              style={{
               padding: '6px 12px',
               borderRadius: '6px',
               border: '0.5px solid #E0E0E0',
@@ -139,7 +143,16 @@ export default function UsersPageModern() {
               <option>Last 7 days</option>
               <option>Last 30 days</option>
             </select>
-            <button style={{
+            <button 
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 20px rgba(38, 103, 232, 0.4)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 2px 8px rgba(38, 103, 232, 0.2)';
+              }}
+              style={{
               padding: '6px 14px',
               borderRadius: '6px',
               border: 'none',
@@ -150,7 +163,9 @@ export default function UsersPageModern() {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              boxShadow: '0 2px 8px rgba(38, 103, 232, 0.2)'
             }}>
               <UserPlus size={16} />
               Add Employee
@@ -173,7 +188,9 @@ export default function UsersPageModern() {
             padding: '14px 14px 14px 6px',
             position: 'sticky',
             top: '76px',
-            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
+            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)',
+            transition: 'all 0.3s ease',
+            animation: 'slideInLeft 0.4s ease-out'
           }}>
             <div style={{ 
               fontSize: '11px', 
@@ -196,6 +213,18 @@ export default function UsersPageModern() {
                 <button
                   key={dept.name}
                   onClick={() => setSelectedDept(dept.name)}
+                  onMouseEnter={(e) => {
+                    if (selectedDept !== dept.name) {
+                      e.currentTarget.style.background = '#F4F8FF';
+                      e.currentTarget.style.transform = 'translateX(4px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (selectedDept !== dept.name) {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.transform = 'translateX(0)';
+                    }
+                  }}
                   style={{
                     padding: '8px 12px 8px 8px',
                     borderRadius: '6px',
@@ -209,7 +238,8 @@ export default function UsersPageModern() {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    transition: 'all 0.15s'
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: selectedDept === dept.name ? '0 4px 12px rgba(38, 103, 232, 0.2)' : 'none'
                   }}
                 >
                   <span>{dept.name}</span>
@@ -231,7 +261,9 @@ export default function UsersPageModern() {
             border: '0.5px solid #E0E0E0',
             borderRadius: '18px',
             padding: '10px',
-            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)'
+            boxShadow: '0 6px 20px -12px rgba(15,27,45,0.18)',
+            transition: 'all 0.3s ease',
+            animation: 'slideInRight 0.4s ease-out'
           }}>
             {/* Filter Bar */}
             <div style={{ marginBottom: '18px' }}>
@@ -275,6 +307,18 @@ export default function UsersPageModern() {
                     <button
                       key={status}
                       onClick={() => setStatusFilter(status)}
+                      onMouseEnter={(e) => {
+                        if (statusFilter !== status) {
+                          e.currentTarget.style.background = '#fff';
+                          e.currentTarget.style.transform = 'scale(1.05)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (statusFilter !== status) {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }
+                      }}
                       style={{
                         padding: '4px 10px',
                         borderRadius: '4px',
@@ -285,7 +329,8 @@ export default function UsersPageModern() {
                         fontWeight: '500',
                         cursor: 'pointer',
                         textTransform: 'capitalize',
-                        transition: 'all 0.15s'
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: statusFilter === status ? '0 2px 8px rgba(27, 79, 209, 0.15)' : 'none'
                       }}
                     >
                       {status}
@@ -406,12 +451,20 @@ export default function UsersPageModern() {
                       style={{
                         borderBottom: '0.5px solid #E0E0E0',
                         cursor: 'pointer',
-                        transition: 'background 0.15s',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         display: 'grid',
                         gridTemplateColumns: '40px 300px 1fr 1fr 130px 40px'
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#F9FAFB';
+                        e.currentTarget.style.transform = 'translateX(4px)';
+                        e.currentTarget.style.boxShadow = '0 2px 12px rgba(15, 27, 45, 0.08)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'transparent';
+                        e.currentTarget.style.transform = 'translateX(0)';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
                     >
                       <td style={{ padding: '8px 8px' }} onClick={(e) => e.stopPropagation()}>
                         <input
@@ -751,7 +804,16 @@ export default function UsersPageModern() {
               </div>
 
               {/* Actions */}
-              <button style={{
+              <button 
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(38, 103, 232, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(38, 103, 232, 0.3)';
+                }}
+                style={{
                 width: '100%',
                 padding: '14px 20px',
                 borderRadius: '12px',
@@ -765,7 +827,8 @@ export default function UsersPageModern() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 12px rgba(38, 103, 232, 0.3)'
+                boxShadow: '0 4px 12px rgba(38, 103, 232, 0.3)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
               }}>
                 View full profile
                 <ChevronDown size={16} style={{ transform: 'rotate(-90deg)' }} />
@@ -781,16 +844,63 @@ export default function UsersPageModern() {
           to { opacity: 1; }
         }
         
+        @keyframes slideInLeft {
+          from {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes slideInRight {
+          from {
+            opacity: 0;
+            transform: translateX(30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
         * {
           box-sizing: border-box;
         }
         
+        button {
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
         button:hover {
-          opacity: 0.9;
+          opacity: 0.95;
+        }
+        
+        button:active {
+          transform: scale(0.98);
         }
         
         input[type="checkbox"] {
           accent-color: #2667E8;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        
+        input[type="checkbox"]:hover {
+          transform: scale(1.1);
         }
         
         input::placeholder {
@@ -800,6 +910,16 @@ export default function UsersPageModern() {
         select:focus,
         input:focus {
           outline: none;
+          border-color: #2667E8;
+          box-shadow: 0 0 0 3px rgba(38, 103, 232, 0.1);
+          transition: all 0.2s ease;
+        }
+        
+        select, input {
+          transition: all 0.2s ease;
+        }
+        
+        select:hover, input:hover {
           border-color: #2667E8;
         }
       `}</style>
