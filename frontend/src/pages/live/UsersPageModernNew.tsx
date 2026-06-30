@@ -101,8 +101,8 @@ export default function UsersPageModernNew() {
     }}>
       {/* Body Container */}
       <div style={{ 
-        maxWidth: '1480px',
-        margin: '0 auto',
+        width: '100%',
+        margin: 0,
         padding: '28px 32px 48px'
       }}>
         {/* Header */}
