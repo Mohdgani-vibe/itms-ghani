@@ -150,7 +150,7 @@ export default function UsersPageModern() {
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0px'
+              gap: '6px'
             }}>
               <UserPlus size={16} />
               Add Employee
@@ -655,7 +655,7 @@ export default function UsersPageModern() {
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{
                   padding: '12px',
                   borderRadius: '12px',
@@ -703,7 +703,7 @@ export default function UsersPageModern() {
                 }}>
                   ASSIGNED ASSETS
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {assets.map((asset) => {
                     const Icon = asset.icon;
                     return (
@@ -716,7 +716,7 @@ export default function UsersPageModern() {
                           background: '#fff',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0px'
+                          gap: '12px'
                         }}
                       >
                         <div style={{
@@ -764,7 +764,7 @@ export default function UsersPageModern() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0px',
+                gap: '8px',
                 boxShadow: '0 4px 12px rgba(38, 103, 232, 0.3)'
               }}>
                 View full profile
