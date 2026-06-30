@@ -4,12 +4,13 @@ import {
   Search, Bell, ChevronDown, LogOut, Settings,
   Users, UserPlus, Upload, MonitorDown, FileCheck, Lock,
   BarChart3, Calendar, AlertCircle, Clock, ClipboardList,
-  Package, HardDrive
+  Package, HardDrive, LayoutDashboard
 } from 'lucide-react';
 import { clearStoredSession, getPortalSegmentForRole, getStoredSession } from '../../lib/session';
 
 // Icon mapping for tabs
 const tabIcons: Record<string, any> = {
+  'Overview': LayoutDashboard,
   'Users': Users,
   'Add Employee': UserPlus,
   'Import / Export': Upload,
@@ -127,7 +128,7 @@ export default function TopNavNew() {
         
         {/* Logo */}
         <Link to={`${basePath}/dashboard`} className="flex flex-shrink-0 items-center gap-2">
-          <img src="/itms-logo-new.svg" alt="ITMS" className="h-12" />
+          <img src="/itms-logo-new.svg" alt="ITMS" className="h-14" />
         </Link>
 
         {/* Page-Specific Tabs */}

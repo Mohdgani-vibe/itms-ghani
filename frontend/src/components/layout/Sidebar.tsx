@@ -88,9 +88,15 @@ export default function Sidebar() {
             <Icon className="h-5 w-5" />
             
             {/* Tooltip */}
-            <div className="absolute left-full ml-2 px-3 py-1.5 bg-zinc-900 text-white text-xs font-medium rounded opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none">
+            <div 
+              className="absolute left-full ml-2 px-3 py-1.5 rounded text-xs font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none"
+              style={{ backgroundColor: '#0F1B2D', color: '#fff' }}
+            >
               {item.name}
-              <div className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent border-r-zinc-900"></div>
+              <div 
+                className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent"
+                style={{ borderRightColor: '#0F1B2D' }}
+              ></div>
             </div>
           </NavLink>
         );
