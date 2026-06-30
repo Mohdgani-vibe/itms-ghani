@@ -622,6 +622,16 @@ function ModulePanel({
 
 // Bar Chart Component (CSS only)
 function BarChart({ data, color, maxValue }: { data: number[]; color: string; maxValue: number }) {
+  // Generate last 7 days labels with current dates
+  const today = new Date();
+  const dayLabels = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() - (6 - i));
+    const month = date.toLocaleDateString('en-US', { month: 'short' });
+    const day = date.getDate();
+    return `${month} ${day}`;
+  });
+
   return (
     <div className="flex items-end justify-between gap-2 h-32">
       {data.map((value, i) => (
@@ -635,8 +645,8 @@ function BarChart({ data, color, maxValue }: { data: number[]; color: string; ma
               }}
             />
           </div>
-          <div className="text-xs text-muted">
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i]}
+          <div className="text-xs text-muted font-medium">
+            {dayLabels[i]}
           </div>
         </div>
       ))}

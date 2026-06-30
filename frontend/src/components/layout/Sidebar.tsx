@@ -89,13 +89,13 @@ export default function Sidebar() {
             
             {/* Tooltip */}
             <div 
-              className="sidebar-tooltip absolute left-full ml-2 px-3 py-1.5 rounded text-xs font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all whitespace-nowrap z-50 pointer-events-none"
-              style={{ backgroundColor: '#0F1B2D !important', color: '#ffffff !important' }}
+              className="sidebar-tooltip absolute left-full ml-3 px-4 py-2 rounded-lg text-sm font-medium opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 whitespace-nowrap z-50 pointer-events-none shadow-lg"
+              style={{ backgroundColor: '#0F1B2D !important', color: '#ffffff !important', boxShadow: '0 4px 12px rgba(15, 27, 45, 0.15)' }}
             >
-              <span style={{ color: '#ffffff !important' }}>{item.name}</span>
+              <span style={{ color: '#ffffff !important', fontFamily: 'Inter, sans-serif', letterSpacing: '0.01em' }}>{item.name}</span>
               <div 
-                className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0 border-4 border-transparent"
-                style={{ borderRightColor: '#0F1B2D' }}
+                className="absolute right-full top-1/2 -translate-y-1/2 w-0 h-0"
+                style={{ borderTop: '6px solid transparent', borderBottom: '6px solid transparent', borderRight: '6px solid #0F1B2D' }}
               ></div>
             </div>
           </NavLink>
