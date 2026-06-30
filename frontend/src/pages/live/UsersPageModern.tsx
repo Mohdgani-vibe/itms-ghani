@@ -639,7 +639,7 @@ export default function UsersPageModern() {
               right: 0,
               top: 0,
               bottom: 0,
-              width: '360px',
+              width: '480px',
               background: '#fff',
               boxShadow: '-4px 0 24px rgba(15, 27, 45, 0.15)',
               zIndex: 51,
@@ -651,7 +651,7 @@ export default function UsersPageModern() {
           >
             {/* Drawer Header */}
             <div style={{ 
-              padding: '24px', 
+              padding: '32px', 
               borderBottom: '1px solid #EAEDF2',
               position: 'sticky',
               top: 0,
@@ -662,8 +662,8 @@ export default function UsersPageModern() {
                 onClick={() => setSelectedUser(null)}
                 style={{
                   position: 'absolute',
-                  top: '20px',
-                  right: '20px',
+                  top: '28px',
+                  right: '28px',
                   padding: '6px',
                   border: 'none',
                   background: 'transparent',
@@ -675,10 +675,10 @@ export default function UsersPageModern() {
               </button>
               
               {/* User Info */}
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
                 <div style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '72px',
+                  height: '72px',
                   borderRadius: '50%',
                   background: currentUser.avatarColor,
                   display: 'flex',
@@ -686,53 +686,53 @@ export default function UsersPageModern() {
                   justifyContent: 'center',
                   color: '#fff',
                   fontWeight: '700',
-                  fontSize: '24px',
-                  margin: '0 auto 16px'
+                  fontSize: '28px',
+                  margin: '0 auto 18px'
                 }}>
                   {currentUser.initials}
                 </div>
                 <h2 style={{ 
-                  fontSize: '20px', 
+                  fontSize: '22px', 
                   fontWeight: '700', 
                   color: '#0F1B2D', 
-                  margin: '0 0 4px 0' 
+                  margin: '0 0 6px 0' 
                 }}>
                   {currentUser.name}
                 </h2>
-                <div style={{ fontSize: '13px', color: '#8C96A4', marginBottom: '4px' }}>
+                <div style={{ fontSize: '14px', color: '#8C96A4', marginBottom: '5px' }}>
                   {currentUser.empId}
                 </div>
-                <div style={{ fontSize: '13px', color: '#8C96A4' }}>
+                <div style={{ fontSize: '14px', color: '#8C96A4' }}>
                   {currentUser.dept}
                 </div>
               </div>
 
               {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div style={{
-                  padding: '12px',
+                  padding: '16px',
                   borderRadius: '12px',
                   background: '#F4F8FF',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#8C96A4', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#8C96A4', marginBottom: '6px' }}>
                     ROLE
                   </div>
-                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#0F1B2D' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '600', color: '#0F1B2D' }}>
                     {currentUser.role}
                   </div>
                 </div>
                 <div style={{
-                  padding: '12px',
+                  padding: '16px',
                   borderRadius: '12px',
                   background: currentUser.status === 'active' ? '#E7F6EE' : '#FEEFEF',
                   textAlign: 'center'
                 }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#8C96A4', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#8C96A4', marginBottom: '6px' }}>
                     STATUS
                   </div>
                   <div style={{ 
-                    fontSize: '13px', 
+                    fontSize: '14px', 
                     fontWeight: '600', 
                     color: currentUser.status === 'active' ? '#1F8A50' : '#C13B40',
                     textTransform: 'capitalize'
@@ -744,56 +744,56 @@ export default function UsersPageModern() {
             </div>
 
             {/* Drawer Content */}
-            <div style={{ padding: '24px' }}>
+            <div style={{ padding: '32px' }}>
               {/* Assigned Assets */}
-              <div style={{ marginBottom: '24px' }}>
+              <div style={{ marginBottom: '28px' }}>
                 <div style={{ 
                   fontSize: '11px', 
                   fontWeight: '700', 
                   color: '#8C96A4',
                   letterSpacing: '0.05em',
-                  marginBottom: '16px'
+                  marginBottom: '18px'
                 }}>
                   ASSIGNED ASSETS
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   {assets.map((asset) => {
                     const Icon = asset.icon;
                     return (
                       <div
                         key={asset.id}
                         style={{
-                          padding: '12px',
+                          padding: '16px',
                           borderRadius: '12px',
                           border: '1px solid #EAEDF2',
                           background: '#fff',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '18px'
+                          gap: '20px'
                         }}
                       >
                         <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '10px',
+                          width: '48px',
+                          height: '48px',
+                          borderRadius: '12px',
                           background: '#F4F8FF',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           flexShrink: 0
                         }}>
-                          <Icon size={20} color="#2667E8" />
+                          <Icon size={24} color="#2667E8" />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ 
-                            fontSize: '14px', 
+                            fontSize: '15px', 
                             fontWeight: '600', 
                             color: '#0F1B2D',
-                            marginBottom: '2px'
+                            marginBottom: '4px'
                           }}>
                             {asset.name}
                           </div>
-                          <div style={{ fontSize: '12px', color: '#8C96A4' }}>
+                          <div style={{ fontSize: '13px', color: '#8C96A4' }}>
                             {asset.id}
                           </div>
                         </div>
