@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Users, Package, HardDrive, Shield, ClipboardList, LogOut,
   Search, Settings, Bell, Plus, ChevronRight, List, Grid3x3,
   Laptop, RefreshCw, Download, Key, Wrench, HelpCircle,
   AlertCircle, Activity, Eye, Filter
 } from 'lucide-react';
+import { fetchRequests } from '../lib/requestsApi';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1020,6 +1021,54 @@ export default function RequestsQueueScreen() {
   const [tab, setTab] = useState<TabType>('queue');
   const [query, setQuery] = useState('');
   const [view, setView] = useState<ViewType>('list');
+  const [requestsData, setRequestsData] = useState<Request[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadRequests();
+  }, []);
+
+  async function loadRequests() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchRequests({ page: 1, page_size: 100 });
+      
+      // Map API response to local Request format
+      const transformedData: Request[] = response.items.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        type: item.type as RequestType,
+        requester: item.requester_name,
+        assignee: item.assignee_name || null,
+        status: item.status as Status,
+        priority: item.priority as Priority,
+        updated: formatTimestamp(item.updated_at),
+        queue: (item.status === 'Approved' ? 'approved' : item.status === 'Rejected' ? 'rejected' : 'queue') as TabType
+      }));
+      
+      setRequestsData(transformedData);
+    } catch (err: any) {
+      console.error('Failed to load requests:', err);
+      setError(err.message || 'Failed to load requests data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return date.toLocaleDateString();
+  }
 
   // Calculate counts per tab
   const counts = useMemo(() => {
@@ -1028,7 +1077,7 @@ export default function RequestsQueueScreen() {
       result[req.queue]++;
     });
     return result;
-  }, []);
+  }, [requestsData]);
 
   // Filter requests
   const filteredRequests = useMemo(() => {
@@ -1077,9 +1126,27 @@ export default function RequestsQueueScreen() {
           }}
         >
           <WorkspaceHeader onCreate={handleCreate} />
-          <KpiRow requests={requestsData.filter((r) => r.queue === tab)} filteredCount={filteredRequests.length} />
-          <FilterBar query={query} setQuery={setQuery} view={view} setView={setView} />
-          <QueueList requests={filteredRequests} tab={tab} />
+          
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+              <div style={{ fontSize: 15, color: '#6b7280' }}>Loading requests...</div>
+            </div>
+          )}
+          
+          {error && (
+            <div style={{ padding: '20px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>Error loading requests</div>
+              <div style={{ fontSize: 13, color: '#991b1b' }}>{error}</div>
+            </div>
+          )}
+          
+          {!loading && !error && (
+            <>
+              <KpiRow requests={requestsData.filter((r) => r.queue === tab)} filteredCount={filteredRequests.length} />
+              <FilterBar query={query} setQuery={setQuery} view={view} setView={setView} />
+              <QueueList requests={filteredRequests} tab={tab} />
+            </>
+          )}
         </main>
       </div>
     </div>

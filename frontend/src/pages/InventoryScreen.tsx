@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Search, Settings, Bell, ChevronDown, Download, Upload, ArrowLeftRight, Plus,
   Users, Package, HardDrive, AlertCircle, FileText, LogOut,
   Laptop, Monitor, Smartphone, Keyboard, Printer, Network, Edit, MoreVertical
 } from 'lucide-react';
+import { fetchInventoryModuleAssets, fetchInventoryModuleBranches } from '../lib/inventoryApi';
 
 // ============================================================================
 // TYPES
@@ -690,20 +691,52 @@ export default function InventoryScreen() {
   const [query, setQuery] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [allAssets, setAllAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample data
-  const allAssets: Asset[] = [
-    { id: '1', name: 'MacBook Pro 14"', serial: 'C02XR3AJ', code: 'AP-MBP14', branch: 'Zerodha HO', employee: 'Ananya Mehta', stock: 'In use', cost: '₹1,89,000', kind: 'laptop' },
-    { id: '2', name: 'Dell UltraSharp 27"', serial: 'CN-0P2423', code: 'DL-U27', branch: 'Zerodha Bangalore', employee: 'Rohan Sharma', stock: 'In use', cost: '₹42,500', kind: 'monitor' },
-    { id: '3', name: 'iPhone 13 Pro', serial: 'F2GH3JKL', code: 'AP-IP13P', branch: 'Zerodha HO', employee: null, stock: 'In stock', cost: '₹1,19,900', kind: 'phone' },
-    { id: '4', name: 'ThinkPad X1 Carbon', serial: 'PC-12345X', code: 'LN-X1C', branch: 'Zerodha Belgaum', employee: 'Priya Reddy', stock: 'In use', cost: '₹1,45,000', kind: 'laptop' },
-    { id: '5', name: 'Magic Keyboard', serial: 'MK-287364', code: 'AP-MK', branch: 'ZBL Support Office', employee: 'Amit Kumar', stock: 'In use', cost: '₹12,900', kind: 'keyboard' },
-    { id: '6', name: 'HP LaserJet Pro', serial: 'HP-LJ5001', code: 'HP-LJ', branch: 'Zerodha Bangalore', employee: null, stock: 'Low', cost: '₹28,500', kind: 'printer' },
-    { id: '7', name: 'Cisco Switch 24-Port', serial: 'CSC-24P01', code: 'CS-SW24', branch: 'Zerodha HO', employee: null, stock: 'In use', cost: '₹65,000', kind: 'network' },
-    { id: '8', name: 'MacBook Air M2', serial: 'C03YT8RJ', code: 'AP-MBA', branch: 'Zerodha Bangalore', employee: 'Sneha Patel', stock: 'In use', cost: '₹1,14,900', kind: 'laptop' },
-    { id: '9', name: 'LG UltraWide 34"', serial: 'LG-UW3401', code: 'LG-UW34', branch: 'ZBL Support Office', employee: null, stock: 'Retired', cost: '₹55,000', kind: 'monitor' },
-    { id: '10', name: 'Samsung Galaxy S22', serial: 'SM-G998B', code: 'SS-S22', branch: 'Zerodha Belgaum', employee: 'Karthik Iyer', stock: 'In use', cost: '₹69,999', kind: 'phone' },
-  ];
+  useEffect(() => {
+    loadAssets();
+  }, []);
+
+  async function loadAssets() {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetchInventoryModuleAssets({ page: 1 });
+      
+      // Transform API response to Asset format
+      const transformedAssets: Asset[] = response.items.map((item: any, index: number) => ({
+        id: item.id || `asset-${index}`,
+        name: item.name || 'Unknown',
+        serial: item.serialNumber || 'N/A',
+        code: item.assetCode || 'N/A',
+        branch: item.branchName || 'Unknown',
+        employee: item.assignedTo || null,
+        stock: item.status || 'In stock',
+        cost: item.purchasePrice ? `₹${item.purchasePrice.toLocaleString()}` : '₹0',
+        kind: determineDeviceKind(item.name || '')
+      }));
+      
+      setAllAssets(transformedAssets);
+    } catch (err: any) {
+      console.error('Failed to load inventory:', err);
+      setError(err.message || 'Failed to load inventory data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function determineDeviceKind(name: string): DeviceKind {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes('macbook') || lowerName.includes('laptop') || lowerName.includes('thinkpad')) return 'laptop';
+    if (lowerName.includes('monitor') || lowerName.includes('display')) return 'monitor';
+    if (lowerName.includes('iphone') || lowerName.includes('phone') || lowerName.includes('mobile')) return 'phone';
+    if (lowerName.includes('keyboard')) return 'keyboard';
+    if (lowerName.includes('printer')) return 'printer';
+    if (lowerName.includes('switch') || lowerName.includes('router') || lowerName.includes('network')) return 'network';
+    return 'laptop'; // default
+  }
 
   // Filter assets
   const filteredAssets = allAssets.filter((asset) => {
@@ -728,10 +761,28 @@ export default function InventoryScreen() {
       <div style={{ marginLeft: '290px', paddingTop: '58px' }}>
         <div style={{ padding: '24px 30px' }}>
           <WorkspaceHeader menuOpen={menuOpen} onMenuToggle={() => setMenuOpen(!menuOpen)} />
-          <KpiBar />
-          <FilterBar query={query} onQueryChange={setQuery} />
-          <AssetTable assets={filteredAssets.slice((currentPage - 1) * 10, currentPage * 10)} />
-          <Pagination total={filteredAssets.length} currentPage={currentPage} onPageChange={setCurrentPage} />
+          
+          {loading && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+              <div style={{ fontSize: 15, color: '#6b7280' }}>Loading inventory...</div>
+            </div>
+          )}
+          
+          {error && (
+            <div style={{ padding: '20px', marginBottom: 20, background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>Error loading inventory</div>
+              <div style={{ fontSize: 13, color: '#991b1b' }}>{error}</div>
+            </div>
+          )}
+          
+          {!loading && !error && (
+            <>
+              <KpiBar />
+              <FilterBar query={query} onQueryChange={setQuery} />
+              <AssetTable assets={filteredAssets.slice((currentPage - 1) * 10, currentPage * 10)} />
+              <Pagination total={filteredAssets.length} currentPage={currentPage} onPageChange={setCurrentPage} />
+            </>
+          )}
         </div>
       </div>
     </div>

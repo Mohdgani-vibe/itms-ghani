@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Settings, Bell, Home, HardDrive, Users, Package, Terminal, BarChart3, FileText } from 'lucide-react';
+import { fetchPatchDashboard } from '../lib/patchApi';
 
 // ============================================================================
 // DATA TYPES
@@ -540,45 +541,76 @@ function RecentUpdates({ updates }: RecentUpdatesProps) {
 
 export default function PatchDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [summary, setSummary] = useState<SystemsSummary>({ total: 0, online: 0, offline: 0 });
+  const [charts, setCharts] = useState<ChartData[]>([]);
+  const [recentUpdates, setRecentUpdates] = useState<RecentUpdate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Mock data - defaults to zeros for empty scope
-  const summary: SystemsSummary = {
-    total: 0,
-    online: 0,
-    offline: 0,
-  };
+  useEffect(() => {
+    loadPatchDashboard();
+  }, []);
 
-  const charts: ChartData[] = [
-    {
-      period: 'LAST 1 DAY',
-      runs: 0,
-      rate: 0,
-      done: 0,
-      failed: 0,
-      trendLabel: 'RUNS PER HOUR',
-      series: [],
-    },
-    {
-      period: 'LAST 7 DAYS',
-      runs: 0,
-      rate: 0,
-      done: 0,
-      failed: 0,
-      trendLabel: 'RUNS PER DAY',
-      series: [],
-    },
-    {
-      period: 'LAST 30 DAYS',
-      runs: 0,
-      rate: 0,
-      done: 0,
-      failed: 0,
-      trendLabel: 'RUNS PER DAY',
-      series: [],
-    },
-  ];
-
-  const recentUpdates: RecentUpdate[] = [];
+  async function loadPatchDashboard() {
+    try {
+      setLoading(true);
+      setError(null);
+      const dashboard = await fetchPatchDashboard();
+      
+      // Transform summary data
+      setSummary({
+        total: dashboard.summary.total_devices || 0,
+        online: dashboard.summary.up_to_date || 0,
+        offline: dashboard.summary.pending_updates || 0
+      });
+      
+      // Transform charts data (placeholder with empty series for now)
+      const chartsData: ChartData[] = [
+        {
+          period: 'LAST 1 DAY',
+          runs: 0,
+          rate: 0,
+          done: 0,
+          failed: 0,
+          trendLabel: 'RUNS PER HOUR',
+          series: []
+        },
+        {
+          period: 'LAST 7 DAYS',
+          runs: 0,
+          rate: 0,
+          done: 0,
+          failed: 0,
+          trendLabel: 'RUNS PER DAY',
+          series: []
+        },
+        {
+          period: 'LAST 30 DAYS',
+          runs: 0,
+          rate: 0,
+          done: 0,
+          failed: 0,
+          trendLabel: 'RUNS PER DAY',
+          series: []
+        }
+      ];
+      setCharts(chartsData);
+      
+      // Transform recent patches to RecentUpdate format
+      const updates: RecentUpdate[] = (dashboard.recent_patches || []).slice(0, 10).map((patch: any, index: number) => ({
+        id: `update-${index}`,
+        timestamp: patch.installed_at || new Date().toISOString(),
+        system: patch.hostname || `System ${index + 1}`,
+        status: 'success' as const
+      }));
+      setRecentUpdates(updates);
+    } catch (err: any) {
+      console.error('Failed to load patch dashboard:', err);
+      setError(err.message || 'Failed to load patch data');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: '100vh' }}>
@@ -605,9 +637,26 @@ export default function PatchDashboard() {
 
           {/* Content */}
           <div className="space-y-6">
-            <SystemsSummary summary={summary} />
-            <ChartsPanel charts={charts} />
-            <RecentUpdates updates={recentUpdates} />
+            {loading && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
+                <div style={{ fontSize: 15, color: '#6b7280' }}>Loading patch dashboard...</div>
+              </div>
+            )}
+            
+            {error && (
+              <div style={{ padding: '20px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 12 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#dc2626', marginBottom: 4 }}>Error loading dashboard</div>
+                <div style={{ fontSize: 13, color: '#991b1b' }}>{error}</div>
+              </div>
+            )}
+            
+            {!loading && !error && (
+              <>
+                <SystemsSummary summary={summary} />
+                <ChartsPanel charts={charts} />
+                <RecentUpdates updates={recentUpdates} />
+              </>
+            )}
           </div>
         </div>
       </div>
