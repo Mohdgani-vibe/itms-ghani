@@ -21,7 +21,7 @@ const Gatepass = lazy(() => import('./pages/Gatepass'));
 const Chat = lazy(() => import('./pages/Chat'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const SaltStackWorkspace = lazy(() => import('./pages/SaltStackWorkspace'));
-const Announcements = lazy(() => import('./pages/Announcements'));
+const AnnouncementsScreen = lazy(() => import('./pages/AnnouncementsScreen'));
 const MyAssetsPage = lazy(() => import('./pages/live/MyAssetsPage'));
 const MyRequestsPage = lazy(() => import('./pages/live/MyRequestsPage'));
 const RequestsQueuePage = lazy(() => import('./pages/live/RequestsQueuePage'));
@@ -160,7 +160,7 @@ function App() {
             <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="announcements" element={<Announcements />} />
+            <Route path="announcements" element={<AnnouncementsScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -188,7 +188,7 @@ function App() {
             <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="announcements" element={<Announcements />} />
+            <Route path="announcements" element={<AnnouncementsScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -214,7 +214,7 @@ function App() {
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
-            <Route path="announcements" element={<Announcements />} />
+            <Route path="announcements" element={<AnnouncementsScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -231,7 +231,7 @@ function App() {
             <Route path="requests" element={<MyRequestsPage />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="announcements" element={<Announcements />} />
+            <Route path="announcements" element={<AnnouncementsScreen />} />
           </Route>
           <Route path="/" element={<PortalHomeRedirect />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
