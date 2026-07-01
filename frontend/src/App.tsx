@@ -22,6 +22,7 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const SaltStackWorkspace = lazy(() => import('./pages/SaltStackWorkspace'));
 const AnnouncementsScreen = lazy(() => import('./pages/AnnouncementsScreen'));
+const BroadcastCenterScreen = lazy(() => import('./pages/BroadcastCenterScreen'));
 const MyAssetsPage = lazy(() => import('./pages/live/MyAssetsPage'));
 const MyRequestsPage = lazy(() => import('./pages/live/MyRequestsPage'));
 const RequestsQueuePage = lazy(() => import('./pages/live/RequestsQueuePage'));
@@ -161,6 +162,7 @@ function App() {
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -189,6 +191,7 @@ function App() {
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -215,6 +218,7 @@ function App() {
             <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -232,6 +236,7 @@ function App() {
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="chat" element={<Chat />} />
             <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
           </Route>
           <Route path="/" element={<PortalHomeRedirect />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
