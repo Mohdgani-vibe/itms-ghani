@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Search, Settings, Bell, ChevronDown, Users, HardDrive, Database, AlertCircle, FileText, LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Search, Settings, Bell, ChevronDown, Users, HardDrive, Database, AlertCircle, FileText, LogOut, Megaphone, Home } from 'lucide-react';
 
 // ============================================================================
 // TYPES
@@ -60,6 +61,8 @@ const AUDIENCES = ['All', 'All Employees', 'IT Team', 'Admin', 'Audit', 'Super A
 // ============================================================================
 
 function IconRail() {
+  const navigate = useNavigate();
+  
   return (
     <div style={{
       width: 56,
@@ -76,7 +79,9 @@ function IconRail() {
       paddingBottom: 14
     }}>
       {/* Logo tile */}
-      <div style={{
+      <button 
+        onClick={() => navigate('/admin/dashboard')}
+        style={{
         position: 'relative',
         width: 38,
         height: 38,
@@ -88,7 +93,9 @@ function IconRail() {
         color: '#fff',
         fontSize: 13,
         fontWeight: 700,
-        marginBottom: 16
+        marginBottom: 16,
+        border: 'none',
+        cursor: 'pointer'
       }}>
         IT
         <div style={{
@@ -105,29 +112,55 @@ function IconRail() {
           alignItems: 'center',
           justifyContent: 'center'
         }}>z</div>
-      </div>
+      </button>
 
       {/* Divider */}
       <div style={{ width: 28, height: 1, background: '#e8e4dc', marginBottom: 12 }} />
 
       {/* Navigation icons */}
-      <button style={{
+      <button 
+        onClick={() => navigate('/admin/dashboard')}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
         border: 'none',
-        background: '#eaeefb',
-        color: '#23315d',
+        background: 'transparent',
+        color: '#9aa0ad',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
-        marginBottom: 8
-      }}>
+        marginBottom: 8,
+        transition: 'background 0.2s'
+      }} onMouseEnter={(e) => e.currentTarget.style.background = '#f2f0ea'}
+         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+        <Home size={20} />
+      </button>
+      
+      <button 
+        onClick={() => navigate('/admin/users')}
+        style={{
+        width: 38,
+        height: 38,
+        borderRadius: 9,
+        border: 'none',
+        background: 'transparent',
+        color: '#9aa0ad',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        marginBottom: 8,
+        transition: 'background 0.2s'
+      }} onMouseEnter={(e) => e.currentTarget.style.background = '#f2f0ea'}
+         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
         <Users size={20} />
       </button>
 
-      <button style={{
+      <button 
+        onClick={() => navigate('/admin/devices')}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
@@ -145,7 +178,9 @@ function IconRail() {
         <HardDrive size={20} />
       </button>
 
-      <button style={{
+      <button 
+        onClick={() => navigate('/admin/inventory')}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
@@ -163,7 +198,9 @@ function IconRail() {
         <Database size={20} />
       </button>
 
-      <button style={{
+      <button 
+        onClick={() => navigate('/admin/alerts')}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
@@ -181,28 +218,34 @@ function IconRail() {
         <AlertCircle size={20} />
       </button>
 
-      <button style={{
+      <button 
+        onClick={() => navigate('/admin/announcements')}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
         border: 'none',
-        background: 'transparent',
-        color: '#9aa0ad',
+        background: '#eaeefb',
+        color: '#23315d',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
         transition: 'background 0.2s'
-      }} onMouseEnter={(e) => e.currentTarget.style.background = '#f2f0ea'}
-         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
-        <FileText size={20} />
+      }}>
+        <Megaphone size={20} />
       </button>
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
       {/* Sign out */}
-      <button style={{
+      <button 
+        onClick={() => {
+          localStorage.removeItem('session');
+          navigate('/login');
+        }}
+        style={{
         width: 38,
         height: 38,
         borderRadius: 9,
