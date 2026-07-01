@@ -171,7 +171,7 @@ function ScanBanner() {
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: 1.2,
-            color: '#9ca3af',
+            color: '#fff',
             marginBottom: 8
           }}
         >
@@ -180,7 +180,7 @@ function ScanBanner() {
         <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, marginBottom: 8 }}>
           Gatepass barcode board
         </h2>
-        <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>
+        <p style={{ fontSize: 14, color: '#fff', margin: 0, lineHeight: 1.6 }}>
           Use the larger barcode cards to verify movement records quickly from reports.
         </p>
       </div>
