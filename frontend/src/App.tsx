@@ -14,7 +14,7 @@ const UserProfilePage = lazy(() => import('./pages/live/UserProfilePage'));
 const Devices = lazy(() => import('./pages/Devices'));
 const DeviceDetailPage = lazy(() => import('./pages/live/DeviceDetailPage'));
 const SettingsPage = lazy(() => import('./pages/live/SettingsPage'));
-const PatchDashboardPage = lazy(() => import('./pages/live/PatchDashboardPage'));
+const PatchDashboard = lazy(() => import('./pages/PatchDashboard'));
 const PatchList = lazy(() => import('./pages/PatchList'));
 const Inventory = lazy(() => import('./pages/Inventory'));
 const Gatepass = lazy(() => import('./pages/Gatepass'));
@@ -163,7 +163,7 @@ function App() {
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
-            <Route path="patch" element={<PatchDashboardPage />} />
+            <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="inventory-screen" element={<InventoryScreen />} />
             <Route path="security-alerts" element={<SecurityAlertsScreen />} />
@@ -181,7 +181,7 @@ function App() {
             <Route path="inventory" element={<InventoryScreen />} />
             <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
-            <Route path="patch" element={<PatchDashboardPage />} />
+            <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
@@ -209,7 +209,7 @@ function App() {
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="patch" element={<PatchDashboardPage />} />
+            <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="vault" element={<VaultPage />} />
