@@ -182,7 +182,7 @@ function ScanBanner() {
           SCAN STATION
         </div>
         <h2 className="scan-station-text" style={{ fontSize: 22, fontWeight: 700, margin: 0, marginBottom: 8 }}>
-          Gatepass barcode board
+          ## Gatepass barcode board
         </h2>
         <p className="scan-station-text" style={{ fontSize: 14, margin: 0, lineHeight: 1.6 }}>
           Use the larger barcode cards to verify movement records quickly from reports.
