@@ -32,6 +32,7 @@ const DocsPage = lazy(() => import('./pages/live/DocsPage'));
 const InventoryScreen = lazy(() => import('./pages/InventoryScreen'));
 const SecurityAlertsScreen = lazy(() => import('./pages/SecurityAlertsScreen'));
 const RequestsQueueScreen = lazy(() => import('./pages/RequestsQueueScreen'));
+const GatepassScreen = lazy(() => import('./pages/GatepassScreen'));
 
 function RouteFallback() {
   return (
@@ -168,6 +169,7 @@ function App() {
             <Route path="inventory-screen" element={<InventoryScreen />} />
             <Route path="security-alerts" element={<SecurityAlertsScreen />} />
             <Route path="requests-queue" element={<RequestsQueueScreen />} />
+            <Route path="gatepass-screen" element={<GatepassScreen />} />
           </Route>
 
           {/* IT Portal with PortalLayout */}
@@ -193,6 +195,7 @@ function App() {
             <Route path="inventory-screen" element={<InventoryScreen />} />
             <Route path="security-alerts" element={<SecurityAlertsScreen />} />
             <Route path="requests-queue" element={<RequestsQueueScreen />} />
+            <Route path="gatepass-screen" element={<GatepassScreen />} />
           </Route>
 
           {/* Audit Portal with PortalLayout */}
@@ -215,6 +218,7 @@ function App() {
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="gatepass-screen" element={<GatepassScreen />} />
           </Route>
 
           {/* Employee Portal with PortalLayout */}
