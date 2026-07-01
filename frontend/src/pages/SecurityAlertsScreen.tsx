@@ -1115,24 +1115,9 @@ export default function SecurityAlertsScreen() {
     : sourcesData;
 
   return (
-    <div
-      style={{
-        width: '100%',
-        minHeight: '100vh',
-        background: '#f7f8fa',
-        fontFamily: 'Public Sans, sans-serif',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <TopBar nav={nav} setNav={setNav} />
-      
-      <div style={{ display: 'flex', flex: 1 }}>
-        <IconRail />
-        
-        <main style={{ flex: 1, padding: '30px' }}>
-          <WorkspaceHeader onRefresh={handleRefresh} />
-          <SourcesBar source={source} setSource={setSource} />
+    <div style={{ padding: '30px', background: '#f7f8fa', minHeight: '100vh' }}>
+      <WorkspaceHeader onRefresh={handleRefresh} />
+      <SourcesBar source={source} setSource={setSource} />
           
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
@@ -1176,8 +1161,6 @@ export default function SecurityAlertsScreen() {
               </div>
             </>
           )}
-        </main>
-      </div>
     </div>
   );
 }

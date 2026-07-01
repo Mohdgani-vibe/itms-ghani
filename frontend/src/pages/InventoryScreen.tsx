@@ -203,7 +203,7 @@ function ContextSidebar({ nav, onNavChange, branch, onBranchChange }: ContextSid
 
   return (
     <div
-      className="fixed left-[58px] top-[58px] bottom-0 overflow-y-auto"
+      className="fixed left-16 top-14 bottom-0 overflow-y-auto"
       style={{ width: '232px', backgroundColor: '#ffffff', borderRight: '1px solid #e7e9ec' }}
     >
       {/* Inventory Nav */}
@@ -753,14 +753,11 @@ export default function InventoryScreen() {
 
   return (
     <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f7f8fa', minHeight: '100vh' }}>
-      <TopBar />
-      <IconRail />
       <ContextSidebar nav={nav} onNavChange={setNav} branch={branch} onBranchChange={setBranch} />
 
       {/* Main Workspace */}
-      <div style={{ marginLeft: '290px', paddingTop: '58px' }}>
-        <div style={{ padding: '24px 30px' }}>
-          <WorkspaceHeader menuOpen={menuOpen} onMenuToggle={() => setMenuOpen(!menuOpen)} />
+      <div style={{ marginLeft: '232px', padding: '24px 30px' }}>
+        <WorkspaceHeader menuOpen={menuOpen} onMenuToggle={() => setMenuOpen(!menuOpen)} />
           
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
@@ -783,7 +780,6 @@ export default function InventoryScreen() {
               <Pagination total={filteredAssets.length} currentPage={currentPage} onPageChange={setCurrentPage} />
             </>
           )}
-        </div>
       </div>
     </div>
   );

@@ -1102,31 +1102,8 @@ export default function RequestsQueueScreen() {
   };
 
   return (
-    <div
-      style={{
-        width: '100%',
-        minHeight: '100vh',
-        background: '#f7f8fa',
-        fontFamily: 'Public Sans, sans-serif',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-    >
-      <TopBar tab={tab} setTab={setTab} counts={counts} />
-
-      <div style={{ display: 'flex', flex: 1 }}>
-        <IconRail />
-
-        <main
-          style={{
-            flex: 1,
-            padding: '30px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20
-          }}
-        >
-          <WorkspaceHeader onCreate={handleCreate} />
+    <div style={{ padding: '30px', background: '#f7f8fa', minHeight: '100vh', display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <WorkspaceHeader onCreate={handleCreate} />
           
           {loading && (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '60px' }}>
@@ -1148,8 +1125,6 @@ export default function RequestsQueueScreen() {
               <QueueList requests={filteredRequests} tab={tab} />
             </>
           )}
-        </main>
-      </div>
     </div>
   );
 }

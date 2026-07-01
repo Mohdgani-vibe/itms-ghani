@@ -609,14 +609,9 @@ export default function PatchDashboard() {
   }
 
   return (
-    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: '100vh' }}>
-      <TopBar />
-      <IconRail />
-
-      {/* Main content */}
-      <div style={{ marginLeft: '64px', paddingTop: '60px' }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px' }}>
-          {/* Page header */}
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: '100vh', padding: '32px' }}>
+      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+        {/* Page header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1a1d21' }}>Patch dashboard</h1>
@@ -655,7 +650,6 @@ export default function PatchDashboard() {
             )}
           </div>
         </div>
-      </div>
     </div>
   );
 }
