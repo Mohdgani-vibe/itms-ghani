@@ -946,57 +946,26 @@ export default function Alerts() {
   };
 
   return (
-    <div className={`min-h-screen overflow-hidden px-4 py-8 xl:px-6 alerts-page-root ${darkMode ? 'text-white bg-zinc-950' : 'text-zinc-900 bg-gradient-to-br from-blue-50 via-white to-cyan-50'}`}>
-      <style>{`
-        .alerts-page-root,
-        .alerts-page-root div,
-        .alerts-page-root span,
-        .alerts-page-root p,
-        .alerts-page-root h1,
-        .alerts-page-root h2,
-        .alerts-page-root h3,
-        .alerts-page-root button,
-        .alerts-page-root a,
-        .alerts-page-root label,
-        .alerts-page-root input,
-        .alerts-page-root select,
-        .alerts-page-root td,
-        .alerts-page-root th,
-        .alerts-page-root li {
-          color: #0F1B2D !important;
-        }
-        .alerts-page-root .text-ink { color: #0F1B2D !important; }
-        .alerts-page-root .text-muted { color: #8C96A4 !important; }
-        .alerts-page-root .text-primary { color: #2667E8 !important; }
-        .alerts-page-root .text-white { color: white !important; }
-        .alerts-page-root .text-success { color: #30A46C !important; }
-        .alerts-page-root .text-warning { color: #FFB224 !important; }
-        .alerts-page-root .text-danger { color: #E5484D !important; }
-        .alerts-page-root .bg-white { background-color: white !important; }
-        
-        @keyframes alerts-fade-in {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: 'calc(100vh - 60px)', width: '100%', margin: 0, padding: '28px 32px 48px' }} className={`overflow-hidden ${darkMode ? 'text-white bg-zinc-950' : ''}`}>
 
-      <div className="relative mx-auto max-w-[1600px] space-y-6 pb-10">
+      <div className="relative mx-auto space-y-6 pb-10" style={{ width: '100%' }}>
         <div className={`space-y-4 ${view === 'all-alerts' ? 'relative z-10' : 'sticky top-3 z-30'}`}>
-          <div className="rounded-3xl border border-zinc-200 bg-white/90 backdrop-blur-sm px-8 py-6 shadow-xl">
+          <div className="rounded-xl px-8 py-6" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-4">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 shadow-lg">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl shadow-lg" style={{ background: 'linear-gradient(135deg, #dc2626 0%, #ea580c 100%)' }}>
                   <Shield className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold tracking-tight text-zinc-900">Security Alerts</h1>
-                  <p className="mt-1 text-sm text-zinc-600 font-medium">Monitor threats, compliance scans, and malware detections across your infrastructure.</p>
+                  <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#1a1d21' }}>Security Alerts</h1>
+                  <p className="mt-1 text-sm font-medium" style={{ color: '#6b7280' }}>Monitor threats, compliance scans, and malware detections across your infrastructure.</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={refreshData}
-                className="inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 px-6 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-cyan-700 transition-all"
+                className="inline-flex items-center justify-center rounded-xl px-6 py-3 text-sm font-bold text-white shadow-lg hover:shadow-xl transition-all"
+                style={{ background: 'linear-gradient(to right, #2563eb, #0891b2)' }}
               >
                 Refresh
               </button>
@@ -1017,13 +986,13 @@ export default function Alerts() {
             />
           </div>
 
-          <div className="rounded-3xl border border-zinc-200 bg-white/90 backdrop-blur-sm p-6 shadow-xl">
+          <div className="rounded-xl p-6" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
             <div className="mb-4 flex items-center justify-between gap-3 px-2">
               <div>
-                <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-zinc-500">Source Navigation</div>
-                <div className="mt-1 text-sm text-zinc-600">Jump straight into Wazuh, OpenSCAP, or ClamAV without leaving the Alerts workspace.</div>
+                <div className="text-[11px] font-bold uppercase tracking-[0.16em]" style={{ color: '#9aa1ab' }}>Source Navigation</div>
+                <div className="mt-1 text-sm" style={{ color: '#6b7280' }}>Jump straight into Wazuh, OpenSCAP, or ClamAV without leaving the Alerts workspace.</div>
               </div>
-              <div className="rounded-full border border-white/70 bg-[linear-gradient(135deg,_rgba(224,242,254,0.9)_0%,_rgba(255,255,255,0.7)_100%)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-sky-700 shadow-sm backdrop-blur-xl">Always visible</div>
+              <div className="rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] shadow-sm" style={{ border: '1px solid #dbe4ff', background: '#eef2ff', color: '#2563eb' }}>Always visible</div>
             </div>
             <div className="flex flex-wrap gap-2">
               {SOURCE_KEYS.map((source) => {

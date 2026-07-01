@@ -479,7 +479,7 @@ export default function PatchList() {
   };
 
   return (
-    <div className="min-h-screen space-y-6 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.08),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(245,158,11,0.08),_transparent_24%),linear-gradient(180deg,_#f8fbff_0%,_#f2f7fb_100%)] p-4 sm:p-6">
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: 'calc(100vh - 60px)', width: '100%', margin: 0, padding: '28px 32px 48px' }} className="space-y-6">
       <PatchListHeader
         basePath={basePath}
         navigate={navigate}
@@ -492,39 +492,39 @@ export default function PatchList() {
       />
 
       {!canOperate ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="rounded-xl px-4 py-3 text-sm" style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e' }}>
           Auditor access is view-only on patch operations. You can review device status, but patch runs, Salt console actions, and report history are disabled.
         </div>
       ) : null}
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="rounded-xl px-4 py-4" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Scope</span>
-            <Wrench className="h-4 w-4 text-brand-600" />
+            <span className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: '#9aa1ab' }}>Scope</span>
+            <Wrench className="h-4 w-4" style={{ color: '#2563eb' }} />
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-950">{selectedDepartment === 'all' ? 'All departments' : selectedDepartment}</div>
+          <div className="mt-3 text-2xl font-black" style={{ color: '#1a1d21' }}>{selectedDepartment === 'all' ? 'All departments' : selectedDepartment}</div>
         </div>
-        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="rounded-xl px-4 py-4" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Actionable</span>
-            <ShieldCheck className="h-4 w-4 text-brand-600" />
+            <span className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: '#9aa1ab' }}>Actionable</span>
+            <ShieldCheck className="h-4 w-4" style={{ color: '#2563eb' }} />
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-950">{actionableDeviceCount}</div>
+          <div className="mt-3 text-2xl font-black" style={{ color: '#1a1d21' }}>{actionableDeviceCount}</div>
         </div>
-        <div className="rounded-[24px] border border-rose-200 bg-rose-50 px-4 py-4 shadow-sm">
+        <div className="rounded-xl px-4 py-4" style={{ border: '1px solid #fecaca', background: '#fef2f2', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-rose-700">Review blocked</span>
-            <ShieldAlert className="h-4 w-4 text-rose-700" />
+            <span className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: '#991b1b' }}>Review blocked</span>
+            <ShieldAlert className="h-4 w-4" style={{ color: '#991b1b' }} />
           </div>
-          <div className="mt-3 text-2xl font-black text-rose-950">{Math.max(totalDevices - actionableDeviceCount, 0)}</div>
+          <div className="mt-3 text-2xl font-black" style={{ color: '#7f1d1d' }}>{Math.max(totalDevices - actionableDeviceCount, 0)}</div>
         </div>
-        <div className="rounded-[24px] border border-slate-200 bg-white px-4 py-4 shadow-sm">
+        <div className="rounded-xl px-4 py-4" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-500">Saved reports</span>
-            <Play className="h-4 w-4 text-brand-600" />
+            <span className="text-[11px] font-black uppercase tracking-[0.16em]" style={{ color: '#9aa1ab' }}>Saved reports</span>
+            <Play className="h-4 w-4" style={{ color: '#2563eb' }} />
           </div>
-          <div className="mt-3 text-2xl font-black text-slate-950">{recentReports.length}</div>
+          <div className="mt-3 text-2xl font-black" style={{ color: '#1a1d21' }}>{recentReports.length}</div>
         </div>
       </section>
 

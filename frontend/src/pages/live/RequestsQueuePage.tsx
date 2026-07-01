@@ -781,35 +781,8 @@ export default function RequestsQueuePage() {
   };
 
   return (
-    <>
-    <style>{`
-      .requests-queue-root,
-      .requests-queue-root div,
-      .requests-queue-root span,
-      .requests-queue-root p,
-      .requests-queue-root h1,
-      .requests-queue-root h2,
-      .requests-queue-root h3,
-      .requests-queue-root button,
-      .requests-queue-root a,
-      .requests-queue-root label,
-      .requests-queue-root input,
-      .requests-queue-root select,
-      .requests-queue-root td,
-      .requests-queue-root th,
-      .requests-queue-root li {
-        color: #0F1B2D !important;
-      }
-      .requests-queue-root .text-ink { color: #0F1B2D !important; }
-      .requests-queue-root .text-muted { color: #8C96A4 !important; }
-      .requests-queue-root .text-primary { color: #2667E8 !important; }
-      .requests-queue-root .text-white { color: white !important; }
-      .requests-queue-root .text-success { color: #30A46C !important; }
-      .requests-queue-root .text-warning { color: #FFB224 !important; }
-      .requests-queue-root .text-danger { color: #E5484D !important; }
-      .requests-queue-root .bg-white { background-color: white !important; }
-    `}</style>
-    <div className="space-y-6 rounded-[32px] border border-zinc-200 bg-[linear-gradient(180deg,_#f8fcff_0%,_#eef6ff_100%)] p-4 shadow-[0_20px_60px_rgba(14,165,233,0.08)] lg:p-6 requests-queue-root">
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: 'calc(100vh - 60px)', width: '100%' }}>
+    <div style={{ width: '100%', margin: 0, padding: '28px 32px 48px' }} className="space-y-6 rounded-xl" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
       <RequestsQueueHero
         totalRequests={totalRequests}
         pendingCount={requestSummary.pending}
@@ -819,10 +792,10 @@ export default function RequestsQueuePage() {
         enrollmentCount={enrollmentCount}
       />
 
-      {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
+      {error ? <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid #fecaca', background: '#fee', color: '#b91c1c' }}>{error}</div> : null}
 
       {isAuditor ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid #fde68a', background: '#fffbeb', color: '#92400e' }}>
           Auditor access is read-only on requests. You can review queue state, comments, and linked devices, but creating, assigning, and status changes are disabled.
         </div>
       ) : null}
@@ -970,7 +943,7 @@ export default function RequestsQueuePage() {
         );
       })}
 
-      <div className="rounded-xl border border-sky-100 bg-white shadow-sm">
+      <div className="rounded-xl" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
         <Pagination
           currentPage={currentPage}
           totalItems={totalRequests}
@@ -980,6 +953,6 @@ export default function RequestsQueuePage() {
         />
       </div>
     </div>
-    </>
+    </div>
   );
 }
