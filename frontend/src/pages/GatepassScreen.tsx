@@ -152,6 +152,12 @@ function Barcode({ code }: { code: string }) {
 // ============================================================================
 
 function ScanBanner() {
+  const whiteTextStyle = {
+    color: 'rgb(255, 255, 255)',
+    WebkitTextFillColor: 'rgb(255, 255, 255)',
+    textShadow: 'none'
+  };
+
   return (
     <div
       style={{
@@ -165,26 +171,49 @@ function ScanBanner() {
       }}
     >
       <div style={{ flex: 1 }}>
-        <style>{`
-          .scan-station-text, .scan-station-text * {
+        <style dangerouslySetInnerHTML={{__html: `
+          .scan-station-white {
             color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
           }
-        `}</style>
+          .scan-station-white * {
+            color: #ffffff !important;
+            -webkit-text-fill-color: #ffffff !important;
+          }
+        `}} />
         <div
-          className="scan-station-text"
+          className="scan-station-white"
           style={{
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: 1.2,
-            marginBottom: 8
+            marginBottom: 8,
+            ...whiteTextStyle
           }}
         >
           SCAN STATION
         </div>
-        <h2 className="scan-station-text" style={{ fontSize: 22, fontWeight: 700, margin: 0, marginBottom: 8 }}>
+        <h2 
+          className="scan-station-white"
+          style={{ 
+            fontSize: 22, 
+            fontWeight: 700, 
+            margin: 0, 
+            marginBottom: 8,
+            ...whiteTextStyle
+          }}
+        >
           ## Gatepass barcode board
         </h2>
-        <p className="scan-station-text" style={{ fontSize: 14, margin: 0, lineHeight: 1.6 }}>
+        <p 
+          className="scan-station-white"
+          style={{ 
+            fontSize: 14, 
+            margin: 0, 
+            lineHeight: 1.6,
+            ...whiteTextStyle
+          }}
+        >
           Use the larger barcode cards to verify movement records quickly from reports.
         </p>
       </div>
