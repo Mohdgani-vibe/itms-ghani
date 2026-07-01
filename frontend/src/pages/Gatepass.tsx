@@ -1110,35 +1110,8 @@ export default function Gatepass() {
   };
 
   return (
-    <>
-    <style>{`
-      .gatepass-page-root,
-      .gatepass-page-root div,
-      .gatepass-page-root span,
-      .gatepass-page-root p,
-      .gatepass-page-root h1,
-      .gatepass-page-root h2,
-      .gatepass-page-root h3,
-      .gatepass-page-root button,
-      .gatepass-page-root a,
-      .gatepass-page-root label,
-      .gatepass-page-root input,
-      .gatepass-page-root select,
-      .gatepass-page-root td,
-      .gatepass-page-root th,
-      .gatepass-page-root li {
-        color: #0F1B2D !important;
-      }
-      .gatepass-page-root .text-ink { color: #0F1B2D !important; }
-      .gatepass-page-root .text-muted { color: #8C96A4 !important; }
-      .gatepass-page-root .text-primary { color: #2667E8 !important; }
-      .gatepass-page-root .text-white { color: white !important; }
-      .gatepass-page-root .text-success { color: #30A46C !important; }
-      .gatepass-page-root .text-warning { color: #FFB224 !important; }
-      .gatepass-page-root .text-danger { color: #E5484D !important; }
-      .gatepass-page-root .bg-white { background-color: white !important; }
-    `}</style>
-    <div className="gatepass-page gatepass-page-root w-full space-y-6">
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: 'calc(100vh - 60px)', width: '100%' }}>
+    <div style={{ width: '100%', margin: 0, padding: '28px 32px 48px' }} className="space-y-6">
       <GatepassPreviewOverlay
         showPreview={showPreview}
         previewGatepassNumber={previewGatepassNumber}
@@ -1151,31 +1124,32 @@ export default function Gatepass() {
       />
 
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Gatepass</h1>
-        <p className="mt-1 text-sm text-zinc-500">Admin and IT dispatch tracking with creation, pending signatures, saved PDFs, and reporting.</p>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: '#1a1d21', letterSpacing: '-0.5px' }}>Gatepass</h1>
+        <p className="mt-1 text-sm" style={{ color: '#8b919b' }}>Admin and IT dispatch tracking with creation, pending signatures, saved PDFs, and reporting.</p>
       </div>
 
       {isAuditor ? (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid #fef3c7', background: '#fffbeb', color: '#92400e' }}>
           Auditor access is read-only on gatepass. You can review movement summaries and existing records, but drafting and issuing new gatepasses is disabled.
         </div>
       ) : null}
 
-      {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div> : null}
-      {successMessage ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{successMessage}</div> : null}
+      {error ? <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid #fecaca', background: '#fee', color: '#b91c1c' }}>{error}</div> : null}
+      {successMessage ? <div className="rounded-xl p-4 text-sm" style={{ border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#15803d' }}>{successMessage}</div> : null}
 
       {activeSection === 'create' && !isAuditor ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
-          <div className="max-h-full w-full max-w-5xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8" style={{ background: 'rgba(0,0,0,0.4)' }}>
+          <div className="max-h-full w-full max-w-5xl overflow-y-auto rounded-2xl p-6" style={{ background: '#ffffff', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)' }}>
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <div className="text-lg font-bold text-sky-950">Create Gatepass</div>
-                <div className="text-sm text-blue-700/80">Use the same popup-style workflow as inventory add item to draft and issue a gatepass.</div>
+                <div className="text-lg font-bold" style={{ color: '#1a1d21' }}>Create Gatepass</div>
+                <div className="text-sm" style={{ color: '#2563eb' }}>Use the same popup-style workflow as inventory add item to draft and issue a gatepass.</div>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveSection('reports')}
-                className="rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                className="rounded-lg px-3 py-2 text-sm font-semibold"
+                style={{ border: '1px solid #dbe4ff', background: '#ffffff', color: '#2563eb' }}
               >
                 Close
               </button>
@@ -1238,21 +1212,21 @@ export default function Gatepass() {
           />
         ) : null}
         {activeSection !== 'create' ? (
-        <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-bold text-zinc-900">
+        <div className="rounded-xl p-5" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <h2 className="text-lg font-bold" style={{ color: '#1a1d21' }}>
             {activeSection === 'pending' ? 'Pending Signatures' : activeSection === 'records' ? 'Vault & Records' : 'Gatepass Register'}
           </h2>
-          <p className="mt-1 text-sm text-zinc-500">
+          <p className="mt-1 text-sm" style={{ color: '#8b919b' }}>
             {activeSection === 'pending' ? 'Review gatepasses that still need approval, receiver upload, or security signoff.' : activeSection === 'records' ? 'Browse completed and rejected gatepasses already processed.' : 'Search all generated gatepasses.'}
           </p>
         </div>
         ) : null}
 
-        {activeSection === 'pending' ? <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">Pending signatures are managed from the side menu only.</div> : null}
-        {activeSection === 'records' ? <div className="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-500 shadow-sm">Saved gatepass records are hidden from the main page.</div> : null}
+        {activeSection === 'pending' ? <div className="rounded-xl p-6 text-sm" style={{ border: '1px solid #e6e8eb', background: '#ffffff', color: '#8b919b', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>Pending signatures are managed from the side menu only.</div> : null}
+        {activeSection === 'records' ? <div className="rounded-xl p-6 text-sm" style={{ border: '1px solid #e6e8eb', background: '#ffffff', color: '#8b919b', boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}>Saved gatepass records are hidden from the main page.</div> : null}
         </div>
       </div>
     </div>
-    </>
+    </div>
   );
 }

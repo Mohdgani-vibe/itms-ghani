@@ -758,79 +758,52 @@ export default function InventoryPage() {
   ];
 
   return (
-    <>
-    <style>{`
-      .inventory-page-root,
-      .inventory-page-root div,
-      .inventory-page-root span,
-      .inventory-page-root p,
-      .inventory-page-root h1,
-      .inventory-page-root h2,
-      .inventory-page-root h3,
-      .inventory-page-root button,
-      .inventory-page-root a,
-      .inventory-page-root label,
-      .inventory-page-root input,
-      .inventory-page-root select,
-      .inventory-page-root td,
-      .inventory-page-root th,
-      .inventory-page-root li {
-        color: #0F1B2D !important;
-      }
-      .inventory-page-root .text-ink { color: #0F1B2D !important; }
-      .inventory-page-root .text-muted { color: #8C96A4 !important; }
-      .inventory-page-root .text-primary { color: #2667E8 !important; }
-      .inventory-page-root .text-white { color: white !important; }
-      .inventory-page-root .text-success { color: #30A46C !important; }
-      .inventory-page-root .text-warning { color: #FFB224 !important; }
-      .inventory-page-root .text-danger { color: #E5484D !important; }
-      .inventory-page-root .bg-white { background-color: white !important; }
-    `}</style>
-    <div className="space-y-3 pb-6 inventory-page-root">
-      <section className="overflow-hidden rounded-[18px] border border-sky-100 bg-white text-sky-950 shadow-sm shadow-sky-100/70">
-        <div className="bg-[radial-gradient(circle_at_top_right,_rgba(125,211,252,0.22),_transparent_32%),radial-gradient(circle_at_left,_rgba(224,242,254,0.9),_transparent_28%),linear-gradient(135deg,_#f4fbff_0%,_#ffffff_58%,_#e0f2fe_100%)] p-3">
+    <div style={{ fontFamily: 'Public Sans, sans-serif', backgroundColor: '#f5f6f8', minHeight: 'calc(100vh - 60px)', width: '100%' }}>
+    <div style={{ width: '100%', margin: 0, padding: '28px 32px 48px' }} className="space-y-3 pb-6">
+      <section className="overflow-hidden rounded-xl" style={{ border: '1px solid #e6e8eb', background: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div className="p-3" style={{ background: '#ffffff' }}>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="text-xs font-bold uppercase tracking-[0.24em] text-sky-700">Inventory Management</div>
-            <h1 className="mt-1 text-2xl font-bold text-sky-950">Inventory and asset control by branch</h1>
-            <p className="mt-1.5 max-w-3xl text-sm text-sky-800">Manage assets, stock movement, catalog definitions, suppliers, branches, imports, audit history, and direct user assignment from one workspace.</p>
-            <div className="mt-2 inline-flex items-center rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700">
+            <div className="text-xs font-bold uppercase tracking-[0.24em]" style={{ color: '#2563eb' }}>Inventory Management</div>
+            <h1 className="mt-1 text-2xl font-bold" style={{ color: '#1a1d21' }}>Inventory and asset control by branch</h1>
+            <p className="mt-1.5 max-w-3xl text-sm" style={{ color: '#6b7280' }}>Manage assets, stock movement, catalog definitions, suppliers, branches, imports, audit history, and direct user assignment from one workspace.</p>
+            <div className="mt-2 inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold" style={{ border: '1px solid #dbe4ff', background: '#eef2ff', color: '#2563eb' }}>
               <Mail className="mr-2 h-3.5 w-3.5" />
               New assets can be assigned to a user by employee email, name, or employee ID.
             </div>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-            <div className="rounded-2xl border border-sky-100 bg-white/90 p-3 backdrop-blur-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Assets</div>
-              <div className="mt-2 text-2xl font-bold text-sky-950">{summary.assets}</div>
+            <div className="rounded-xl p-3" style={{ border: '1px solid #f2f3f5', background: '#f5f6f8' }}>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9aa1ab' }}>Assets</div>
+              <div className="mt-2 text-2xl font-bold" style={{ color: '#1a1d21' }}>{summary.assets}</div>
             </div>
-            <div className="rounded-2xl border border-sky-100 bg-white/90 p-3 backdrop-blur-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Entities</div>
+            <div className="rounded-xl p-3" style={{ border: '1px solid #f2f3f5', background: '#f5f6f8' }}>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9aa1ab' }}>Entities</div>
               <div className="mt-2 space-y-2">
                 {entitySummary.length ? (
                   entitySummary.map((entity) => (
-                    <div key={entity.id} className="flex items-center justify-between gap-3 text-sm text-sky-900">
+                    <div key={entity.id} className="flex items-center justify-between gap-3 text-sm" style={{ color: '#3a3f47' }}>
                       <span className="truncate font-semibold" title={entity.full_name}>{entity.full_name}</span>
-                      <span className="shrink-0 text-lg font-bold text-sky-950">{entity.count}</span>
+                      <span className="shrink-0 text-lg font-bold" style={{ color: '#1a1d21' }}>{entity.count}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-sky-700">No entity stock available</div>
+                  <div className="text-sm" style={{ color: '#8b919b' }}>No entity stock available</div>
                 )}
               </div>
             </div>
-            <div className="rounded-2xl border border-sky-100 bg-white/90 p-3 backdrop-blur-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-sky-700">Branch Stock</div>
+            <div className="rounded-xl p-3" style={{ border: '1px solid #f2f3f5', background: '#f5f6f8' }}>
+              <div className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#9aa1ab' }}>Branch Stock</div>
               <div className="mt-2 space-y-2">
                 {branchSummary.length ? (
                   branchSummary.map((branch) => (
-                    <div key={branch.id} className="flex items-center justify-between gap-3 text-sm text-sky-900">
+                    <div key={branch.id} className="flex items-center justify-between gap-3 text-sm" style={{ color: '#3a3f47' }}>
                       <span className="truncate font-semibold" title={branch.name}>{branch.shortName}</span>
-                      <span className="shrink-0 text-lg font-bold text-sky-950">{branch.count}</span>
+                      <span className="shrink-0 text-lg font-bold" style={{ color: '#1a1d21' }}>{branch.count}</span>
                     </div>
                   ))
                 ) : (
-                  <div className="text-sm text-sky-700">No branches configured</div>
+                  <div className="text-sm" style={{ color: '#8b919b' }}>No branches configured</div>
                 )}
               </div>
             </div>
@@ -857,7 +830,7 @@ export default function InventoryPage() {
       />
       <input ref={importInputRef} type="file" accept=".csv" className="hidden" onChange={handleImportCsv} />
 
-      {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</div> : null}
+      {error ? <div className="rounded-xl px-3 py-2.5 text-sm" style={{ border: '1px solid #fecaca', background: '#fee', color: '#b91c1c' }}>{error}</div> : null}
       {successMessage ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">{successMessage}</div> : null}
 
       <div className="flex flex-wrap gap-1.5 rounded-2xl border border-emerald-100 bg-white p-1.5 shadow-sm shadow-emerald-100/50">
@@ -1307,6 +1280,6 @@ export default function InventoryPage() {
         onConfirm={handleDeleteConfirm}
       />
     </div>
-    </>
+    </div>
   );
 }
