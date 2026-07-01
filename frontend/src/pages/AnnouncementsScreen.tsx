@@ -882,6 +882,12 @@ interface FeedItemProps {
 }
 
 function FeedItem({ post }: FeedItemProps) {
+  const whiteTextStyle = {
+    color: 'rgb(255, 255, 255)',
+    WebkitTextFillColor: 'rgb(255, 255, 255)',
+    textShadow: 'none'
+  };
+  
   return (
     <div
       style={{
@@ -894,6 +900,18 @@ function FeedItem({ post }: FeedItemProps) {
         gap: 10
       }}
     >
+      {/* CSS override for white text */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .feed-item-white-text {
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
+        }
+        .feed-item-white-text * {
+          color: inherit !important;
+          -webkit-text-fill-color: inherit !important;
+        }
+      `}} />
+      
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <TagChip label={post.urgent ? 'URGENT' : 'BROADCAST'} urgent={post.urgent} onDark />
@@ -912,7 +930,15 @@ function FeedItem({ post }: FeedItemProps) {
       </div>
 
       {/* Title */}
-      <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
+      <div 
+        className="feed-item-white-text"
+        style={{ 
+          fontSize: 15, 
+          fontWeight: 600, 
+          ...whiteTextStyle,
+          lineHeight: 1.4 
+        }}
+      >
         {post.title}
       </div>
 
@@ -931,6 +957,12 @@ interface BroadcastPulseProps {
 }
 
 function BroadcastPulse({ posts }: BroadcastPulseProps) {
+  const whiteTextStyle = {
+    color: 'rgb(255, 255, 255)',
+    WebkitTextFillColor: 'rgb(255, 255, 255)',
+    textShadow: 'none'
+  };
+  
   return (
     <div
       style={{
@@ -942,6 +974,18 @@ function BroadcastPulse({ posts }: BroadcastPulseProps) {
         gap: 20
       }}
     >
+      {/* CSS override for white text */}
+      <style dangerouslySetInnerHTML={{ __html: `
+        .broadcast-pulse-white-text {
+          color: #ffffff !important;
+          -webkit-text-fill-color: #ffffff !important;
+        }
+        .broadcast-pulse-white-text * {
+          color: inherit !important;
+          -webkit-text-fill-color: inherit !important;
+        }
+      `}} />
+      
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div style={{ flex: 1 }}>
@@ -957,10 +1001,11 @@ function BroadcastPulse({ posts }: BroadcastPulseProps) {
             LIVE FEED
           </div>
           <h2
+            className="broadcast-pulse-white-text"
             style={{
               fontSize: 19,
               fontWeight: 700,
-              color: '#fff',
+              ...whiteTextStyle,
               margin: 0
             }}
           >
