@@ -882,11 +882,7 @@ interface FeedItemProps {
 }
 
 function FeedItem({ post }: FeedItemProps) {
-  const whiteTextStyle = {
-    color: 'rgb(255, 255, 255)',
-    WebkitTextFillColor: 'rgb(255, 255, 255)',
-    textShadow: 'none'
-  };
+  const itemId = `feed-item-${post.id}`;
   
   return (
     <div
@@ -900,15 +896,20 @@ function FeedItem({ post }: FeedItemProps) {
         gap: 10
       }}
     >
-      {/* CSS override for white text */}
+      {/* Super aggressive CSS override for white text */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .feed-item-white-text {
+        #${itemId} .feed-title {
           color: #ffffff !important;
           -webkit-text-fill-color: #ffffff !important;
+          text-fill-color: #ffffff !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          background-clip: border-box !important;
+          -webkit-background-clip: border-box !important;
         }
-        .feed-item-white-text * {
-          color: inherit !important;
-          -webkit-text-fill-color: inherit !important;
+        #${itemId} .feed-title::before,
+        #${itemId} .feed-title::after {
+          color: #ffffff !important;
         }
       `}} />
       
@@ -931,13 +932,20 @@ function FeedItem({ post }: FeedItemProps) {
 
       {/* Title */}
       <div 
-        className="feed-item-white-text"
+        id={itemId}
+        className="feed-title"
         style={{ 
           fontSize: 15, 
           fontWeight: 600, 
-          ...whiteTextStyle,
-          lineHeight: 1.4 
-        }}
+          color: '#ffffff',
+          WebkitTextFillColor: '#ffffff',
+          textShadow: 'none',
+          lineHeight: 1.4,
+          backgroundColor: 'transparent',
+          backgroundImage: 'none',
+          backgroundClip: 'border-box',
+          WebkitBackgroundClip: 'border-box'
+        } as any}
       >
         {post.title}
       </div>
@@ -957,12 +965,6 @@ interface BroadcastPulseProps {
 }
 
 function BroadcastPulse({ posts }: BroadcastPulseProps) {
-  const whiteTextStyle = {
-    color: 'rgb(255, 255, 255)',
-    WebkitTextFillColor: 'rgb(255, 255, 255)',
-    textShadow: 'none'
-  };
-  
   return (
     <div
       style={{
@@ -974,15 +976,20 @@ function BroadcastPulse({ posts }: BroadcastPulseProps) {
         gap: 20
       }}
     >
-      {/* CSS override for white text */}
+      {/* Super aggressive CSS override for white text */}
       <style dangerouslySetInnerHTML={{ __html: `
-        .broadcast-pulse-white-text {
+        #broadcast-pulse-title {
           color: #ffffff !important;
           -webkit-text-fill-color: #ffffff !important;
+          text-fill-color: #ffffff !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          background-clip: border-box !important;
+          -webkit-background-clip: border-box !important;
         }
-        .broadcast-pulse-white-text * {
-          color: inherit !important;
-          -webkit-text-fill-color: inherit !important;
+        #broadcast-pulse-title::before,
+        #broadcast-pulse-title::after {
+          color: #ffffff !important;
         }
       `}} />
       
@@ -1001,13 +1008,19 @@ function BroadcastPulse({ posts }: BroadcastPulseProps) {
             LIVE FEED
           </div>
           <h2
-            className="broadcast-pulse-white-text"
+            id="broadcast-pulse-title"
             style={{
               fontSize: 19,
               fontWeight: 700,
-              ...whiteTextStyle,
-              margin: 0
-            }}
+              color: '#ffffff',
+              WebkitTextFillColor: '#ffffff',
+              textShadow: 'none',
+              margin: 0,
+              backgroundColor: 'transparent',
+              backgroundImage: 'none',
+              backgroundClip: 'border-box',
+              WebkitBackgroundClip: 'border-box'
+            } as any}
           >
             Broadcast pulse
           </h2>
