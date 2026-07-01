@@ -558,10 +558,11 @@ export default function PatchDashboard() {
       const dashboard = await fetchPatchDashboard();
       
       // Transform summary data
+      // Backend returns flat structure: total, upToDate, pending, failed, rebootPending
       setSummary({
-        total: dashboard.summary.total_devices || 0,
-        online: dashboard.summary.up_to_date || 0,
-        offline: dashboard.summary.pending_updates || 0
+        total: dashboard.total || 0,
+        online: dashboard.upToDate || 0,
+        offline: dashboard.pending || dashboard.failed || 0
       });
       
       // Transform charts data (placeholder with empty series for now)
@@ -596,14 +597,9 @@ export default function PatchDashboard() {
       ];
       setCharts(chartsData);
       
-      // Transform recent patches to RecentUpdate format
-      const updates: RecentUpdate[] = (dashboard.recent_patches || []).slice(0, 10).map((patch: any, index: number) => ({
-        id: `update-${index}`,
-        timestamp: patch.installed_at || new Date().toISOString(),
-        system: patch.hostname || `System ${index + 1}`,
-        status: 'success' as const
-      }));
-      setRecentUpdates(updates);
+      // Backend doesn't return recent_patches, keep empty for now
+      // TODO: Fetch from /api/patch/jobs endpoint
+      setRecentUpdates([]);
     } catch (err: any) {
       console.error('Failed to load patch dashboard:', err);
       setError(err.message || 'Failed to load patch data');

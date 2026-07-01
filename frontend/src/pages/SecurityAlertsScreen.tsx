@@ -1058,37 +1058,42 @@ export default function SecurityAlertsScreen() {
       const dashboard = await fetchAlertsDashboard();
       
       // Transform API response to SourceData format
-      const transformedData: SourceData[] = dashboard.by_source.map((src: any) => {
+      // Backend returns 'moduleCards' array
+      const transformedData: SourceData[] = (dashboard.moduleCards || []).map((src: any) => {
         const sourceConfig = {
           wazuh: { accent: '#2563eb', tint: '#eef2ff' },
           openscap: { accent: '#7c3aed', tint: '#f3edfd' },
           clamav: { accent: '#e11d48', tint: '#fdeef1' }
         }[src.source] || { accent: '#6b7280', tint: '#f5f6f8' };
         
+        const totalScanned = src.totalSystemsScanned || 0;
+        const errorCount = src.errorSystemsCount || 0;
+        const cleanCount = src.cleanSystemsCount || 0;
+        
         return {
           id: src.source as SourceName,
-          name: src.source === 'wazuh' ? 'Wazuh' : src.source === 'openscap' ? 'OpenSCAP' : 'ClamAV',
+          name: src.label || (src.source === 'wazuh' ? 'Wazuh' : src.source === 'openscap' ? 'OpenSCAP' : 'ClamAV'),
           accent: sourceConfig.accent,
           tint: sourceConfig.tint,
-          status: src.critical > 0 ? 'ATTENTION' : 'HEALTHY',
-          risk: src.critical > 0 ? 'High' : src.high > 0 ? 'Medium' : 'Low',
+          status: src.statusColor === 'red' || errorCount > 0 ? 'ATTENTION' : 'HEALTHY',
+          risk: errorCount > cleanCount ? 'High' : errorCount > 0 ? 'Medium' : 'Low',
           desc: src.source === 'wazuh' 
             ? 'Host-based intrusion detection, log analysis, and compliance monitoring across all endpoints.'
             : src.source === 'openscap'
             ? 'Security compliance validation and vulnerability scanning against industry benchmarks.'
             : 'Real-time antivirus and malware detection protecting file systems and email gateways.',
           stats: [
-            { value: src.total.toString(), label: 'SCANNED' },
-            { value: (src.critical + src.high).toString(), label: 'FINDINGS', color: '#d97706' },
-            { value: src.total.toString(), label: 'ALERTS' }
+            { value: totalScanned.toString(), label: 'SCANNED' },
+            { value: errorCount.toString(), label: 'FINDINGS', color: '#d97706' },
+            { value: (errorCount + cleanCount).toString(), label: 'ALERTS' }
           ],
           depts: '4 / 9',
           deptsSub: '44% of scope',
-          passing: src.total > 0 ? Math.round(((src.total - src.critical - src.high) / src.total) * 100) + '%' : '0%',
-          passHealthy: src.critical === 0,
-          lastScan: 'Today, ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          passing: totalScanned > 0 ? Math.round((cleanCount / totalScanned) * 100) + '%' : '0%',
+          passHealthy: errorCount === 0,
+          lastScan: src.lastUpdated ? new Date(src.lastUpdated).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Never',
           spark: Array(14).fill(0).map(() => Math.floor(Math.random() * 30) + 10),
-          trendLabel: '+' + Math.floor(Math.random() * 20) + '% alerts'
+          trendLabel: errorCount > 0 ? `${errorCount} issues` : 'Clean'
         };
       });
       

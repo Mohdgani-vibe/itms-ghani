@@ -1036,16 +1036,17 @@ export default function RequestsQueueScreen() {
       const response = await fetchRequests({ page: 1, page_size: 100 });
       
       // Map API response to local Request format
+      // Backend nests requester/assignee in objects
       const transformedData: Request[] = response.items.map((item: any) => ({
         id: item.id,
         title: item.title,
         type: item.type as RequestType,
-        requester: item.requester_name,
-        assignee: item.assignee_name || null,
+        requester: item.requester?.fullName || item.requester_name || 'Unknown',
+        assignee: item.assignee?.fullName || item.assignee_name || null,
         status: item.status as Status,
-        priority: item.priority as Priority,
-        updated: formatTimestamp(item.updated_at),
-        queue: (item.status === 'Approved' ? 'approved' : item.status === 'Rejected' ? 'rejected' : 'queue') as TabType
+        priority: item.priority || 'Medium' as Priority,
+        updated: formatTimestamp(item.updated_at || item.updatedAt),
+        queue: (item.status === 'resolved' ? 'approved' : item.status === 'rejected' ? 'rejected' : 'queue') as TabType
       }));
       
       setRequestsData(transformedData);
