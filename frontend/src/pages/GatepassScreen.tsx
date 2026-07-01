@@ -161,27 +161,26 @@ function ScanBanner() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        gap: 40,
-        color: '#fff'
+        gap: 40
       }}
     >
-      <div style={{ flex: 1 }}>
+      <div style={{ flex: 1, color: '#ffffff' }}>
         <div
           style={{
             fontSize: 10,
             fontWeight: 800,
             letterSpacing: 1.2,
-            color: '#fff',
+            color: '#ffffff',
             marginBottom: 8
           }}
         >
-          SCAN STATION
+          <span style={{ color: '#ffffff' }}>SCAN STATION</span>
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 8 }}>
-          Gatepass barcode board
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#ffffff', margin: 0, marginBottom: 8 }}>
+          <span style={{ color: '#ffffff' }}>Gatepass barcode board</span>
         </h2>
-        <p style={{ fontSize: 14, color: '#fff', margin: 0, lineHeight: 1.6 }}>
-          Use the larger barcode cards to verify movement records quickly from reports.
+        <p style={{ fontSize: 14, color: '#ffffff', margin: 0, lineHeight: 1.6 }}>
+          <span style={{ color: '#ffffff' }}>Use the larger barcode cards to verify movement records quickly from reports.</span>
         </p>
       </div>
       <Barcode code="GP-2048-ZBL" />
