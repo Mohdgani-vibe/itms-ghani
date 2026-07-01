@@ -146,6 +146,14 @@ function App() {
           <Route path="/portal/it/gatepass" element={<Navigate to="/it/gatepass" replace />} />
           <Route path="/terminal/:minionId" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><TerminalConsole /></RequireRoles></RequireAuth>} />
           <Route path="/ssh/assets/:id" element={<RequireAuth><RequireRoles roles={['super_admin', 'it_team']}><SshTerminalPage /></RequireRoles></RequireAuth>} />
+          <Route path="/admin/announcements" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/admin/broadcast-center" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/it/announcements" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/it/broadcast-center" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/audit/announcements" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/audit/broadcast-center" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/emp/announcements" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
+          <Route path="/emp/broadcast-center" element={<RequireAuth><BroadcastCenterScreen /></RequireAuth>} />
 
           {/* Admin Portal with PortalLayout */}
           <Route path="/admin" element={<RequireAuth><PortalLayout /></RequireAuth>}>
@@ -161,8 +169,6 @@ function App() {
             <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="announcements" element={<AnnouncementsScreen />} />
-            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -190,8 +196,6 @@ function App() {
             <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="announcements" element={<BroadcastCenterScreen />} />
-            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -217,8 +221,6 @@ function App() {
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
-            <Route path="announcements" element={<BroadcastCenterScreen />} />
-            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
@@ -235,8 +237,6 @@ function App() {
             <Route path="requests" element={<MyRequestsPage />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="announcements" element={<BroadcastCenterScreen />} />
-            <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
           </Route>
           <Route path="/" element={<PortalHomeRedirect />} />
           <Route path="*" element={<Navigate to="/login" replace />} />
