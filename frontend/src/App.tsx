@@ -190,7 +190,7 @@ function App() {
             <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
-            <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="announcements" element={<BroadcastCenterScreen />} />
             <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
@@ -217,7 +217,7 @@ function App() {
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
-            <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="announcements" element={<BroadcastCenterScreen />} />
             <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
@@ -235,7 +235,7 @@ function App() {
             <Route path="requests" element={<MyRequestsPage />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="announcements" element={<AnnouncementsScreen />} />
+            <Route path="announcements" element={<BroadcastCenterScreen />} />
             <Route path="broadcast-center" element={<BroadcastCenterScreen />} />
           </Route>
           <Route path="/" element={<PortalHomeRedirect />} />
