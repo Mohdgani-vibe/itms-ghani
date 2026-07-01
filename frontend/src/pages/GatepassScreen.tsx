@@ -177,7 +177,7 @@ function ScanBanner() {
         >
           SCAN STATION
         </div>
-        <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, marginBottom: 8 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 8 }}>
           Gatepass barcode board
         </h2>
         <p style={{ fontSize: 14, color: '#fff', margin: 0, lineHeight: 1.6 }}>
