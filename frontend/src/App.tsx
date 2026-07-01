@@ -153,12 +153,12 @@ function App() {
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="alerts" element={<Alerts />} />
+            <Route path="inventory" element={<InventoryScreen />} />
+            <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="requests" element={<RequestsQueuePage />} />
+            <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
@@ -178,14 +178,14 @@ function App() {
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="alerts" element={<Alerts />} />
+            <Route path="inventory" element={<InventoryScreen />} />
+            <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="requests" element={<RequestsQueuePage />} />
+            <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
@@ -203,12 +203,12 @@ function App() {
             <Route path="users/:id" element={<UserProfilePage />} />
             <Route path="devices" element={<Devices />} />
             <Route path="devices/:id" element={<DeviceDetailPage />} />
-            <Route path="inventory" element={<Inventory />} />
-            <Route path="alerts" element={<Alerts />} />
+            <Route path="inventory" element={<InventoryScreen />} />
+            <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="gatepass" element={<Gatepass />} />
             <Route path="chat" element={<Chat />} />
-            <Route path="requests" element={<RequestsQueuePage />} />
+            <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
             <Route path="announcements" element={<Announcements />} />
