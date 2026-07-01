@@ -157,7 +157,7 @@ function App() {
             <Route path="inventory" element={<InventoryScreen />} />
             <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
-            <Route path="gatepass" element={<Gatepass />} />
+            <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<Announcements />} />
@@ -185,7 +185,7 @@ function App() {
             <Route path="salt" element={<SaltStackWorkspace />} />
             <Route path="patch" element={<PatchDashboard />} />
             <Route path="patch/devices" element={<PatchList />} />
-            <Route path="gatepass" element={<Gatepass />} />
+            <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="announcements" element={<Announcements />} />
@@ -209,7 +209,7 @@ function App() {
             <Route path="inventory" element={<InventoryScreen />} />
             <Route path="alerts" element={<SecurityAlertsScreen />} />
             <Route path="salt" element={<SaltStackWorkspace />} />
-            <Route path="gatepass" element={<Gatepass />} />
+            <Route path="gatepass" element={<GatepassScreen />} />
             <Route path="chat" element={<Chat />} />
             <Route path="requests" element={<RequestsQueueScreen />} />
             <Route path="patch" element={<PatchDashboard />} />

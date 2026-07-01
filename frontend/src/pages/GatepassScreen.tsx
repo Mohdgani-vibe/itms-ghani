@@ -181,7 +181,7 @@ function ScanBanner() {
           Gatepass barcode board
         </h2>
         <p style={{ fontSize: 14, color: '#9ca3af', margin: 0, lineHeight: 1.6 }}>
-          Scan any gatepass barcode to view complete asset details and approval status
+          Use the larger barcode cards to verify movement records quickly from reports.
         </p>
       </div>
       <Barcode code="GP-2048-ZBL" />
