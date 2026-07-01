@@ -29,6 +29,8 @@ const TerminalConsole = lazy(() => import('./pages/TerminalConsole'));
 const SshTerminalPage = lazy(() => import('./pages/SshTerminalPage'));
 const VaultPage = lazy(() => import('./pages/live/VaultPage'));
 const DocsPage = lazy(() => import('./pages/live/DocsPage'));
+const InventoryScreen = lazy(() => import('./pages/InventoryScreen'));
+const SecurityAlertsScreen = lazy(() => import('./pages/SecurityAlertsScreen'));
 
 function RouteFallback() {
   return (
@@ -162,6 +164,8 @@ function App() {
             <Route path="settings" element={<SettingsPage />} />
             <Route path="patch" element={<PatchDashboardPage />} />
             <Route path="patch/devices" element={<PatchList />} />
+            <Route path="inventory-screen" element={<InventoryScreen />} />
+            <Route path="security-alerts" element={<SecurityAlertsScreen />} />
           </Route>
 
           {/* IT Portal with PortalLayout */}
@@ -184,6 +188,8 @@ function App() {
             <Route path="vault" element={<VaultPage />} />
             <Route path="docs" element={<DocsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="inventory-screen" element={<InventoryScreen />} />
+            <Route path="security-alerts" element={<SecurityAlertsScreen />} />
           </Route>
 
           {/* Audit Portal with PortalLayout */}
